@@ -63,19 +63,9 @@ void CInterpreter::Init(std::istream& oInput)
 	if (m_pCode == nullptr)
 		throw base::CException("Failed to Pre-process input.");
 
-	// Calculate total data size
-	t_size nDataSize = 0;
-	for (auto const& tItem : aVariables)
-		nDataSize += tItem.second.GetSize();
-
-	if (nStackSize == 0)
-		nStackSize = t_size(CMemory::DefaultStackSize);
-
 	// Create the Memory Manager and initialize
 	m_pMemMan = CMemoryManagerPtr(new CMemoryManager);
-	m_pMemMan->Init(nDataSize + nStackSize);
-	for (auto const& tItem : aVariables)
-		m_pMemMan->AddVariable(tItem.first, tItem.second);
+	m_pMemMan->Init(aVariables, nStackSize);
 
 	// Create the IO Manager
 	m_pIOMan = CIOManagerPtr(new CIOManager);
@@ -85,7 +75,7 @@ void CInterpreter::Init(std::istream& oInput)
 
 	// Create the CPU and intialize
 	m_pCPU = CProcessorPtr(new CProcessor);
-	m_pCPU->Init(m_pCode, m_pMemMan->GetMemory(), m_pIOMan->GetPorts(), nStackSize);
+	m_pCPU->Init(m_pCode, m_pMemMan->GetMemory(), m_pIOMan->GetPorts(), m_pMemMan->GetStackSize());
 	m_pCPU->SetDecodeFilter(m_pDecoeFilter);
 
 	if (m_pDebugger != nullptr)

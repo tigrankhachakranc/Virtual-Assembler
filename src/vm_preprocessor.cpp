@@ -144,7 +144,7 @@ CCodePtr Preprocessor::Run(
 						t_word_array aValues(nSize);
 						for (t_index i = 0; i < nSize; ++i)
 						{
-							t_word n = oParser.ParseNumber<int16>(',');
+							t_word n = ParseWord(oParser, ',');
 							aValues[i] = n;
 							if (oParser.IsFinished())
 								break;
@@ -158,7 +158,7 @@ CCodePtr Preprocessor::Run(
 						t_dword_array aValues(nSize);
 						for (t_index i = 0; i < nSize; ++i)
 						{
-							t_dword n = oParser.ParseNumber<int32>(',');
+							t_dword n = ParseDWord(oParser, ',');
 							aValues[i] = n;
 							if (oParser.IsFinished())
 								break;
@@ -172,7 +172,7 @@ CCodePtr Preprocessor::Run(
 						t_qword_array aValues(nSize);
 						for (t_index i = 0; i < nSize; ++i)
 						{
-							t_qword n = oParser.ParseNumber<int64>(',');
+							t_qword n = ParseQWord(oParser, ',');
 							aValues[i] = n;
 							if (oParser.IsFinished())
 								break;
@@ -200,19 +200,19 @@ CCodePtr Preprocessor::Run(
 				}
 				case EKeyword::Word:
 				{
-					t_word n = oParser.ParseNumber<int16>();
+					t_word n = ParseWord(oParser);
 					oValue = std::move(CValue(n));
 					break;
 				}
 				case EKeyword::DWord:
 				{
-					t_dword n = oParser.ParseNumber<int32>();
+					t_dword n = ParseDWord(oParser);
 					oValue = std::move(CValue(n));
 					break;
 				}
 				case EKeyword::QWord:
 				{
-					t_qword n = oParser.ParseNumber<int64>();
+					t_qword n = ParseQWord(oParser);
 					oValue = std::move(CValue(n));
 					break;
 				}
@@ -249,6 +249,40 @@ CCodePtr Preprocessor::Run(
 	}
 	return pCode;
 }
+
+t_word Preprocessor::ParseWord(base::CParser& oParser, char const chDelimiter)
+{
+	t_word val = 0;
+	oParser.SkipWhiteSpaces();
+	if (oParser.PeekChar() == '-')
+		val = (t_word) oParser.ParseNumber<int16>(chDelimiter);
+	else
+		val = oParser.ParseNumber<uint16>(chDelimiter);
+	return val;
+}
+
+t_dword Preprocessor::ParseDWord(base::CParser& oParser, char const chDelimiter)
+{
+	t_dword val = 0;
+	oParser.SkipWhiteSpaces();
+	if (oParser.PeekChar() == '-')
+		val = (t_dword) oParser.ParseNumber<int32>(chDelimiter);
+	else
+		val = oParser.ParseNumber<uint32>(chDelimiter);
+	return val;
+}
+
+t_qword Preprocessor::ParseQWord(base::CParser& oParser, char const chDelimiter)
+{
+	t_qword val = 0;
+	oParser.SkipWhiteSpaces();
+	if (oParser.PeekChar() == '-')
+		val = (t_qword)oParser.ParseNumber<int64>(chDelimiter);
+	else
+		val = oParser.ParseNumber<uint64>(chDelimiter);
+	return val;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 } // namespace vm

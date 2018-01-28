@@ -7,6 +7,7 @@
 
 // STL
 #include <cstring>
+#include <algorithm>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 namespace vm {
@@ -190,10 +191,7 @@ bool CProcessor::IsValid() const
 }
 
 void CProcessor::Init(
-	CCodePtr pCode,
-	CMemoryPtr pMemory,
-	IPortsPtr pPorts,
-	t_size nStackSize)
+	CCodePtr pCode, CMemoryPtr pMemory, IPortsPtr pPorts, t_size nStackSize)
 {
 	if (pCode == nullptr)
 		throw base::CException("Failed to initialize processor: Invalid Code pointer.");
@@ -201,12 +199,10 @@ void CProcessor::Init(
 		throw base::CException("Failed to initialize processor: Invalid Memory pointer.");
 	if (pPorts == nullptr)
 		throw base::CException("Failed to initialize processor: Invalid I/O Ports pointer.");
-	if (nStackSize < CMemory::MinStackSize)
-		throw base::CException("Failed to initialize processor: Invalid stack size.");
 	if (pCode->GetSize() < 1)
 		throw base::CException("Failed to initialize processor: Code is empty.");
 	if (pMemory->GetSize() < nStackSize)
-		throw base::CException("Failed to initialize processor: Small stack.");
+		throw base::CException("Failed to initialize processor: memory size is too small.");
 
 	m_pCode = pCode;
 	m_pMemory = pMemory;

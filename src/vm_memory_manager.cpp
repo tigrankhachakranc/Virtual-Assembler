@@ -17,22 +17,44 @@ CMemoryManager::CMemoryManager()
 
 CMemoryManager::~CMemoryManager() = default;
 
-void CMemoryManager::Init(t_size nMemSize)
+void CMemoryManager::Init(t_aVariables const& aVariables, t_size const nStackSize)
 {
-	if (nMemSize == 0)
-		base::CException("Failed to initialize memory manager: empty memory is requested.");
-	else if (nMemSize > CMemory::MaxSize)
-		base::CException("Failed to initialize memory manager: requested memory is too big.");
-
-	// Round specified size
-	t_size nReminder = nMemSize % CMemory::MinStackSize;
-	if (nReminder != 0)
-		nMemSize += nReminder;
-
 	m_nDataMarker = 1; // first byte is reserved for null
 	m_mapVariables.clear();
-	
+
+	// Calculate total data size
+	t_size nMemSize = aVariables.empty() ? 0 : 1;
+	for (auto const& tItem : aVariables)
+	{
+		// Round to elemen boundary
+		t_size nVarSize = tItem.second.GetElementSize();
+		t_size nReminder = nMemSize % nVarSize;
+		if (nReminder != 0)
+			nMemSize += nVarSize - nReminder;
+		nMemSize += tItem.second.GetSize();
+	}
+
+	// Adjust specified stack size
+	if (nStackSize == 0)
+		m_nStackSize = t_size(CMemory::DefaultStackSize);
+	else if (nStackSize > CMemory::MaxStackSize)
+		base::CException("Failed to initialize memory manager: requested stack size is too big.");
+	else
+	{
+		m_nStackSize = nStackSize;
+		t_size nReminder = nStackSize % CMemory::MinStackSize;
+		if (nReminder != 0)
+			m_nStackSize += CMemory::MinStackSize - nReminder;
+	}
+	nMemSize += m_nStackSize;
+
+	if (nMemSize > CMemory::MaxSize)
+		base::CException("Failed to initialize memory manager: requested memory is too big.");
+
 	m_pRAM = CMemoryPtr(new CMemory(nMemSize));
+
+	for (auto const& tItem : aVariables)
+		AddVariable(tItem.first, tItem.second);
 }
 
 bool CMemoryManager::IsValid() const
@@ -51,15 +73,16 @@ void CMemoryManager::AddVariable(std::string const& sName, CValue const& oValue)
 
 	CMemory const& oRAM = Memory();
 
-		// Round data marker to elemen boundary
-	t_size nReminder = m_nDataMarker % oValue.GetElementSize();
+	// Round data marker to elemen boundary
+	t_size nVarSize = oValue.GetElementSize();
+	t_size nReminder = m_nDataMarker % nVarSize;
 	if (nReminder != 0)
-		m_nDataMarker += nReminder;
+		m_nDataMarker += nVarSize - nReminder;
 
 	SVarInfo tVarInfo(oValue, m_nDataMarker);
 	m_nDataMarker += tVarInfo.nSize;
-	if (m_nDataMarker > oRAM.GetSize())
-		base::CException("Failed to declare variable: Size is out of available memory bounds.");
+	if (m_nDataMarker > oRAM.GetSize() - m_nStackSize)
+		base::CException("Failed to declare variable: Offset is out of available memory bounds.");
 
 	if (tVarInfo.nSize > 0)
 	{

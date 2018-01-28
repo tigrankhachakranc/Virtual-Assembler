@@ -104,6 +104,7 @@ private:
 	SData	m_tData;
 };
 
+using t_aVariables = std::vector< std::pair<std::string, CValue> >;
 
 ////////////////////////////////////////////////////////////////////////////////
 //

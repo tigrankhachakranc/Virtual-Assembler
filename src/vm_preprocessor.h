@@ -15,6 +15,9 @@
 #include <map>
 #include <unordered_map>
 
+// Forward declarations
+namespace base { class CParser; }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 namespace vm { // vm stands for Virtual Machine
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -56,6 +59,11 @@ private:
 
 		inline SKeywordDefinition(EKeyword keyType = EKeyword::Void);
 	};
+
+	// Helpers
+	static t_word  ParseWord(base::CParser&, char const chDelimiter = 0);
+	static t_dword ParseDWord(base::CParser&, char const chDelimiter = 0);
+	static t_qword ParseQWord(base::CParser&, char const chDelimiter = 0);
 
 private:
 	//

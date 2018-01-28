@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+# Intermediate files
+.vs/
+build/
+VASM.vcxproj.user

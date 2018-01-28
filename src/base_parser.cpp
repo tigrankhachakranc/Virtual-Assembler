@@ -6,6 +6,7 @@
 // STL
 #include <limits>
 #include <cstdlib>
+#include <type_traits>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 namespace base{
@@ -93,69 +94,30 @@ TNumType CParser::ParseNumber(char const chDelimiter)
 
 	FixCurrentPos();
 
-	int64 nNumber = 0;
+	TNumType nNumber = 0;
 	size_t nPos = GetCurrentPos();
 	char const* pchStartPos = GetInput().c_str() + nPos;
 	char* pchLastPos = nullptr;
 
-	nNumber = std::strtoll(pchStartPos, &pchLastPos, 0);
-
-	if (pchLastPos <= pchStartPos ||
-		nNumber > (int64) std::numeric_limits<TNumType>::max() ||
-		nNumber < (int64) std::numeric_limits<TNumType>::min())
-		throw CException("Invalid numeric value.");
+	if (std::is_signed<TNumType>::value)
+	{
+		int64 i64Number = std::strtoll(pchStartPos, &pchLastPos, 0);
+		if (pchLastPos <= pchStartPos ||
+			i64Number > (int64) std::numeric_limits<TNumType>::max() ||
+			i64Number < (int64) std::numeric_limits<TNumType>::min())
+			throw CException("Invalid numeric value.");
+		nNumber = (TNumType) i64Number;
+	}
+	else
+	{
+		uint64 ui64Number = std::strtoull(pchStartPos, &pchLastPos, 0);
+		if (pchLastPos <= pchStartPos ||
+			ui64Number > (uint64) std::numeric_limits<TNumType>::max())
+			throw CException("Invalid numeric value.");
+		nNumber = (TNumType) ui64Number;
+	}
 
 	SetCurrentPos(nPos + (pchLastPos - pchStartPos));
-
-	//int nBase = 10;
-	//bool bSigned = false;
-
-	//char chCurr = PeekChar();
-	//if (chCurr == '-')
-	//{
-	//	bSigned = true;
-	//	Skip(1);
-	//	if (!IsNum(PeekChar()))
-	//		throw CException("Invalid numeric value.");
-	//}
-	//else if (chCurr == '0' && PeekChar(1) == 'x')
-	//{
-	//	Skip(2);
-	//	nBase = 16;
-	//}
-
-	//size_t nPos = GetCurrentPos();
-	//int64 nNumber = 0;
-	//if (nBase == 16)
-	//{
-	//	while (IsHexNum(PeekChar()))
-	//	{
-	//		uchar chVal = GetHexNumValue(GetChar(false));
-	//		nNumber = nNumber * nBase + chVal;
-	//	}
-	//}
-	//else
-	//{
-	//	while (IsNum(PeekChar()))
-	//	{
-	//		uchar chVal = GetNumValue(GetChar(false));
-	//		nNumber = nNumber * nBase + chVal;
-	//	}
-	//}
-
-	//if (bSigned)
-	//	nNumber *= -1;
-
-	//if (nPos == GetCurrentPos() || IsAlpha(PeekChar()))
-	//	throw CException("Invalid numeric value.");
-	//else if (nBase == 16)
-	//{
-	//	if (GetCurrentPos() - nPos > 2 * sizeof(TNumType))
-	//		throw CException("Hexadecimal numeric value exceeds allowed number of symbols.");
-	//}
-	//else if (nNumber < (int64) std::numeric_limits<TNumType>::min() ||
-	//		 nNumber > (int64) std::numeric_limits<TNumType>::max())
-	//	throw CException("Numeric value exceeds allowed range.");
 
 	if (chDelimiter != 0)
 	{	// Ensure for delimiter
@@ -168,7 +130,7 @@ TNumType CParser::ParseNumber(char const chDelimiter)
 		throw CException("Invalid numeric value.");
 	}
 
-	return static_cast<TNumType>(nNumber);
+	return nNumber;
 }
 
 // Force compiler to instantiate template functions

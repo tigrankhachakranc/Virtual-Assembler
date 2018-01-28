@@ -31,7 +31,7 @@ public:
 	void operator=(CMemoryManager&&) = delete;
 
 	// Initialization interface
-	void Init(t_size nSize = CMemory::DefaultSize);
+	void Init(t_aVariables const& aVariables, t_size const nStackSize = CMemory::DefaultStackSize);
 	// Returns true if initialized
 	bool IsValid() const;
 
@@ -40,10 +40,15 @@ public:
 	inline CMemory const& Memory() const;
 	inline CMemoryPtr GetMemory() const;
 
+	inline t_size GetStackSize() const;
+
 	// Variable support
-	void AddVariable(std::string const& sName, CValue const& oValue);
 	t_size GetVariableOffset(std::string const& sName) const;
 	CValue GetVariable(std::string const& sName) const;
+
+private:
+	// Helpers
+	void AddVariable(std::string const& sName, CValue const& oValue);
 
 private:
 	//
@@ -63,6 +68,7 @@ private:
 	using t_mapVariables = std::unordered_map<std::string, SVarInfo>;
 
 	t_size			m_nDataMarker;
+	t_size			m_nStackSize;
 	CMemoryPtr		m_pRAM;
 	t_mapVariables	m_mapVariables;
 };
@@ -91,6 +97,11 @@ inline CMemory const& CMemoryManager::Memory() const
 inline CMemoryPtr CMemoryManager::GetMemory() const
 {
 	return m_pRAM;
+}
+
+inline t_size CMemoryManager::GetStackSize() const
+{
+	return m_nStackSize;
 }
 
 inline CMemoryManager::SVarInfo::SVarInfo()
