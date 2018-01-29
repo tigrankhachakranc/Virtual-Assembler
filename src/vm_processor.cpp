@@ -269,11 +269,10 @@ void CProcessor::Run(CException* pError)
 			// Execute current command
 			Execute(m_tCurrentCommandContext);
 			// Check trap for debugger
-			if (m_tState.oFlags.getTrap())
-			{
-				// Break program executon
+			if (m_tState.bRun && m_tState.oFlags.getTrap())
+			{	// Break program executon and pass control to the debugger
 				if (m_pDebugger != nullptr)
-					m_tState.bRun &= m_pDebugger->Break();
+					m_tState.bRun = m_pDebugger->Break();
 				else
 					m_tState.bRun = false;
 			}

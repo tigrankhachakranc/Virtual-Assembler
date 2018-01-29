@@ -108,6 +108,10 @@ protected:
 								SCommandContext& tCommand,
 								EArgIndex eArgIdx);
 
+	// Converts IA32 Flags into own flags
+	static uint16 ConvertFlags(uint16 ui16IA32Flags);
+
+
 private:
 	//
 	//	Content

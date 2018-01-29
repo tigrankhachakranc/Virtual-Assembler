@@ -436,7 +436,7 @@ void CExecutor::And(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Or(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -470,7 +470,7 @@ void CExecutor::Or(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Xor(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -504,7 +504,7 @@ void CExecutor::Xor(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Not(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -531,7 +531,7 @@ void CExecutor::Not(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Nand(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -565,7 +565,7 @@ void CExecutor::Nand(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Nor(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -599,7 +599,7 @@ void CExecutor::Nor(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 
@@ -635,7 +635,7 @@ void CExecutor::Add(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Sub(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -669,7 +669,7 @@ void CExecutor::Sub(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Mul(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -703,7 +703,7 @@ void CExecutor::Mul(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Div(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -737,7 +737,7 @@ void CExecutor::Div(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Inc(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -764,7 +764,7 @@ void CExecutor::Inc(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Dec(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -791,7 +791,7 @@ void CExecutor::Dec(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 
@@ -827,7 +827,7 @@ void CExecutor::AddC(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::SubB(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -861,7 +861,7 @@ void CExecutor::SubB(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::IMul(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -895,7 +895,7 @@ void CExecutor::IMul(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::IDiv(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -929,7 +929,7 @@ void CExecutor::IDiv(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Neg(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -956,7 +956,7 @@ void CExecutor::Neg(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 
@@ -990,7 +990,7 @@ void CExecutor::ShiftR(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::ShiftL(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -1022,7 +1022,7 @@ void CExecutor::ShiftL(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::RotateR(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -1054,7 +1054,7 @@ void CExecutor::RotateR(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::RotateL(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -1086,7 +1086,7 @@ void CExecutor::RotateL(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::ShiftAR(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -1118,8 +1118,7 @@ void CExecutor::ShiftAR(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
-
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::ShiftAL(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -1151,7 +1150,7 @@ void CExecutor::ShiftAL(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::RotateCR(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -1183,7 +1182,7 @@ void CExecutor::RotateCR(SMachineState& tMachineState, SCommandContext& tCommand
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::RotateCL(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -1215,7 +1214,7 @@ void CExecutor::RotateCL(SMachineState& tMachineState, SCommandContext& tCommand
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 
@@ -1249,7 +1248,7 @@ void CExecutor::Test(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 void CExecutor::Cmp(SMachineState& tMachineState, SCommandContext& tCommand)
@@ -1281,7 +1280,7 @@ void CExecutor::Cmp(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error: Unknown operand size.");
 	}
 
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 
@@ -1376,7 +1375,7 @@ void CExecutor::PopF(SMachineState& tMachineState, SCommandContext& tCommand)
 		throw base::CException("Runtime error in POP: Stack underflow.");
 	uint16 ui16Flags = m_pMemory->cAt<uint16>(tMachineState.nSP);
 	tMachineState.nSP += sizeof(uint16);
-	tMachineState.oFlags.setFlags(ui16Flags);
+	tMachineState.oFlags.setFlags(ConvertFlags(ui16Flags));
 }
 
 
@@ -1549,6 +1548,17 @@ void CExecutor::Out(SMachineState& tMachineState, SCommandContext& tCommand)
 	}
 
 	m_pPorts->Out(nPort, tVal);
+}
+
+uint16 CExecutor::ConvertFlags(uint16 ui16IA32Flags)
+{
+	CProcessor::CFlags oFlags;
+	oFlags.setCarry(0 != (ui16IA32Flags & 0x0001));
+	oFlags.setParity(0 != (ui16IA32Flags & 0x0004));
+	oFlags.setZero(0 != (ui16IA32Flags & 0x0040));
+	oFlags.setSign(0 != (ui16IA32Flags & 0x0080));
+	oFlags.setOverflow(0 != (ui16IA32Flags & 0x0800));
+	return oFlags.getFlags();
 }
 ////////////////////////////////////////////////////////////////////////////////
 
