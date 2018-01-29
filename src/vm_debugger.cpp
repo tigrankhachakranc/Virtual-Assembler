@@ -33,21 +33,18 @@ bool CDebugger::Start()
 	return false;
 }
 
-void CDebugger::End()
+void CDebugger::End(bool bSuccessfull)
 {
-	if (m_pMachine != nullptr)
-	{
-		CProcessor::SState const& tState = m_pMachine->GetProcessor()->GetState();
-		PrintState(tState);
-	}
-
-	std::cout << "Finished!" << std::endl;
+	if (bSuccessfull)
+		std::cout << std::endl << "!-> Program execution finished!";
+	else
+		std::cout << std::endl << "!-> Program execution stopped!";
 	std::cin.get();
 
 	m_pMachine = nullptr;
 }
 
-void CDebugger::Error()
+bool CDebugger::Error(CException const& e)
 {
 	if (m_pMachine != nullptr)
 	{
@@ -55,10 +52,9 @@ void CDebugger::Error()
 		PrintState(tState);
 	}
 
-	std::cout << "Aborted!" << std::endl;
-	std::cin.get();
+	std::cout << std::endl << "!-> " << e.what();
 
-	m_pMachine = nullptr;
+	return false;
 }
 
 bool CDebugger::Break()
@@ -71,22 +67,26 @@ bool CDebugger::Break()
 
 		if (tState.nPC > 0)
 		{
-			auto it = m_mapCodeCache.find(tState.nPC - 1);
+			t_index nPrevPC = tState.nPC - 1;
+			auto it = m_mapCodeCache.find(nPrevPC);
 			if (it != m_mapCodeCache.end())
 			{	// Breakpoint
-				std::string const& sHitCmd = pCode->GetAt(tState.nPC - 1);
+				std::string const& sHitCmd = pCode->GetAt(nPrevPC);
 				if (sHitCmd == m_sBreakCmd)
 				{	// Breakpoint hit, restore command
-					pCode->ChangeAt(tState.nPC) = it->second;
+					pCode->ChangeAt(nPrevPC) = it->second;
 					// And put pack PC
-					pCPU->SetPC(tState.nPC - 1);
+					pCPU->SetPC(nPrevPC);
 				}
 				else
 				{	// Breakpoint passed, restore break command
-					pCode->ChangeAt(tState.nPC) = m_sBreakCmd;
-					// Continue
-					pCPU->GetFlags().setTrap(false);
-					return true;
+					pCode->ChangeAt(nPrevPC) = m_sBreakCmd;
+
+					if (m_chLastCommand == 'g')
+					{	// Continue
+						pCPU->GetFlags().setTrap(false);
+						return true;
+					}
 				}
 			}
 		}
@@ -95,7 +95,7 @@ bool CDebugger::Break()
 	}
 	else
 	{
-		std::cout << "Machine is not available" << std::endl;
+		std::cout << std::endl << "!-> Machine is not available";
 	}
 
 	while (m_pMachine != nullptr)
@@ -104,10 +104,10 @@ bool CDebugger::Break()
 		CProcessorPtr pCPU = m_pMachine->GetProcessor();
 		CProcessor::SState const& tState = pCPU->GetState();
 
-		char chCommand;
-		std::cin >> chCommand;
+		std::cout << std::endl << "-> ";
+		std::cin >> m_chLastCommand;
 
-		if (chCommand == 'g')
+		if (m_chLastCommand == 'g')
 		{
 			auto it = m_mapCodeCache.find(tState.nPC);
 			if (it != m_mapCodeCache.end())
@@ -116,36 +116,46 @@ bool CDebugger::Break()
 				pCPU->GetFlags().setTrap(false);
 			return true;
 		}
-		else if (chCommand == 't')
+		else if (m_chLastCommand == 't')
 		{
 			pCPU->GetFlags().setTrap(true);
 			return true;
 		}
-		else if (chCommand == 'b')
+		else if (m_chLastCommand == 'b')
 		{
-			t_size nLine;
-			std::cin >> nLine;
-			if (nLine < pCode->GetSize() &&
-				m_mapCodeCache.find(nLine) == m_mapCodeCache.end())
+			t_size nSrcLine;
+			std::cin >> nSrcLine;
+			t_size nCodeLine = pCode->GetCodeLine(nSrcLine);
+			if (nCodeLine < pCode->GetSize() &&
+				m_mapCodeCache.find(nCodeLine) == m_mapCodeCache.end())
 			{
-				std::string& sCmd = pCode->ChangeAt(nLine);
-				m_mapCodeCache.insert(std::move(std::make_pair(nLine, std::move(sCmd))));
+				std::string& sCmd = pCode->ChangeAt(nCodeLine);
+				std::cout << std::endl << "-> Breakpoint set at PC line #" << std::dec << nCodeLine << ": " << sCmd;
+
+				m_mapCodeCache.insert(std::move(std::make_pair(nCodeLine, std::move(sCmd))));
 				sCmd = m_sBreakCmd;
 			}
+			else
+				std::cout << std::endl << "!-> Breakpoint not set.";
 		}
-		else if (chCommand == 'r')
+		else if (m_chLastCommand == 'r')
 		{
-			t_size nLine;
-			std::cin >> nLine;
-			auto it = m_mapCodeCache.find(nLine);
-			if (nLine < pCode->GetSize() && it != m_mapCodeCache.end())
+			t_size nSrcLine;
+			std::cin >> nSrcLine;
+			t_size nCodeLine = pCode->GetCodeLine(nSrcLine);
+			auto it = m_mapCodeCache.find(nCodeLine);
+			if (nCodeLine < pCode->GetSize() && it != m_mapCodeCache.end())
 			{
-				std::string& sCmd = pCode->ChangeAt(nLine);
+				std::string& sCmd = pCode->ChangeAt(nCodeLine);
 				sCmd = std::move(it->second);
 				m_mapCodeCache.erase(it);
+
+				std::cout << std::endl << "-> Breakpoint removed from PC line #" << std::dec << nCodeLine;
 			}
+			else
+				std::cout << std::endl << "!-> Breakpoint not removed.";
 		}
-		else if (chCommand == 'x')
+		else if (m_chLastCommand == 'x')
 		{
 			m_pMachine = nullptr;
 		}
@@ -156,17 +166,17 @@ bool CDebugger::Break()
 
 void CDebugger::PrintState(CProcessor::SState const& tState)
 {
-	std::cout << "Processor State: ------------------------"  << std::endl;
-	std::cout << "PC = " << std::dec << tState.nPC << "  ";
+	std::cout << std::endl;
+	std::cout << "Processor State: -------------------------------------------"  << std::endl;
 	std::cout << "Flags: CF(" << tState.oFlags.getCarry() << ")  ";
 	std::cout << "ZF(" << tState.oFlags.getZero() << ")  ";
 	std::cout << "SF(" << tState.oFlags.getSign() << ")  ";
 	std::cout << "PF(" << tState.oFlags.getParity() << ")  ";
 	std::cout << "OF(" << tState.oFlags.getOverflow() << ")  ";
-	std::cout << std::endl;
+	std::cout << std::endl << "PC = " << std::dec << tState.nPC << "  ";
 
-	
-	std::cout << std::endl << "Address register:" << std::endl;
+	std::cout << std::endl;
+	std::cout << "Address registers: -----------------------------------------" << std::endl;
 	std::cout << "A0 (SP) = " << std::hex << std::showbase << tState.aui32ARPool[0] << "  ";
 	std::cout << "A1 (SF) = " << std::hex << std::showbase << tState.aui32ARPool[1] << "  ";
 	std::cout << "A2 = " << std::hex << std::showbase << tState.aui32ARPool[2] << "  ";
@@ -176,9 +186,9 @@ void CDebugger::PrintState(CProcessor::SState const& tState)
 	std::cout << "A5 = " << std::hex << std::showbase << tState.aui32ARPool[5] << "  ";
 	std::cout << "A6 = " << std::hex << std::showbase << tState.aui32ARPool[6] << "  ";
 	std::cout << "A7 = " << std::hex << std::showbase << tState.aui32ARPool[7] << "  ";
-	std::cout << std::endl;
 
-	std::cout << std::endl << "General purpose register:" << std::endl;
+	std::cout << std::endl;
+	std::cout << "General purpose registers: ---------------------------------" << std::endl;
 	std::cout << "R0 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[0]) << "  ";
 	std::cout << "R8 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[8]) << "  ";
 	std::cout << "R16 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[16]) << "  ";
@@ -188,13 +198,9 @@ void CDebugger::PrintState(CProcessor::SState const& tState)
 	std::cout << "R40 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[40]) << "  ";
 	std::cout << "R48 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[48]) << "  ";
 	std::cout << "R56 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[56]) << "  ";
-	std::cout << std::endl;
 
 	CCodePtr pCode = m_pMachine->GetCode();
-	std::cout << pCode->GetAt(tState.nPC) << std::endl;
-
-
-	std::cout << std::endl;
+	std::cout << std::endl << "Next command:  " << pCode->GetAt(tState.nPC);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 } // namespace vm

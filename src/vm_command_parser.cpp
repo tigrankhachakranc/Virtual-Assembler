@@ -156,9 +156,9 @@ const CCommandParser::CCommandDefinitionMap CCommandParser::ms_mapCommands {
 	std::make_pair(std::string("POP"), CCommandParser::SCommandDefinition
 		{&CProcessor::IExecutor::Pop, true, EArgType::AGR}),
 	std::make_pair(std::string("PUSHF"), CCommandParser::SCommandDefinition
-		{&CProcessor::IExecutor::Push, false}),
+		{&CProcessor::IExecutor::PushF, false}),
 	std::make_pair(std::string("POPF"), CCommandParser::SCommandDefinition
-		{&CProcessor::IExecutor::Pop, false}),
+		{&CProcessor::IExecutor::PopF, false}),
 	// Memory
 	std::make_pair(std::string("LOAD"), CCommandParser::SCommandDefinition
 		{&CProcessor::IExecutor::Load, true, EArgType::AGR, EArgType::AR}),
@@ -271,7 +271,7 @@ CProcessor::SArgument CCommandParser::ParseArgument(
 	// Allow decode filter to parse first
 	if (sToken.compare("ZERO") == 0 || sToken.compare("Zero") == 0)
 	{	// Zero could not be hooked
-		tArg.eType = CProcessor::SArgument::Number;
+		tArg.eType = CProcessor::SArgument::Zero;
 		tArg.nValue = 0;
 	}
 	else if (pDecodeFilter != nullptr)
@@ -286,33 +286,37 @@ CProcessor::SArgument CCommandParser::ParseArgument(
 		{
 		case CProcessor::SArgument::AR:
 			if ((uint(eArgType) & uint(EArgType::AR)) == 0)
-				throw base::CException("Invalid argument specified: address register is bot expected.");
+				throw base::CException("Invalid argument specified: address register is not expected.");
 			break;
 		case CProcessor::SArgument::GPR:
 			if ((uint(eArgType) & uint(EArgType::GR)) == 0)
-				throw base::CException("Invalid argument specified: generic register is bot expected.");
+				throw base::CException("Invalid argument specified: generic register is not expected.");
 			break;
 		case CProcessor::SArgument::Number:
 			if ((uint(eArgType) & uint(EArgType::NUM)) == 0)
-				throw base::CException("Invalid argument specified: number is bot expected.");
+				throw base::CException("Invalid argument specified: number is not expected.");
 			break;
 		case CProcessor::SArgument::Offset:
 			if ((uint(eArgType) & uint(EArgType::Offset)) == 0)
-				throw base::CException("Invalid argument specified: offset is bot expected.");
+				throw base::CException("Invalid argument specified: offset is not expected.");
+			break;
+		case CProcessor::SArgument::Zero:
+			if ((uint(eArgType) & (uint(EArgType::AR) | uint(EArgType::GR) | uint(EArgType::NUM) | uint(EArgType::SameR))) == 0)
+				throw base::CException("Invalid argument specified: ZERO is not expected.");
 			break;
 		default:
-			throw base::CException("Invalid argument specified: unknown is bot expected.");
+			throw base::CException("Invalid argument specified.");
 			break;
 		}
 	}
 	else if ((chFirst == '+' || chFirst == '-') || (chFirst >= '0' && chFirst <= '9'))
 	{	// Numeric
 		if ((uint(eArgType) & uint(EArgType::NUM)) == 0)
-			throw base::CException("Invalid argument specified: numberic is bot expected.");
+			throw base::CException("Invalid argument specified: numberic is not expected.");
 		if ((uint(eArgType) & uint(EArgType::Offset)) == 0 &&
 			(uint(eArgType) & uint(EArgType::Signed)) == 0 &&
 			(chFirst == '+' || chFirst == '-'))
-			throw base::CException("Invalid argument specified: signed number is bot expected.");
+			throw base::CException("Invalid argument specified: signed number is not expected.");
 
 		if ((uint(eArgType) & uint(EArgType::Offset)) != 0 &&
 			(chFirst == '+' || chFirst == '-'))
@@ -326,13 +330,19 @@ CProcessor::SArgument CCommandParser::ParseArgument(
 		if (nStrPos != sToken.size())
 			throw base::CException("Invalid number specified.");
 	}
-	else
+	else if (chFirst == 'A' || chFirst == 'R')
 	{	// Register
 
 		// get index
 		sToken.erase(0, 1);
 		std::size_t nStrPos = 0;
-		tArg.nValue = std::stoi(sToken, &nStrPos, 10);
+		try
+		{
+			tArg.nValue = std::stoi(sToken, &nStrPos, 10);
+		}
+		catch (std::exception const&)
+		{ }
+
 		if (nStrPos != sToken.size())
 			throw base::CException("Invalid register index specified.");
 
@@ -356,7 +366,7 @@ CProcessor::SArgument CCommandParser::ParseArgument(
 
 			tArg.eType = CProcessor::SArgument::AR;
 		}
-		else if (chFirst == 'R')
+		else // (chFirst == 'R')
 		{
 			if ((uint(eArgType) & uint(EArgType::GR)) == 0)
 				// This should be generic register
@@ -366,9 +376,9 @@ CProcessor::SArgument CCommandParser::ParseArgument(
 
 			tArg.eType = CProcessor::SArgument::GPR;
 		}
-		else
-			throw base::CException("Unknown argument specified.");
 	}
+	else
+		throw base::CException("Unknown argument specified.");
 
 	return tArg;
 }

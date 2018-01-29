@@ -243,21 +243,22 @@ void CProcessor::SetDecodeFilter(IDecodeFilterPtr pDecodeFilter)
 
 void CProcessor::Run(CException* pError)
 {
-	try
+	if (!IsValid())
+		throw base::CException("Error: Attempting to run unitizlized processor.");
+	if (m_tState.bRun)
+		throw base::CException("Error: Attempting to run processor repetitive while it already is running.");
+
+	// Start running
+	m_tState.bRun = true;
+	bool bSuccessfull = true;
+
+	if (m_pDebugger != nullptr)
+		m_tState.bRun &= m_pDebugger->Start();
+
+	// Main loop
+	while (m_tState.bRun)
 	{
-		if (!IsValid())
-			throw base::CException("Error: Attempting to run unitizlized processor.");
-		if (m_tState.bRun)
-			throw base::CException("Error: Attempting to run processor repetitive while it already is running.");
-
-		// Start running
-		m_tState.bRun = true;
-
-		if (m_pDebugger != nullptr)
-			m_tState.bRun &= m_pDebugger->Start();
-
-		// Main loop
-		while (m_tState.bRun)
+		try
 		{
 			// Fetch current command
 			m_sCurrentCommand = std::move(Fetch());
@@ -277,65 +278,96 @@ void CProcessor::Run(CException* pError)
 					m_tState.bRun = false;
 			}
 		}
-
-		if (m_pDebugger != nullptr)
-			m_pDebugger->End();
-	}
-	catch (CException& e)
-	{
-		if (m_pDebugger != nullptr)
-			m_pDebugger->Error();
-
-		if (pError == nullptr)
-			throw; //rethrow
-		else
-		{	// caller wants to get error manually rather than catching it
-			// This happens when Run() called within the context of worker thread
-			*pError = std::move(e);
+		catch (CException& e)
+		{
+			if (m_pDebugger != nullptr)
+			{
+				m_tState.bRun = m_pDebugger->Error(e);
+				bSuccessfull = m_tState.bRun;
+			}
+			else
+			{
+				bSuccessfull = false;
+				m_tState.bRun = false;
+				if (pError == nullptr)
+					throw;
+				else
+				{	// caller wants to get error manually rather than catching it
+					// This happens when Run() called within the context of worker thread
+					*pError = std::move(e);
+				}
+			}
 		}
-	}
-	catch (base::CException& be)
-	{
-		if (m_pDebugger != nullptr)
-			m_pDebugger->Error();
-
-		if (pError == nullptr)
-			throw; //rethrow
-		else
-		{	// caller wants to get error manually rather than catching it
-			// This happens when Run() called within the context of worker thread
+		catch (base::CException& be)
+		{
 			CException e(std::move(be), m_tState.nPC, m_sCurrentCommand);
-			*pError = std::move(e);
-		}
-	}
-	catch (std::exception const& se)
-	{
-		if (m_pDebugger != nullptr)
-			m_pDebugger->Error();
 
-		if (pError == nullptr)
-			throw; //rethrow
-		else
-		{	// caller wants to get error manually rather than catching it
-			// This happens when Run() called within the context of worker thread
+			if (m_pDebugger != nullptr)
+			{
+				m_tState.bRun = m_pDebugger->Error(e);
+				bSuccessfull = m_tState.bRun;
+			}
+			else
+			{
+				bSuccessfull = false;
+				m_tState.bRun = false;
+				if (pError == nullptr)
+					throw;
+				else
+				{	// caller wants to get error manually rather than catching it
+					// This happens when Run() called within the context of worker thread
+					*pError = std::move(e);
+				}
+			}
+		}
+		catch (std::exception const& se)
+		{
 			CException e(se, m_tState.nPC, m_sCurrentCommand);
-			*pError = std::move(e);
-		}
-	}
-	catch (...)
-	{
-		if (m_pDebugger != nullptr)
-			m_pDebugger->Error();
 
-		if (pError == nullptr)
-			throw; //rethrow
-		else
-		{	// caller wants to get error manually rather than catching it
-			// This happens when Run() called within the context of worker thread
+			if (m_pDebugger != nullptr)
+			{
+				m_tState.bRun = m_pDebugger->Error(e);
+				bSuccessfull = m_tState.bRun;
+			}
+			else
+			{
+				bSuccessfull = false;
+				m_tState.bRun = false;
+				if (pError == nullptr)
+					throw;
+				else
+				{	// caller wants to get error manually rather than catching it
+					// This happens when Run() called within the context of worker thread
+					*pError = std::move(e);
+				}
+			}
+		}
+		catch (...)
+		{
 			CException e("Unknown exception caught in Run().", m_tState.nPC, m_sCurrentCommand);
-			*pError = std::move(e);
+
+			if (m_pDebugger != nullptr)
+			{
+				m_tState.bRun = m_pDebugger->Error(e);
+				bSuccessfull = m_tState.bRun;
+			}
+			else
+			{
+				bSuccessfull = false;
+				m_tState.bRun = false;
+				if (pError == nullptr)
+					throw;
+				else
+				{	// caller wants to get error manually rather than catching it
+					// This happens when Run() called within the context of worker thread
+					*pError = std::move(e);
+				}
+			}
 		}
 	}
+
+	if (m_pDebugger != nullptr)
+		m_pDebugger->End(bSuccessfull);
 }
 
 void CProcessor::Stop()

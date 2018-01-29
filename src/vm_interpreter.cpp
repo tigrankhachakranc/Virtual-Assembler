@@ -3,6 +3,9 @@
 //
 #include "vm_interpreter.h"
 
+// STL
+#include <cassert>
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 namespace vm {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -22,7 +25,6 @@ CProcessor::SArgument CDecodeFilter::ParseArgument(
 	std::string const& sArgument)
 {
 	CProcessor::SArgument tArg;
-	CMemoryManagerPtr pMemMan = m_pMemMan.lock();
 
 	// Try label
 	auto itLbl = m_mapLabels.find(sArgument);
@@ -31,11 +33,15 @@ CProcessor::SArgument CDecodeFilter::ParseArgument(
 		tArg.eType = CProcessor::SArgument::Number;
 		tArg.nValue = itLbl->second;
 	}
-	else if (pMemMan != nullptr)
-	{	// Try variable anme
-		tArg.nValue = pMemMan->GetVariableOffset(sArgument);
-		if (tArg.nValue > 0)
-			tArg.eType = CProcessor::SArgument::Number;
+	else
+	{
+		CMemoryManagerPtr pMemMan = m_pMemMan.lock();
+		if (pMemMan != nullptr)
+		{	// Try variable anme
+			tArg.nValue = pMemMan->GetVariableOffset(sArgument);
+			if (tArg.nValue > 0)
+				tArg.eType = CProcessor::SArgument::Number;
+		}
 	}
 	return tArg;
 }
@@ -158,13 +164,6 @@ void CInterpreter::Reset()
 			m_pCPU->Stop();
 	}
 
-	m_pCPU = nullptr;
-	m_pCode = nullptr;
-	m_pMemMan = nullptr;
-	m_pIOMan = nullptr;
-	m_pDecoeFilter = nullptr;
-	m_pDebugger = nullptr;
-
 	if (m_oWorkerThread.joinable())
 	{	// We have two options here
 		// Either wait to the thread, but if it is hunged then we also will hung.
@@ -179,8 +178,15 @@ void CInterpreter::Reset()
 	else if (isRunning)
 	{	// CPU is working in the same thread
 		// Very very bad situation, almost Fatal, never ever should happen!!!
-		throw base::CException("Fatal error: Interpreter is reset or destroyed during run.");
+		assert(false);//throw base::CException("Fatal error: Interpreter is reset or destroyed during run.");
 	}
+
+	m_pCPU = nullptr;
+	m_pCode = nullptr;
+	m_pMemMan = nullptr;
+	m_pIOMan = nullptr;
+	m_pDecoeFilter = nullptr;
+	m_pDebugger = nullptr;
 
 	m_oLastError.Clear();
 }

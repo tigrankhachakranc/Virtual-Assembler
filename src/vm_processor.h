@@ -34,14 +34,25 @@ class IDebugger
 public:
 	virtual ~IDebugger();
 
+	// CPU informs debugger that its execution started
 	virtual bool Start() = 0;
-	virtual void End() = 0;
-	virtual void Error() = 0;
+	// CPU informs debugger that its execution finished
+	// bSuccessfull = true means processor finished normally
+	// bSuccessfull = false means processor stopped because of an error
+	virtual void End(bool bSuccessfull) = 0;
 
-	// Processor calls will call Break() upon breakpoint or trap from its execution loop
+	// Processor will call Error() upon exception during program execution
+	// If Break() returns true CPU execution should continue
+	// If Break() returns FALSE CPU execution should be stopped
+	virtual bool Error(CException const& e) = 0;
+
+	// Processor will call Break() upon breakpoint or trap from its execution loop
 	// If Break() returns true CPU execution should continue
 	// If Break() returns FALSE CPU execution should be stopped
 	virtual bool Break() = 0;
+
+	// Special note: if processor is executed within worker thread
+	// all above functions will be called within worker thread
 };
 
 using IDebuggerPtr = std::shared_ptr<IDebugger>;
@@ -226,7 +237,8 @@ public:
 			AR,		// Address register index
 			GPR,	// General purpose register index
 			Number,	// Numeric value
-			Offset	// Offset
+			Offset,	// Offset
+			Zero
 		};
 
 		EType	eType;

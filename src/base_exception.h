@@ -21,16 +21,17 @@ class CException : public std::exception
 public:
 	inline CException();
 
-	inline CException(char const* const&);
+	inline CException(char const* const psErrMsg);
 	inline CException(std::string const& sErrMsg);
 	inline CException(std::string&& sErrMsg);
-	inline CException(std::exception const&);
 
+	inline CException(std::exception const&);
 	inline CException(CException const& o);
 	inline CException(CException&& o);
 
-	inline CException& operator=(CException const&);
 	inline CException& operator=(std::exception const&);
+	inline CException& operator=(CException const&);
+	inline CException& operator=(CException&&);
 
 	inline std::string const& GetErrorMsg() const;
 	char const* what() const override;
@@ -50,8 +51,8 @@ inline CException::CException()
 {
 }
 
-inline CException::CException(char const* const& sErrMsg)
-	: m_sErrorMsg(sErrMsg)
+inline CException::CException(char const* const psErrMsg)
+	: Base(psErrMsg)
 {
 }
 
@@ -66,7 +67,7 @@ inline CException::CException(std::string&& sErrMsg)
 }
 
 inline CException::CException(std::exception const& o)
-	: m_sErrorMsg(o.what())
+	: Base(o)
 {
 }
 
@@ -80,6 +81,12 @@ inline CException::CException(CException&& o)
 {
 }
 
+inline CException& CException::operator=(std::exception const& o)
+{
+	Base::operator=(o);
+	m_sErrorMsg.clear();
+}
+
 inline CException& CException::operator=(CException const& o)
 {
 	Base::operator=(o);
@@ -87,10 +94,11 @@ inline CException& CException::operator=(CException const& o)
 	return *this;
 }
 
-inline CException& CException::operator=(std::exception const& o)
+inline CException& CException::operator=(CException&& o)
 {
-	Base::operator=(std::exception());
-	m_sErrorMsg = std::move(std::string(o.what()));
+	Base::operator=(o);
+	m_sErrorMsg = std::move(o.m_sErrorMsg);
+	return *this;
 }
 
 inline std::string const& CException::GetErrorMsg() const

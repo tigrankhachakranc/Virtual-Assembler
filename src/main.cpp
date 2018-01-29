@@ -55,8 +55,6 @@ int main(int argc, char* argv[])
 			pMachine->Init(oInput);
 			pMachine->SetDebugger(pDebugger);
 			pMachine->Run(false);
-
-			std::cout << std::endl << "Succeed" << std::endl;
 		}
 	}
 	catch (std::exception& e)

@@ -222,6 +222,12 @@ CExecutor::t_parArgument CExecutor::GetArgument(
 		parArg.second = CProcessor::EOpSize::DWord;
 		break;
 	}
+	case CProcessor::SArgument::Zero:
+	{
+		parArg.first = (void*) &pArg->nValue;
+		parArg.second = CProcessor::EOpSize::DWord;
+		break;
+	}
 	default:
 		throw base::CException("Runtime error: argument is invalid.");
 	}
@@ -251,9 +257,9 @@ void CExecutor::Break(SMachineState& tMachineState, SCommandContext& tCommand)
 void CExecutor::Jump(SMachineState& tMachineState, SCommandContext& tCommand)
 {
 	if (tCommand.tArg1.eType == CProcessor::SArgument::Offset)
-		tMachineState.nPC += tCommand.tArg1.Number;
+		tMachineState.nPC += (t_index) tCommand.tArg1.nValue;
 	else if (tCommand.tArg1.eType == CProcessor::SArgument::Number)
-		tMachineState.nPC = tCommand.tArg1.Number;
+		tMachineState.nPC = (t_index) tCommand.tArg1.nValue;
 	else
 		throw base::CException("Runtime error in Jump: Invalid argument.");
 }
@@ -275,7 +281,7 @@ void CExecutor::Call(SMachineState& tMachineState, SCommandContext& tCommand)
 		m_pMemory->At<t_offset>(tMachineState.nSP) = tMachineState.nSF;
 
 		// Change PC
-		tMachineState.nPC = tCommand.tArg1.Number;
+		tMachineState.nPC = (t_index) tCommand.tArg1.nValue;
 		// Change SF
 		tMachineState.nSF = tMachineState.nSP;
 	}

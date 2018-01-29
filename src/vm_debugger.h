@@ -33,12 +33,8 @@ public:
 	//	Methods
 	//
 	bool Start() override;
-	void End() override;
-	void Error() override;
-
-	// Processor calls will call Break() upon breakpoint or trap from its execution loop
-	// If Break() returns true CPU execution should continue
-	// If Break() returns FALSE CPU execution should be stopped
+	void End(bool bSuccessfull) override;
+	bool Error(CException const&) override;
 	bool Break() override;
 
 private:
@@ -52,6 +48,8 @@ private:
 	CInterpreterPtr		m_pMachine;
 	std::string const	m_sBreakCmd;
 	std::unordered_map<t_size, std::string>	m_mapCodeCache;
+	// Additional helpers
+	char				m_chLastCommand;
 };
 
 using CDebuggerPtr = std::shared_ptr<CDebugger>;

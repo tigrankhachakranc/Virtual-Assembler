@@ -47,6 +47,7 @@ CCodePtr Preprocessor::Run(
 	CCodePtr pCode;
 	std::string sLine;
 	std::vector<std::string> aProgram;
+	std::vector<t_index> aSourceMapping;
 	int nLineNumber = 0;
 	
 	// Indicates default
@@ -55,6 +56,7 @@ CCodePtr Preprocessor::Run(
 	while (!oInput.eof())
 	{
 		std::getline(oInput, sLine);
+		aSourceMapping.push_back((t_index) aProgram.size());
 		++nLineNumber;
 
 		// Find comments and eliminate
@@ -114,7 +116,7 @@ CCodePtr Preprocessor::Run(
 			if (chAfterName == '[')
 			{	// Array specifier
 				if (eKeyword == EKeyword::String)
-					throw CException("Array specified is not applicable to string.", nLineNumber, sToken);
+					throw CException("Array specifier is not applicable to string.", nLineNumber, sToken);
 
 				nSize = oParser.ParseNumber<t_size>(']');
 				if (nSize > 1024)
@@ -182,7 +184,7 @@ CCodePtr Preprocessor::Run(
 						break;
 					}
 					default:
-						throw CException("Variable type not allowed.", nLineNumber, sToken);
+						throw CException("Invalid variable type.", nLineNumber, sToken);
 					}
 				} //fi (ch == '=')
 				else if (ch != 0)
@@ -223,10 +225,34 @@ CCodePtr Preprocessor::Run(
 					break;
 				}
 				default:
-					throw CException("Variable type not allowed.", nLineNumber, sToken);
+					throw CException("Invalid variable type.", nLineNumber, sToken);
 				}
 			}
-			else if (chAfterName != 0)
+			else if (chAfterName == 0)
+			{
+				switch (eKeyword)
+				{
+				case EKeyword::Byte:
+					oValue = std::move(CValue(EType::Byte, 1));
+					break;
+				case EKeyword::Word:
+					oValue = std::move(CValue(EType::Word, 1));
+					break;
+				case EKeyword::DWord:
+					oValue = std::move(CValue(EType::DWord, 1));
+					break;
+				case EKeyword::QWord:
+					oValue = std::move(CValue(EType::QWord, 1));
+					break;
+				case EKeyword::String:
+					throw CException("Expecting string initializer.", nLineNumber, sToken);
+					break;
+				default:
+					throw CException("Invalid variable type.", nLineNumber, sToken);
+				}
+
+			}
+			else
 				throw CException("Invalid symbols after variable declaration.", nLineNumber, sToken);
 
 			// Define variable
@@ -237,15 +263,16 @@ CCodePtr Preprocessor::Run(
 			oParser.RevertPreviousParse();
 			std::string sCodeLine = std::move(oParser.ParseTillEnd(s_cchComment, true));
 			if (!sCodeLine.empty())
-				// Save code line
+			{	// Save code line
 				aProgram.push_back(std::move(sCodeLine));
+			}
 		}
 	}
 
 	// Create code
 	if (!aProgram.empty())
 	{
-		pCode = CCodePtr(new CCode(std::move(aProgram)));
+		pCode = CCodePtr(new CCode(std::move(aProgram), std::move(aSourceMapping)));
 	}
 	return pCode;
 }

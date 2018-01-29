@@ -1383,13 +1383,15 @@ extern "C" uint16 __stdcall fnCMP32(uint32* pLeft, uint32* pRight)
 	uint16 flags = 0;
 	uint32 lval = *pLeft;
 	uint32 rval = *pRight;
-	uint32 res = lval - rval;
-	(void) res;
+	__asm mov EAX, lval
+	__asm mov EBX, rval
+	__asm cmp EAX, EBX
 	__asm pushf
 	__asm pop AX
 	__asm mov flags, AX
 	return flags;
 }
+
 extern "C" uint16 __stdcall fnCMP64(uint64* pLeft, uint64* pRight)
 {
 	uint16 flags = 0;
