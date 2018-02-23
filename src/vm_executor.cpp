@@ -72,15 +72,15 @@ extern "C" uint16 __stdcall fnDEC16(uint16* pTarget);
 extern "C" uint16 __stdcall fnDEC32(uint32* pTarget);
 extern "C" uint16 __stdcall fnDEC64(uint64* pTarget);
 
-extern "C" uint16 __stdcall fnADC8 (uint8* pLeft, uint8* pRight, uint8* pTarget);
-extern "C" uint16 __stdcall fnADC16(uint16* pLeft, uint16* pRight, uint16* pTarget);
-extern "C" uint16 __stdcall fnADC32(uint32* pLeft, uint32* pRight, uint32* pTarget);
-extern "C" uint16 __stdcall fnADC64(uint64* pLeft, uint64* pRight, uint64* pTarget);
+extern "C" uint16 __stdcall fnADC8 (uint8* pLeft, uint8* pRight, uint8* pTarget, bool bCarryFlag);
+extern "C" uint16 __stdcall fnADC16(uint16* pLeft, uint16* pRight, uint16* pTarget, bool bCarryFlag);
+extern "C" uint16 __stdcall fnADC32(uint32* pLeft, uint32* pRight, uint32* pTarget, bool bCarryFlag);
+extern "C" uint16 __stdcall fnADC64(uint64* pLeft, uint64* pRight, uint64* pTarget, bool bCarryFlag);
 
-extern "C" uint16 __stdcall fnSBB8 (uint8* pLeft, uint8* pRight, uint8* pTarget);
-extern "C" uint16 __stdcall fnSBB16(uint16* pLeft, uint16* pRight, uint16* pTarget);
-extern "C" uint16 __stdcall fnSBB32(uint32* pLeft, uint32* pRight, uint32* pTarget);
-extern "C" uint16 __stdcall fnSBB64(uint64* pLeft, uint64* pRight, uint64* pTarget);
+extern "C" uint16 __stdcall fnSBB8 (uint8* pLeft, uint8* pRight, uint8* pTarget, bool bCarryFlag);
+extern "C" uint16 __stdcall fnSBB16(uint16* pLeft, uint16* pRight, uint16* pTarget, bool bCarryFlag);
+extern "C" uint16 __stdcall fnSBB32(uint32* pLeft, uint32* pRight, uint32* pTarget, bool bCarryFlag);
+extern "C" uint16 __stdcall fnSBB64(uint64* pLeft, uint64* pRight, uint64* pTarget, bool bCarryFlag);
 
 extern "C" uint16 __stdcall fnIMUL8 (uint8* pLeft, uint8* pRight, uint8* pTarget);
 extern "C" uint16 __stdcall fnIMUL16(uint16* pLeft, uint16* pRight, uint16* pTarget);
@@ -98,44 +98,44 @@ extern "C" uint16 __stdcall fnNEG32(uint32* pTarget);
 extern "C" uint16 __stdcall fnNEG64(uint64* pTarget);
 
 extern "C" uint16 __stdcall fnSHR8 (uint8* pTarget, uint8* pOperand);
-extern "C" uint16 __stdcall fnSHR16(uint16* pTarget, uint16* pOperand);
-extern "C" uint16 __stdcall fnSHR32(uint32* pTarget, uint32* pOperand);
-extern "C" uint16 __stdcall fnSHR64(uint64* pTarget, uint64* pOperand);
+extern "C" uint16 __stdcall fnSHR16(uint16* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnSHR32(uint32* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnSHR64(uint64* pTarget, uint8* pOperand);
 
 extern "C" uint16 __stdcall fnSHL8 (uint8* pTarget, uint8* pOperand);
-extern "C" uint16 __stdcall fnSHL16(uint16* pTarget, uint16* pOperand);
-extern "C" uint16 __stdcall fnSHL32(uint32* pTarget, uint32* pOperand);
-extern "C" uint16 __stdcall fnSHL64(uint64* pTarget, uint64* pOperand);
+extern "C" uint16 __stdcall fnSHL16(uint16* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnSHL32(uint32* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnSHL64(uint64* pTarget, uint8* pOperand);
 
 extern "C" uint16 __stdcall fnROR8 (uint8* pTarget, uint8* pOperand);
-extern "C" uint16 __stdcall fnROR16(uint16* pTarget, uint16* pOperand);
-extern "C" uint16 __stdcall fnROR32(uint32* pTarget, uint32* pOperand);
-extern "C" uint16 __stdcall fnROR64(uint64* pTarget, uint64* pOperand);
+extern "C" uint16 __stdcall fnROR16(uint16* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnROR32(uint32* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnROR64(uint64* pTarget, uint8* pOperand);
 
 extern "C" uint16 __stdcall fnROL8 (uint8* pTarget, uint8* pOperand);
-extern "C" uint16 __stdcall fnROL16(uint16* pTarget, uint16* pOperand);
-extern "C" uint16 __stdcall fnROL32(uint32* pTarget, uint32* pOperand);
-extern "C" uint16 __stdcall fnROL64(uint64* pTarget, uint64* pOperand);
+extern "C" uint16 __stdcall fnROL16(uint16* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnROL32(uint32* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnROL64(uint64* pTarget, uint8* pOperand);
 
 extern "C" uint16 __stdcall fnSAR8 (uint8* pTarget, uint8* pOperand);
-extern "C" uint16 __stdcall fnSAR16(uint16* pTarget, uint16* pOperand);
-extern "C" uint16 __stdcall fnSAR32(uint32* pTarget, uint32* pOperand);
-extern "C" uint16 __stdcall fnSAR64(uint64* pTarget, uint64* pOperand);
+extern "C" uint16 __stdcall fnSAR16(uint16* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnSAR32(uint32* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnSAR64(uint64* pTarget, uint8* pOperand);
 
 extern "C" uint16 __stdcall fnSAL8 (uint8* pTarget, uint8* pOperand);
-extern "C" uint16 __stdcall fnSAL16(uint16* pTarget, uint16* pOperand);
-extern "C" uint16 __stdcall fnSAL32(uint32* pTarget, uint32* pOperand);
-extern "C" uint16 __stdcall fnSAL64(uint64* pTarget, uint64* pOperand);
+extern "C" uint16 __stdcall fnSAL16(uint16* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnSAL32(uint32* pTarget, uint8* pOperand);
+extern "C" uint16 __stdcall fnSAL64(uint64* pTarget, uint8* pOperand);
 
-extern "C" uint16 __stdcall fnRCR8 (uint8* pTarget, uint8* pOperand);
-extern "C" uint16 __stdcall fnRCR16(uint16* pTarget, uint16* pOperand);
-extern "C" uint16 __stdcall fnRCR32(uint32* pTarget, uint32* pOperand);
-extern "C" uint16 __stdcall fnRCR64(uint64* pTarget, uint64* pOperand);
+extern "C" uint16 __stdcall fnRCR8 (uint8* pTarget, uint8* pOperand, bool bCarryFlag);
+extern "C" uint16 __stdcall fnRCR16(uint16* pTarget, uint8* pOperand, bool bCarryFlag);
+extern "C" uint16 __stdcall fnRCR32(uint32* pTarget, uint8* pOperand, bool bCarryFlag);
+extern "C" uint16 __stdcall fnRCR64(uint64* pTarget, uint8* pOperand, bool bCarryFlag);
 
-extern "C" uint16 __stdcall fnRCL8 (uint8* pTarget, uint8* pOperand);
-extern "C" uint16 __stdcall fnRCL16(uint16* pTarget, uint16* pOperand);
-extern "C" uint16 __stdcall fnRCL32(uint32* pTarget, uint32* pOperand);
-extern "C" uint16 __stdcall fnRCL64(uint64* pTarget, uint64* pOperand);
+extern "C" uint16 __stdcall fnRCL8 (uint8* pTarget, uint8* pOperand, bool bCarryFlag);
+extern "C" uint16 __stdcall fnRCL16(uint16* pTarget, uint8* pOperand, bool bCarryFlag);
+extern "C" uint16 __stdcall fnRCL32(uint32* pTarget, uint8* pOperand, bool bCarryFlag);
+extern "C" uint16 __stdcall fnRCL64(uint64* pTarget, uint8* pOperand, bool bCarryFlag);
 
 extern "C" uint16 __stdcall fnTEST8 (uint8* pLeft, uint8* pRight);
 extern "C" uint16 __stdcall fnTEST16(uint16* pLeft, uint16* pRight);
@@ -329,16 +329,16 @@ void CExecutor::Assign(SMachineState& tMachineState, SCommandContext& tCommand)
 	switch (parReg.second)
 	{
 	case CProcessor::EOpSize::Byte:
-		*reinterpret_cast<t_byte*>(parReg.first) = static_cast<t_byte>(tCommand.tArg2.nValue);
+		*reinterpret_cast<t_byte*>(parReg.first) = static_cast<t_byte>(tCommand.tArg2.uValue);
 		break;
 	case CProcessor::EOpSize::Word:
-		*reinterpret_cast<t_word*>(parReg.first) = static_cast<t_word>(tCommand.tArg2.nValue);
+		*reinterpret_cast<t_word*>(parReg.first) = static_cast<t_word>(tCommand.tArg2.uValue);
 		break;
 	case CProcessor::EOpSize::DWord:
-		*reinterpret_cast<t_dword*>(parReg.first) = static_cast<t_dword>(tCommand.tArg2.nValue);
+		*reinterpret_cast<t_dword*>(parReg.first) = static_cast<t_dword>(tCommand.tArg2.uValue);
 		break;
 	case CProcessor::EOpSize::QWord:
-		*reinterpret_cast<t_qword*>(parReg.first) = static_cast<t_qword>(tCommand.tArg2.nValue);
+		*reinterpret_cast<t_qword*>(parReg.first) = static_cast<t_qword>(tCommand.tArg2.uValue);
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");
@@ -812,16 +812,16 @@ void CExecutor::AddC(SMachineState& tMachineState, SCommandContext& tCommand)
 	switch (parOpL.second)
 	{
 	case CProcessor::EOpSize::Byte:
-		ui16Flags = fnADC8(reinterpret_cast<t_byte*>(parOpL.first), reinterpret_cast<t_byte*>(parOpR.first), reinterpret_cast<t_byte*>(parTrgt.first));
+		ui16Flags = fnADC8(reinterpret_cast<t_byte*>(parOpL.first), reinterpret_cast<t_byte*>(parOpR.first), reinterpret_cast<t_byte*>(parTrgt.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::Word:
-		ui16Flags = fnADC16(reinterpret_cast<t_word*>(parOpL.first), reinterpret_cast<t_word*>(parOpR.first), reinterpret_cast<t_word*>(parTrgt.first));
+		ui16Flags = fnADC16(reinterpret_cast<t_word*>(parOpL.first), reinterpret_cast<t_word*>(parOpR.first), reinterpret_cast<t_word*>(parTrgt.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::DWord:
-		ui16Flags = fnADC32(reinterpret_cast<t_dword*>(parOpL.first), reinterpret_cast<t_dword*>(parOpR.first), reinterpret_cast<t_dword*>(parTrgt.first));
+		ui16Flags = fnADC32(reinterpret_cast<t_dword*>(parOpL.first), reinterpret_cast<t_dword*>(parOpR.first), reinterpret_cast<t_dword*>(parTrgt.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::QWord:
-		ui16Flags = fnADC64(reinterpret_cast<t_qword*>(parOpL.first), reinterpret_cast<t_qword*>(parOpR.first), reinterpret_cast<t_qword*>(parTrgt.first));
+		ui16Flags = fnADC64(reinterpret_cast<t_qword*>(parOpL.first), reinterpret_cast<t_qword*>(parOpR.first), reinterpret_cast<t_qword*>(parTrgt.first), tMachineState.oFlags.getCarry());
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");
@@ -846,16 +846,16 @@ void CExecutor::SubB(SMachineState& tMachineState, SCommandContext& tCommand)
 	switch (parOpL.second)
 	{
 	case CProcessor::EOpSize::Byte:
-		ui16Flags = fnSBB8(reinterpret_cast<t_byte*>(parOpL.first), reinterpret_cast<t_byte*>(parOpR.first), reinterpret_cast<t_byte*>(parTrgt.first));
+		ui16Flags = fnSBB8(reinterpret_cast<t_byte*>(parOpL.first), reinterpret_cast<t_byte*>(parOpR.first), reinterpret_cast<t_byte*>(parTrgt.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::Word:
-		ui16Flags = fnSBB16(reinterpret_cast<t_word*>(parOpL.first), reinterpret_cast<t_word*>(parOpR.first), reinterpret_cast<t_word*>(parTrgt.first));
+		ui16Flags = fnSBB16(reinterpret_cast<t_word*>(parOpL.first), reinterpret_cast<t_word*>(parOpR.first), reinterpret_cast<t_word*>(parTrgt.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::DWord:
-		ui16Flags = fnSBB32(reinterpret_cast<t_dword*>(parOpL.first), reinterpret_cast<t_dword*>(parOpR.first), reinterpret_cast<t_dword*>(parTrgt.first));
+		ui16Flags = fnSBB32(reinterpret_cast<t_dword*>(parOpL.first), reinterpret_cast<t_dword*>(parOpR.first), reinterpret_cast<t_dword*>(parTrgt.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::QWord:
-		ui16Flags = fnSBB64(reinterpret_cast<t_qword*>(parOpL.first), reinterpret_cast<t_qword*>(parOpR.first), reinterpret_cast<t_qword*>(parTrgt.first));
+		ui16Flags = fnSBB64(reinterpret_cast<t_qword*>(parOpL.first), reinterpret_cast<t_qword*>(parOpR.first), reinterpret_cast<t_qword*>(parTrgt.first), tMachineState.oFlags.getCarry());
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");
@@ -978,13 +978,13 @@ void CExecutor::ShiftR(SMachineState& tMachineState, SCommandContext& tCommand)
 		ui16Flags = fnSHR8(reinterpret_cast<t_byte*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::Word:
-		ui16Flags = fnSHR16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_word*>(parArg.first));
+		ui16Flags = fnSHR16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::DWord:
-		ui16Flags = fnSHR32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_dword*>(parArg.first));
+		ui16Flags = fnSHR32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::QWord:
-		ui16Flags = fnSHR64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_qword*>(parArg.first));
+		ui16Flags = fnSHR64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");
@@ -1010,13 +1010,13 @@ void CExecutor::ShiftL(SMachineState& tMachineState, SCommandContext& tCommand)
 		ui16Flags = fnSHL8(reinterpret_cast<t_byte*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::Word:
-		ui16Flags = fnSHL16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_word*>(parArg.first));
+		ui16Flags = fnSHL16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::DWord:
-		ui16Flags = fnSHL32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_dword*>(parArg.first));
+		ui16Flags = fnSHL32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::QWord:
-		ui16Flags = fnSHL64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_qword*>(parArg.first));
+		ui16Flags = fnSHL64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");
@@ -1042,13 +1042,13 @@ void CExecutor::RotateR(SMachineState& tMachineState, SCommandContext& tCommand)
 		ui16Flags = fnROR8(reinterpret_cast<t_byte*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::Word:
-		ui16Flags = fnROR16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_word*>(parArg.first));
+		ui16Flags = fnROR16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::DWord:
-		ui16Flags = fnROR32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_dword*>(parArg.first));
+		ui16Flags = fnROR32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::QWord:
-		ui16Flags = fnROR64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_qword*>(parArg.first));
+		ui16Flags = fnROR64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");
@@ -1074,13 +1074,13 @@ void CExecutor::RotateL(SMachineState& tMachineState, SCommandContext& tCommand)
 		ui16Flags = fnROL8(reinterpret_cast<t_byte*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::Word:
-		ui16Flags = fnROL16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_word*>(parArg.first));
+		ui16Flags = fnROL16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::DWord:
-		ui16Flags = fnROL32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_dword*>(parArg.first));
+		ui16Flags = fnROL32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::QWord:
-		ui16Flags = fnROL64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_qword*>(parArg.first));
+		ui16Flags = fnROL64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");
@@ -1106,13 +1106,13 @@ void CExecutor::ShiftAR(SMachineState& tMachineState, SCommandContext& tCommand)
 		ui16Flags = fnSAR8(reinterpret_cast<t_byte*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::Word:
-		ui16Flags = fnSAR16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_word*>(parArg.first));
+		ui16Flags = fnSAR16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::DWord:
-		ui16Flags = fnSAR32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_dword*>(parArg.first));
+		ui16Flags = fnSAR32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::QWord:
-		ui16Flags = fnSAR64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_qword*>(parArg.first));
+		ui16Flags = fnSAR64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");
@@ -1138,13 +1138,13 @@ void CExecutor::ShiftAL(SMachineState& tMachineState, SCommandContext& tCommand)
 		ui16Flags = fnSAL8(reinterpret_cast<t_byte*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::Word:
-		ui16Flags = fnSAL16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_word*>(parArg.first));
+		ui16Flags = fnSAL16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::DWord:
-		ui16Flags = fnSAL32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_dword*>(parArg.first));
+		ui16Flags = fnSAL32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	case CProcessor::EOpSize::QWord:
-		ui16Flags = fnSAL64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_qword*>(parArg.first));
+		ui16Flags = fnSAL64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");
@@ -1167,16 +1167,16 @@ void CExecutor::RotateCR(SMachineState& tMachineState, SCommandContext& tCommand
 	switch (parTrgt.second)
 	{
 	case CProcessor::EOpSize::Byte:
-		ui16Flags = fnRCR8(reinterpret_cast<t_byte*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
+		ui16Flags = fnRCR8(reinterpret_cast<t_byte*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::Word:
-		ui16Flags = fnRCR16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_word*>(parArg.first));
+		ui16Flags = fnRCR16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::DWord:
-		ui16Flags = fnRCR32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_dword*>(parArg.first));
+		ui16Flags = fnRCR32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::QWord:
-		ui16Flags = fnRCR64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_qword*>(parArg.first));
+		ui16Flags = fnRCR64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first), tMachineState.oFlags.getCarry());
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");
@@ -1199,16 +1199,16 @@ void CExecutor::RotateCL(SMachineState& tMachineState, SCommandContext& tCommand
 	switch (parTrgt.second)
 	{
 	case CProcessor::EOpSize::Byte:
-		ui16Flags = fnRCL8(reinterpret_cast<t_byte*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first));
+		ui16Flags = fnRCL8(reinterpret_cast<t_byte*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::Word:
-		ui16Flags = fnRCL16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_word*>(parArg.first));
+		ui16Flags = fnRCL16(reinterpret_cast<t_word*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::DWord:
-		ui16Flags = fnRCL32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_dword*>(parArg.first));
+		ui16Flags = fnRCL32(reinterpret_cast<t_dword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first), tMachineState.oFlags.getCarry());
 		break;
 	case CProcessor::EOpSize::QWord:
-		ui16Flags = fnRCL64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_qword*>(parArg.first));
+		ui16Flags = fnRCL64(reinterpret_cast<t_qword*>(parTrgt.first), reinterpret_cast<t_byte*>(parArg.first), tMachineState.oFlags.getCarry());
 		break;
 	default:
 		throw base::CException("Runtime error: Unknown operand size.");

@@ -326,7 +326,10 @@ CProcessor::SArgument CCommandParser::ParseArgument(
 
 		// Check if it is hexadecimal
 		size_t nStrPos = 0;
-		tArg.nValue = std::stoll(sToken, &nStrPos, 0);
+		if ((chFirst == '+' || chFirst == '-'))
+			tArg.nValue = std::stoll(sToken, &nStrPos, 0);
+		else
+			tArg.uValue = std::stoull(sToken, &nStrPos, 0);
 		if (nStrPos != sToken.size())
 			throw base::CException("Invalid number specified.");
 	}

@@ -242,7 +242,12 @@ public:
 		};
 
 		EType	eType;
-		int64	nValue;
+
+		union
+		{
+			int64	nValue;
+			uint64	uValue;
+		};
 
 		inline SArgument();
 	};

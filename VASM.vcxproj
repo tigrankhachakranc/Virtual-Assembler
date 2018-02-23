@@ -191,6 +191,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="test1.vasm" />
+    <None Include="test2.vasm" />
+    <None Include="test3.vasm" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

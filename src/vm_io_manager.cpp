@@ -29,13 +29,13 @@ void CIOManager::CPorts::In(t_index nPort, CValue& oValue)
 	if (nPort == 0)
 	{
 		char ch;
-		std::cout << std::endl << "VM >> ";
+		std::cout << std::endl << "(VM) >> ";
 		std::cin.get(ch);
 		oValue = CValue((t_byte) ch);
 	}
 	else if (nPort == 1)
 	{
-		std::cout << std::endl << "VM >> ";
+		std::cout << std::endl << "(VM) >> ";
 		switch (oValue.GetType())
 		{
 		case EType::Byte:
@@ -75,14 +75,14 @@ void CIOManager::CPorts::Out(t_index nPort, CValue const& oValue)
 	if (nPort == 0)
 	{
 		//if (m_nLastOutPos != std::cout.tellp())
-			std::cout << "VM << ";
+			std::cout << "(VM) << ";
 		std::cout.put((char) static_cast<t_byte>(oValue));
 		m_nLastOutPos = (t_size) std::cout.tellp();
 	}
 	else if (nPort == 1)
 	{
 		if (m_nLastOutPos != std::cout.tellp())
-			std::cout << "VM << ";
+			std::cout << "(VM) << ";
 		switch (oValue.GetType())
 		{
 		case EType::Byte:

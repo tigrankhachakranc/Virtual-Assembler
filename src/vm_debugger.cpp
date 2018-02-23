@@ -5,6 +5,7 @@
 
 // STL
 #include <iostream>
+#include <iomanip>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 namespace vm { 
@@ -36,9 +37,9 @@ bool CDebugger::Start()
 void CDebugger::End(bool bSuccessfull)
 {
 	if (bSuccessfull)
-		std::cout << std::endl << "!-> Program execution finished!";
+		std::cout << std::endl << ">> Program execution finished!";
 	else
-		std::cout << std::endl << "!-> Program execution stopped!";
+		std::cout << std::endl << "!> Program execution stopped!";
 	std::cin.get();
 
 	m_pMachine = nullptr;
@@ -52,7 +53,7 @@ bool CDebugger::Error(CException const& e)
 		PrintState(tState);
 	}
 
-	std::cout << std::endl << "!-> " << e.what();
+	std::cout << std::endl << "!> " << e.what();
 
 	return false;
 }
@@ -95,7 +96,7 @@ bool CDebugger::Break()
 	}
 	else
 	{
-		std::cout << std::endl << "!-> Machine is not available";
+		std::cout << std::endl << "!> Machine is not available";
 	}
 
 	while (m_pMachine != nullptr)
@@ -107,7 +108,35 @@ bool CDebugger::Break()
 		std::cout << std::endl << "-> ";
 		std::cin >> m_chLastCommand;
 
-		if (m_chLastCommand == 'g')
+		if (m_chLastCommand == '?')
+		{
+			std::cout << "g                         Go: run program until finished or breakpoint reached" << std::endl;
+			std::cout << "t [N=1]                   Trace: execute single instruction N times" << std::endl;
+			std::cout << "j <line>                  Jump: set PC to the specified number of source code" << std::endl;
+			std::cout << "b <line>                  Set breakpoint at line number of source code" << std::endl;
+			std::cout << "r <line>                  Remove breakpoint from line number of source code" << std::endl;
+			std::cout << "d [var]                   Dump content of the variable with name <var> (by default will dump all variables)" << std::endl;
+			std::cout << "ds [size=64]              Dump stack with specified size of bytes" << std::endl;
+			std::cout << "a [B|W|DW|QW] A|R?=<val>  Assign specifed value to the register" << std::endl;
+			std::cout << "a <var>=<val>             Assign specifed value to the variable" << std::endl;
+			std::cout << "st <Flag>                 Set specified flag" << std::endl;
+			std::cout << "cl <Flag>                 Clear specified flag" << std::endl;
+			std::cout << "x                         Stop program execution" << std::endl;
+		}
+		else if (m_chLastCommand == 'j')
+		{
+			t_size nSrcLine;
+			std::cin >> nSrcLine;
+			t_size nCodeLine = pCode->GetCodeLine(nSrcLine);
+			if (nCodeLine < pCode->GetSize())
+			{
+				pCPU->SetPC(nCodeLine);
+				PrintState(tState);
+			}
+			else
+				std::cout << "!> Invalid source code line number.";
+		}
+		else if (m_chLastCommand == 'g')
 		{
 			auto it = m_mapCodeCache.find(tState.nPC);
 			if (it != m_mapCodeCache.end())
@@ -130,13 +159,13 @@ bool CDebugger::Break()
 				m_mapCodeCache.find(nCodeLine) == m_mapCodeCache.end())
 			{
 				std::string& sCmd = pCode->ChangeAt(nCodeLine);
-				std::cout << std::endl << "-> Breakpoint set at PC line #" << std::dec << nCodeLine << ": " << sCmd;
+				std::cout << ">> Breakpoint set at PC line #" << std::dec << nCodeLine << ": " << sCmd;
 
 				m_mapCodeCache.insert(std::move(std::make_pair(nCodeLine, std::move(sCmd))));
 				sCmd = m_sBreakCmd;
 			}
 			else
-				std::cout << std::endl << "!-> Breakpoint not set.";
+				std::cout << "!> Breakpoint not set.";
 		}
 		else if (m_chLastCommand == 'r')
 		{
@@ -150,10 +179,10 @@ bool CDebugger::Break()
 				sCmd = std::move(it->second);
 				m_mapCodeCache.erase(it);
 
-				std::cout << std::endl << "-> Breakpoint removed from PC line #" << std::dec << nCodeLine;
+				std::cout << ">> Breakpoint removed from PC line #" << std::dec << nCodeLine;
 			}
 			else
-				std::cout << std::endl << "!-> Breakpoint not removed.";
+				std::cout << "!> Breakpoint not removed.";
 		}
 		else if (m_chLastCommand == 'x')
 		{
@@ -167,40 +196,41 @@ bool CDebugger::Break()
 void CDebugger::PrintState(CProcessor::SState const& tState)
 {
 	std::cout << std::endl;
-	std::cout << "Processor State: -------------------------------------------"  << std::endl;
-	std::cout << "Flags: CF(" << tState.oFlags.getCarry() << ")  ";
-	std::cout << "ZF(" << tState.oFlags.getZero() << ")  ";
-	std::cout << "SF(" << tState.oFlags.getSign() << ")  ";
-	std::cout << "PF(" << tState.oFlags.getParity() << ")  ";
-	std::cout << "OF(" << tState.oFlags.getOverflow() << ")  ";
-	std::cout << std::endl << "PC = " << std::dec << tState.nPC << "  ";
+	std::cout << "Processor status flags: ---------------------------------------"  << std::endl;
+	std::cout << "CF:" << std::dec << tState.oFlags.getCarry() << "  ";
+	std::cout << "PF:" << std::dec << tState.oFlags.getParity() << "  ";
+	std::cout << "ZF:" << std::dec << tState.oFlags.getZero() << "  ";
+	std::cout << "SF:" << std::dec << tState.oFlags.getSign() << "  ";
+	std::cout << "OF:" << std::dec << tState.oFlags.getOverflow() << "  ";
 
 	std::cout << std::endl;
-	std::cout << "Address registers: -----------------------------------------" << std::endl;
-	std::cout << "A0 (SP) = " << std::hex << std::showbase << tState.aui32ARPool[0] << "  ";
-	std::cout << "A1 (SF) = " << std::hex << std::showbase << tState.aui32ARPool[1] << "  ";
-	std::cout << "A2 = " << std::hex << std::showbase << tState.aui32ARPool[2] << "  ";
-	std::cout << "A3 = " << std::hex << std::showbase << tState.aui32ARPool[3] << "  ";
+	std::cout << "Address registers (0x): ---------------------------------------" << std::endl;
+	std::cout << "A0 (SP) = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.aui32ARPool[0] << "  ";
+	std::cout << "A2 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.aui32ARPool[2] << "  ";
+	std::cout << "A4 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.aui32ARPool[4] << "  ";
+	std::cout << "A6 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.aui32ARPool[6] << "  ";
 	std::cout << std::endl;
-	std::cout << "A4 = " << std::hex << std::showbase << tState.aui32ARPool[4] << "  ";
-	std::cout << "A5 = " << std::hex << std::showbase << tState.aui32ARPool[5] << "  ";
-	std::cout << "A6 = " << std::hex << std::showbase << tState.aui32ARPool[6] << "  ";
-	std::cout << "A7 = " << std::hex << std::showbase << tState.aui32ARPool[7] << "  ";
+	std::cout << "A1 (SF) = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.aui32ARPool[1] << "  ";
+	std::cout << "A3 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.aui32ARPool[3] << "  ";
+	std::cout << "A5 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.aui32ARPool[5] << "  ";
+	std::cout << "A7 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.aui32ARPool[7] << "  ";
 
 	std::cout << std::endl;
-	std::cout << "General purpose registers: ---------------------------------" << std::endl;
-	std::cout << "R0 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[0]) << "  ";
-	std::cout << "R8 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[8]) << "  ";
-	std::cout << "R16 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[16]) << "  ";
-	std::cout << "R24 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[24]) << "  ";
+	std::cout << "General purpose registers (0x): --------------------------------------------------------------" << std::endl;
+	std::cout << "R0  = " << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[0]) << "  ";
+	std::cout << "R16 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[16]) << "  ";
+	std::cout << "R32 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[32]) << "  ";
+	std::cout << "R48 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[48]) << "  ";
 	std::cout << std::endl;
-	std::cout << "R32 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[32]) << "  ";
-	std::cout << "R40 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[40]) << "  ";
-	std::cout << "R48 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[48]) << "  ";
-	std::cout << "R56 = " << std::hex << std::showbase << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[56]) << "  ";
+	std::cout << "R8  = " << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[8]) << "  ";
+	std::cout << "R24 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[24]) << "  ";
+	std::cout << "R40 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[40]) << "  ";
+	std::cout << "R56 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << *reinterpret_cast<uint64 const*>(&tState.aui8GPRPool[56]) << "  ";
+	std::cout << std::endl;
 
 	CCodePtr pCode = m_pMachine->GetCode();
-	std::cout << std::endl << "Next command:  " << pCode->GetAt(tState.nPC);
+	std::cout << "Next command: --------------------------------------------------------------------------------" << std::endl;
+	std::cout << "PC = " << std::dec << tState.nPC << ":  " << pCode->GetAt(tState.nPC);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 } // namespace vm

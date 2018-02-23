@@ -129,5 +129,11 @@
     <None Include="test1.vasm">
       <Filter>Test</Filter>
     </None>
+    <None Include="test2.vasm">
+      <Filter>Test</Filter>
+    </None>
+    <None Include="test3.vasm">
+      <Filter>Test</Filter>
+    </None>
   </ItemGroup>
 </Project>
