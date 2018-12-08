@@ -35,3 +35,13 @@
 .vs/
 build/
 VASM.vcxproj.user
+
+# Temporary files
+*.log
+*.tlog
+*.idb
+*.pdb
+*.ilk
+
+# Test files
+*.vasm
