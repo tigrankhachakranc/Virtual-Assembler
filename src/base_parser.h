@@ -56,6 +56,8 @@ public:
 	static inline uchar GetNumValue(char const ch);
 	static inline uchar GetHexNumValue(char const ch);
 
+	static bool IsNum(std::string const& str, size_t nStartPos = 0);
+
 protected:
 	inline void FixCurrentPos();
 	inline void SetCurrentPos(t_index nPos);

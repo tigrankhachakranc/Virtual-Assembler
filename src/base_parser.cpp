@@ -242,6 +242,14 @@ void CParser::RevertPreviousParse()
 {
 	m_nPos = m_nPrevPos;
 }
+
+bool CParser::IsNum(std::string const& str, size_t nPos)
+{
+	bool bResult = nPos < str.size() ? IsNum(str[nPos]) : false;
+	for (++nPos; nPos < str.size() && bResult; ++nPos)
+		bResult &= IsNum(str[nPos]);
+	return bResult;
+}
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

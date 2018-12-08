@@ -43,17 +43,6 @@ public:
 	inline t_size GetStackSize() const;
 
 	// Variable support
-	t_size GetVariableOffset(std::string const& sName) const;
-	CValue GetVariable(std::string const& sName) const;
-
-private:
-	// Helpers
-	void AddVariable(std::string const& sName, CValue const& oValue);
-
-private:
-	//
-	//	Content
-	//
 	struct SVarInfo
 	{
 		EType	eType;
@@ -63,8 +52,24 @@ private:
 
 		inline SVarInfo();
 		inline SVarInfo(CValue const& oVal, t_size offset);
+
+		inline bool operator==(SVarInfo const&) const;
+		inline bool operator!=(SVarInfo const&) const;
 	};
 
+	t_size GetVariableOffset(std::string const& sName) const;
+	SVarInfo GetVariableInfo(std::string const& sName) const;
+	CValue GetVariable(std::string const& sName) const;
+	bool SetVariable(std::string const& sName, CValue const& oValue);
+
+private:
+	// Helpers
+	void AddVariable(std::string const& sName, CValue const& oValue);
+
+private:
+	//
+	//	Content
+	//
 	using t_mapVariables = std::unordered_map<std::string, SVarInfo>;
 
 	t_size			m_nDataMarker;
@@ -114,6 +119,16 @@ inline CMemoryManager::SVarInfo::SVarInfo(
 	: eType(oVal.GetType()), bString(oVal.IsString()),
 	  nSize(oVal.GetSize()), nOffset(offset)
 {
+}
+
+inline bool CMemoryManager::SVarInfo::operator==(SVarInfo const& o) const
+{
+	return o.eType == eType && o.nSize == nSize && o.bString == bString;
+}
+
+inline bool CMemoryManager::SVarInfo::operator!=(SVarInfo const& o) const
+{
+	return !operator==(o);
 }
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -122,6 +122,36 @@ CValue CMemoryManager::GetVariable(std::string const& sName) const
 	return oValue;
 }
 
+bool CMemoryManager::SetVariable(std::string const& sName, CValue const& oValue)
+{
+	bool bOk = false;
+	CMemory const& oRAM = Memory();
+	auto it = m_mapVariables.find(sName);
+	if (it != m_mapVariables.end())
+	{
+		SVarInfo const& tVarInfo = it->second;
+		SVarInfo tVarInfo2(oValue, tVarInfo.nOffset);
+		if (tVarInfo != tVarInfo2)
+			base::CException("Failed to assign variable: type mismatch.");
+
+		if (tVarInfo.nSize > 0)
+		{
+			std::memcpy((void*)&oRAM[tVarInfo.nOffset], (void*) static_cast<void const*>(oValue), tVarInfo.nSize);
+			bOk = true;
+		}
+	}
+	return bOk;
+}
+
+CMemoryManager::SVarInfo CMemoryManager::GetVariableInfo(std::string const& sName) const
+{
+	SVarInfo tInfo;
+	auto it = m_mapVariables.find(sName);
+	if (it != m_mapVariables.end())
+		tInfo = it->second;
+	return tInfo;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 } // namespace vm
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
