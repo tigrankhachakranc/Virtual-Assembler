@@ -92,6 +92,42 @@ int main(int argc, char* argv[])
 					sOutputName += sExtension;
 
 				dev::CDisassembler::Disassemble(sExecutableName, sOutputName);
+
+				// Finished!
+				std::cout << "Disassembly success!" << std::endl;
+				return 0;
+			}
+			else if (compare(sFirstArg, t_csz("test")))
+			{
+				if (argc != 4)
+					VASM_THROW_ERROR(t_csz("Invalid usage: Incomplete test arguments"));
+
+				// Get input file
+				t_string sTxt(".txt");
+				t_string sTestName(argv[2]);
+				t_string sOutputName(argv[3]);
+
+				if (!base::EndsWith(sTestName, sTxt))
+					sTestName += sTxt;
+				if (!base::EndsWith(sOutputName, sTxt))
+					sOutputName += sTxt;
+
+				std::ifstream oTestInput(sTestName, std::ios_base::in);
+				std::ofstream oTestOutput(sTestName, std::ios_base::out);
+
+				if (oTestInput.fail())
+					VASM_THROW_ERROR(base::toStr("Failed to open the test '%1'", sTestName));
+				if (oTestOutput.fail())
+					VASM_THROW_ERROR(base::toStr("Failed to open test output '%1'", sOutputName));
+
+				// Instantiate command handler
+				dev::CCommanderUPtr pCommander(new dev::CCommander(oTestInput, oTestOutput));
+				pCommander->Init(vm::CMachinePtr(new vm::CMachine(oTestInput, oTestOutput)));
+				pCommander->Start();
+
+				// Finished!
+				std::cout << "Test completed!" << std::endl;
+				return 0;
 			}
 		}
 
