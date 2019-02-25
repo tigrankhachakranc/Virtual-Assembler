@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Base Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="VM Files">
+      <UniqueIdentifier>{99fd41ae-f9b6-4c51-96f4-c9ef5d724584}</UniqueIdentifier>
+      <Extensions>h;hpp;cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Base Files\Impl">
+      <UniqueIdentifier>{f0143a82-4192-4fc4-82dd-7d5d967e844f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="VM Files\Impl">
+      <UniqueIdentifier>{45fb53bc-ea8d-4ecf-bbf1-33f81da0138c}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Main Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Test">
+      <UniqueIdentifier>{c138c0a8-8f9c-45c4-be35-7b32237cade5}</UniqueIdentifier>
+      <Extensions>vasm</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\base_parser.cpp">
+      <Filter>Base Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm_command_parser.cpp">
+      <Filter>VM Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm_definitions.cpp">
+      <Filter>VM Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm_executor.cpp">
+      <Filter>VM Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm_processor.cpp">
+      <Filter>VM Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Main Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm_preprocessor.cpp">
+      <Filter>VM Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm_memory_manager.cpp">
+      <Filter>VM Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm_interpreter.cpp">
+      <Filter>VM Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm_io_manager.cpp">
+      <Filter>VM Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm_native_commands.cpp">
+      <Filter>VM Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm_debugger.cpp">
+      <Filter>VM Files\Impl</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\base_notification.h">
+      <Filter>Base Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\base_exception.h">
+      <Filter>Base Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\base_definitions.h">
+      <Filter>Base Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\base_parser.h">
+      <Filter>Base Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_code.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_definitions.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_exception.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_executor.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_memory.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_memory_manager.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_processor.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_command_parser.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_preprocessor.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_interpreter.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_io_manager.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_debugger.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\vm_commander.h">
+      <Filter>VM Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="src\vm_native_commands.asm">
+      <Filter>VM Files\Impl</Filter>
+    </MASM>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="test1.vasm">
+      <Filter>Test</Filter>
+    </None>
+    <None Include="test2.vasm">
+      <Filter>Test</Filter>
+    </None>
+    <None Include="test3.vasm">
+      <Filter>Test</Filter>
+    </None>
+  </ItemGroup>
+</Project>

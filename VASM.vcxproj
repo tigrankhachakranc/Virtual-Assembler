@@ -22,7 +22,7 @@
     <ProjectGuid>{541489A4-0C2F-464B-AD27-418E7B69594C}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>ConsoleApplication1</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -95,7 +95,11 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4200;4815</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -106,9 +110,13 @@
     <ClCompile>
       <PrecompiledHeader>
       </PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4200;4815</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -118,13 +126,17 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4200;4815</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -135,13 +147,17 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4200;4815</DisableSpecificWarnings>
+      <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -151,44 +167,100 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="src\base_parser.cpp" />
-    <ClCompile Include="src\vm_command_parser.cpp" />
-    <ClCompile Include="src\vm_debugger.cpp" />
-    <ClCompile Include="src\vm_definitions.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\vm_executor.cpp" />
-    <ClCompile Include="src\vm_interpreter.cpp" />
-    <ClCompile Include="src\vm_io_manager.cpp" />
-    <ClCompile Include="src\vm_memory_manager.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="src\vm_native_commands.cpp">
+    <ClCompile Include="src\app\main.cpp" />
+    <ClCompile Include="src\base\base.cpp" />
+    <ClCompile Include="src\base\parser.cpp" />
+    <ClCompile Include="src\compiler\encoder.cpp" />
+    <ClCompile Include="src\compiler\code_generator.cpp" />
+    <ClCompile Include="src\compiler\command_parser.cpp" />
+    <ClCompile Include="src\compiler\compiler.cpp" />
+    <ClCompile Include="src\compiler\asm_parser.cpp" />
+    <ClCompile Include="src\compiler\linker.cpp" />
+    <ClCompile Include="src\compiler\output_generator.cpp" />
+    <ClCompile Include="src\core\address_recovery.cpp" />
+    <ClCompile Include="src\core\command.cpp" />
+    <ClCompile Include="src\core\command_library.cpp" />
+    <ClCompile Include="src\core\decoder.cpp" />
+    <ClCompile Include="src\core\io_controller.cpp" />
+    <ClCompile Include="src\core\value.cpp" />
+    <ClCompile Include="src\devenv\commander.cpp" />
+    <ClCompile Include="src\devenv\disassembly.cpp" />
+    <ClCompile Include="src\vm\basic_commands.cpp" />
+    <ClCompile Include="src\vm\debugger.cpp" />
+    <ClCompile Include="src\vm\io_commands.cpp" />
+    <ClCompile Include="src\vm\io_devices.cpp" />
+    <ClCompile Include="src\vm\loader.cpp" />
+    <ClCompile Include="src\vm\machine.cpp" />
+    <ClCompile Include="src\vm\main_commands.cpp" />
+    <ClCompile Include="src\vm\native_commands.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="src\vm_preprocessor.cpp" />
-    <ClCompile Include="src\vm_processor.cpp" />
+    <ClCompile Include="src\vm\processor.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\base_definitions.h" />
-    <ClInclude Include="src\base_parser.h" />
-    <ClInclude Include="src\vm_commander.h" />
-    <ClInclude Include="src\vm_command_parser.h" />
-    <ClInclude Include="src\vm_debugger.h" />
-    <ClInclude Include="src\vm_exception.h" />
-    <ClInclude Include="src\vm_executor.h" />
-    <ClInclude Include="src\vm_code.h" />
-    <ClInclude Include="src\vm_definitions.h" />
-    <ClInclude Include="src\base_exception.h" />
-    <ClInclude Include="src\vm_interpreter.h" />
-    <ClInclude Include="src\vm_memory.h" />
-    <ClInclude Include="src\base_notification.h" />
-    <ClInclude Include="src\vm_memory_manager.h" />
-    <ClInclude Include="src\vm_io_manager.h" />
-    <ClInclude Include="src\vm_preprocessor.h" />
-    <ClInclude Include="src\vm_processor.h" />
+    <ClInclude Include="src\base\definitions.h" />
+    <ClInclude Include="src\base\exception.h" />
+    <ClInclude Include="src\base\parser.h" />
+    <ClInclude Include="src\base\notification.h" />
+    <ClInclude Include="src\base\utility.h" />
+    <ClInclude Include="src\compiler\encoder.h" />
+    <ClInclude Include="src\compiler\code_generator.h" />
+    <ClInclude Include="src\compiler\command_parser.h" />
+    <ClInclude Include="src\compiler\compiler.h" />
+    <ClInclude Include="src\compiler\input.h" />
+    <ClInclude Include="src\compiler\intermediate.h" />
+    <ClInclude Include="src\compiler\asm_parser.h" />
+    <ClInclude Include="src\compiler\linker.h" />
+    <ClInclude Include="src\compiler\output_generator.h" />
+    <ClInclude Include="src\compiler\package.h" />
+    <ClInclude Include="src\core\address_recovery.h" />
+    <ClInclude Include="src\core\command.h" />
+    <ClInclude Include="src\core\command_library.h" />
+    <ClInclude Include="src\core\decoder.h" />
+    <ClInclude Include="src\core\definitions.h" />
+    <ClInclude Include="src\core\flags.h" />
+    <ClInclude Include="src\core\io_controller.h" />
+    <ClInclude Include="src\core\memory.h" />
+    <ClInclude Include="src\core\package_info.h" />
+    <ClInclude Include="src\core\value.h" />
+    <ClInclude Include="src\devenv\commander.h" />
+    <ClInclude Include="src\devenv\disassembly.h" />
+    <ClInclude Include="src\include\base_definitions.h" />
+    <ClInclude Include="src\include\base_exception.h" />
+    <ClInclude Include="src\include\base_global.h" />
+    <ClInclude Include="src\include\base_notification.h" />
+    <ClInclude Include="src\include\base_parser.h" />
+    <ClInclude Include="src\include\base_utility.h" />
+    <ClInclude Include="src\include\cl_compiler.h" />
+    <ClInclude Include="src\include\core_address_recovery.h" />
+    <ClInclude Include="src\include\core_command.h" />
+    <ClInclude Include="src\include\core_command_library.h" />
+    <ClInclude Include="src\include\core_decoder.h" />
+    <ClInclude Include="src\include\core_definitions.h" />
+    <ClInclude Include="src\include\core_flags.h" />
+    <ClInclude Include="src\include\core_io_controller.h" />
+    <ClInclude Include="src\include\core_memory.h" />
+    <ClInclude Include="src\include\core_package_info.h" />
+    <ClInclude Include="src\include\core_value.h" />
+    <ClInclude Include="src\include\dev_commander.h" />
+    <ClInclude Include="src\include\dev_disassembly.h" />
+    <ClInclude Include="src\include\vasm_global.h" />
+    <ClInclude Include="src\include\vm_debugger.h" />
+    <ClInclude Include="src\include\vm_loader.h" />
+    <ClInclude Include="src\include\vm_machine.h" />
+    <ClInclude Include="src\vm\basic_commands.h" />
+    <ClInclude Include="src\vm\debugger.h" />
+    <ClInclude Include="src\vm\io_commands.h" />
+    <ClInclude Include="src\vm\io_devices.h" />
+    <ClInclude Include="src\vm\loader.h" />
+    <ClInclude Include="src\vm\machine.h" />
+    <ClInclude Include="src\vm\main_commands.h" />
+    <ClInclude Include="src\vm\package_info.h" />
+    <ClInclude Include="src\vm\processor.h" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="src\vm_native_commands.asm">
+    <MASM Include="src\vm\native_commands.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </MASM>
