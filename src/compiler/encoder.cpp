@@ -199,9 +199,6 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		{
 			if (!bool(eOprType & (uchar) EOprType::IMV))
 				throw CError(t_csz("Encoder: Invalid use of numeric value"), tCmd.nLineNumber, tInfo.pcszName);
-			if (tInfo.eOpCode != EOpCode::JUMPR && tInfo.eOpCode != EOpCode::ASSIGNR2)
-				// Label could be used only with the JUMP & ASSIGN R?, LBL_NAME instructions
-				throw CError(t_csz("Encoder: Invalid use of numeric value"), tCmd.nLineNumber, tInfo.pcszName);
 
 			switch (tCmd.eImvType)
 			{
@@ -237,13 +234,17 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 				std::memcpy(pCode, &tArg.i64Val, sizeof(int64));
 				pCode += sizeof(int64); // Move to next operand
 				break;
-			case EImvType::Num12:
+			case EImvType::Count:
+				*reinterpret_cast<uint8*>(pCode) = tArg.u8Val;
+				pCode += sizeof(uint8); // Move to next operand
+				break;
+			case EImvType::Port:
 				// write lower 8 bits of 12 bit value in place of the argument
 				*reinterpret_cast<uint8*>(pCode) = static_cast<uint8>(tArg.u16Val);
 				// Pack elder 4 bits of 12 bit value into elder 4 bits of the extension
 				*(pCodeBase + 1) = (static_cast<uint8>(tArg.u16Val >> 8) << 4) | (*(pCodeBase + 1) & 0x0Fui8);
 				break;
-			case EImvType::SNum24:
+			case EImvType::Index:
 				//TODO! Failed to preserve endianess, this code is Little Endian speciifc
 				std::memcpy(pCode, &tArg.i64Val, 3);
 				pCode += sizeof(int64); // Move to next operand
@@ -291,10 +292,13 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 				std::memcpy(pCode, &tArg.i64Val, sizeof(int64));
 				pCode += sizeof(int64); // Move to next operand
 				break;
-			case EImvType::Num12:
+			case EImvType::Count:
 				VASM_ASSERT(false);
 				break;
-			case EImvType::SNum24:
+			case EImvType::Port:
+				VASM_ASSERT(false);
+				break;
+			case EImvType::Index:
 				//TODO! Failed to preserve endianess, this code is Little Endian speciifc
 				std::memcpy(pCode, &tArg.i64Val, 3);
 				pCode += sizeof(int64); // Move to next operand

@@ -146,7 +146,7 @@ void CCodeGenerator::MakeCode(SUnit const& tUnit, SPackage& tPackage, bool bIncl
 		MakeFunc(tFunc, tPackage, nCodeMarker, pDbgEntry);
 
 		// Keep function size
-		tEntry.nSize = tEntry.nBase - nCodeMarker;
+		tEntry.nSize = nCodeMarker - tEntry.nBase;
 	}
 
 	// Resize code it its exact final size
@@ -177,21 +177,29 @@ void CCodeGenerator::MakeFunc(
 	// Also collect label code locations to adjust local labels later in this function
 	std::vector<t_uoffset> aLblLocations(tFunc.aLabels.size());
 	t_index nCurrLbl = 0;
-	
+
+	t_size nDbgCodeTblIdx = 0;
+	if (pDbgInfo != nullptr)
+		pDbgInfo->aCodeTbl.resize(tFunc.nSizeLine);
+
 	for (t_index nCmd = 0; nCmd < tFunc.aCommands.size(); ++nCmd)
 	{
 		SCommand const& tCmd = tFunc.aCommands.at(nCmd);
 
 		// Is the current command labeld?
-		while (nCurrLbl < tFunc.aLabels.size() && tFunc.aLabels.at(nCurrLbl).nIndex == nCmd)
-			aLblLocations[nCurrLbl] = nCodeMarker;
+		if (nCurrLbl < tFunc.aLabels.size() && tFunc.aLabels.at(nCurrLbl).nIndex == nCmd)
+			aLblLocations[nCurrLbl++] = nCodeMarker;
 
 		// Check code buffer available space
 		if (tPackage.aCode.size() < nCodeMarker + core::cnCmdMaxLength)
 			tPackage.aCode.resize(nCodeMarker + (tFunc.aCommands.size() - nCmd) * cnCmdAvrgLength + core::cnCmdMaxLength);
 
 		if (pDbgInfo != nullptr)
-			pDbgInfo->aCodeTbl.push_back(nCodeMarker - nCodeMarkerBase);
+		{
+			t_size nRelativeLineIdx = tCmd.nLineNumber - tFunc.nBaseLine;
+			while (nDbgCodeTblIdx <= nRelativeLineIdx)
+				pDbgInfo->aCodeTbl[nDbgCodeTblIdx++] = (nCodeMarker - nCodeMarkerBase);
+		}
 
 		nCodeMarker += oEncoder.Encode(tCmd, nCodeMarker);
 	}

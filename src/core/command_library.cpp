@@ -40,9 +40,9 @@ void CCommandLibrary::Register(CCommandPtr pCommand)
 		m_setCommands.insert(pCommand);
 
 		t_size nInstructionCount = pCommand->GetInstructionCount();
-		for (t_index i = nInstructionCount - 1; i >= 0; --i)
+		for (t_index i = nInstructionCount; i > 0; --i)
 		{
-			SInstructionInfo tInfo = pCommand->GetInstruction(i);
+			SInstructionInfo tInfo = pCommand->GetInstruction(i-1);
 
 			// Instruction  with Invalid OpCode is reserved
 			if (tInfo.tMetaInfo.eOpCode == EOpCode::Invalid)
@@ -50,9 +50,9 @@ void CCommandLibrary::Register(CCommandPtr pCommand)
 			
 			t_index idxOpCode = (t_index) tInfo.tMetaInfo.eOpCode;
 			if (idxOpCode >= m_aInstructions.size())
-				m_aInstructions.resize(idxOpCode);
+				m_aInstructions.resize(idxOpCode + 1);
 
-			m_aInstructions[idxOpCode] = tInfo;
+ 			m_aInstructions[idxOpCode] = tInfo;
 		}
 
 		// Pass address recovery to command

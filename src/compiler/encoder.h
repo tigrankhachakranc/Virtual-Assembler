@@ -108,7 +108,7 @@ inline CEncoder::CError::CError() :
 
 inline CEncoder::CError::CError(
 	t_csz psErrMsg, t_index nLine, t_csz pszCommandName) :
-	Base(psErrMsg), m_nLineNumber(nLine), m_pszCommandName(pszCommandName)
+	Base(t_string(psErrMsg)), m_nLineNumber(nLine), m_pszCommandName(pszCommandName)
 {
 }
 

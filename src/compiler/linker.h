@@ -101,7 +101,7 @@ private:
 //
 inline CLinker::CError::CError(
 	t_csz psErrMsg, t_string const& sPkgName) :
-	Base(psErrMsg), m_sPkgName(sPkgName)
+	Base(t_string(psErrMsg)), m_sPkgName(sPkgName)
 {
 }
 

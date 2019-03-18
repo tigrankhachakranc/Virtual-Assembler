@@ -58,6 +58,7 @@ struct SPackageHeader
 
 	char const		cszSignatue[SignatureSize]; // "TK.VASM.PKG" + '\0'
 	uint const		cnVersion; // Package version
+	uint64 const	cnPadding; // reserved
 	
 	t_count	const	nSectionCount = SectionCount_V1;
 	SSectionInfo	aSections[SectionCount_V1];
@@ -218,6 +219,7 @@ inline SSectionInfo::SSectionInfo(EType tp, t_uoffset base, t_uoffset size) :
 inline SPackageHeader::SPackageHeader() :
 	cszSignatue{'T', 'K', '.', 'V', 'A', 'S', 'M', '.', 'P', 'K', 'G', '\0'},
 	cnVersion(CurrentVersion),
+	cnPadding(0),
 	aSections{SSectionInfo::EType::Info,
 			  SSectionInfo::EType::Code,
 			  SSectionInfo::EType::Data,

@@ -75,7 +75,8 @@ public:
 	inline CValue ReadValue(t_address, EValueType eType, t_size nCount) const;
 	inline void WriteValue(t_address, CValue const&);
 
-	inline void Fill(std::vector<uchar> const& aBuffer, t_address nBaseAddress = 0);
+	inline uchar* Buffer(t_address = 0);
+	//inline void Fill(std::vector<uchar> const& aBuffer, t_address nBaseAddress = 0);
 
 private:
 	std::vector<uchar>	m_aBuffer;
@@ -228,13 +229,20 @@ inline void CMemory::WriteValue(t_address addr, CValue const& oValue)
 	}
 }
 
-inline void CMemory::Fill(
-	std::vector<uchar> const& aBuffer, t_address nBaseAddr)
+inline uchar* CMemory::Buffer(t_address addr)
 {
-	if (nBaseAddr + aBuffer.size() > m_aBuffer.size())
-		VASM_THROW_ERROR("Out of memory bounds fill.");
-	std::memcpy(&m_aBuffer[nBaseAddr], aBuffer.data(), aBuffer.size());
+	if (addr >= m_aBuffer.size())
+		VASM_THROW_ERROR("Out of memory bounds access.");
+	return &(m_aBuffer[addr]);
 }
+
+//inline void CMemory::Fill(
+//	std::vector<uchar> const& aBuffer, t_address nBaseAddr)
+//{
+//	if (nBaseAddr + aBuffer.size() > m_aBuffer.size())
+//		VASM_THROW_ERROR("Out of memory bounds fill.");
+//	std::memcpy(&m_aBuffer[nBaseAddr], aBuffer.data(), aBuffer.size());
+//}
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

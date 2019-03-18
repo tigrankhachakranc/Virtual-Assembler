@@ -16,6 +16,7 @@ namespace core {
 CValue::CValue(EValueType eType, t_size nCount, void const* pData)
 	: m_eType(eType), m_nCount(nCount)
 {
+	m_tData.qw = 0;
 	if (nCount > 1)
 	{
 		size_t nActualSize = 0;
@@ -38,10 +39,10 @@ CValue::CValue(EValueType eType, t_size nCount, void const* pData)
 			nActualSize = m_nCount * sizeof(t_qword);
 			break;
 		case EValueType::Char:
-			++m_nCount; // One more the last 0
+			m_nCount += (static_cast<t_csz>(pData)[nCount - 1] == t_char(0)) ? 0 : 1; // One more for the the trailing '\0'
 			m_tData.psz = new t_char[m_nCount];
-			nActualSize = m_nCount * sizeof(t_char);
-			m_tData.psz[m_nCount] = t_char(0);
+			nActualSize = nCount * sizeof(t_char);
+			m_tData.psz[m_nCount-1] = t_char(0);
 			break;
 		default:
 			VASM_THROW_ERROR("CValue: Unknown value type");
@@ -54,7 +55,6 @@ CValue::CValue(EValueType eType, t_size nCount, void const* pData)
 	}
 	else
 	{
-		m_tData.qw = 0;
 		if (nCount == 1 && pData != nullptr)
 		{
 			switch (m_eType)
@@ -111,6 +111,7 @@ CValue::CValue(t_qword qwData) noexcept
 CValue::CValue(t_char chData) noexcept
 	: m_eType(EValueType::Char), m_nCount(1)
 {
+	m_tData.qw = 0;
 	m_tData.ch = chData;
 }
 
@@ -188,7 +189,7 @@ CValue::CValue(t_cstring cszData, t_size nSize)
 		m_nCount = (cszData[nSize-1] == t_char(0)) ?  nSize : nSize + 1;
 		m_tData.psz = new t_char[m_nCount];
 		std::memcpy((void*) m_tData.psz, (void*) cszData, nSize * sizeof(t_char));
-		m_tData.pb[m_nCount - 1] = 0; // last '\0'
+		m_tData.psz[m_nCount - 1] = t_char(0); // last '\0'
 	}
 }
 
@@ -201,17 +202,17 @@ CValue::CValue(CValue&& o) noexcept
 {
 	m_eType = o.m_eType;
 	m_nCount = o.m_nCount;
-	m_tData.pqw = o.m_tData.pqw;
+	m_tData.qw = o.m_tData.qw;
 
 	// make other null
 	o.m_nCount = 0;
-	o.m_tData.pqw = nullptr;
+	o.m_tData.qw = 0;
 }
 
 CValue::~CValue() noexcept
 {
 	if (m_nCount > 1)
-		delete m_tData.pb;
+		delete[] m_tData.pb;
 	m_tData.qw = 0;
 	m_nCount = 0;
 }
@@ -231,15 +232,15 @@ CValue& CValue::operator=(CValue&& o) noexcept
 	if (&o != this)
 	{
 		if (m_nCount > 1)
-			delete m_tData.pb;
+			delete[] m_tData.pb;
 
 		m_eType = o.m_eType;
 		m_nCount = o.m_nCount;
-		m_tData.pqw = o.m_tData.pqw;
+		m_tData.qw = o.m_tData.qw;
 
 		// make other null to not release any allocated memory
 		o.m_nCount = 0;
-		o.m_tData.pqw = nullptr;
+		o.m_tData.qw = 0;
 	}
 	return *this;
 }
@@ -312,16 +313,16 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 		switch (oValue.GetType())
 		{
 		case vasm::core::EValueType::Byte:
-			os << static_cast<vasm::core::t_byte>(oValue);
+			os << +static_cast<vasm::core::t_byte>(oValue);
 			break;
 		case vasm::core::EValueType::Word:
-			os << static_cast<vasm::core::t_word>(oValue);
+			os << +static_cast<vasm::core::t_word>(oValue);
 			break;
 		case vasm::core::EValueType::DWord:
-			os << static_cast<vasm::core::t_dword>(oValue);
+			os << +static_cast<vasm::core::t_dword>(oValue);
 			break;
 		case vasm::core::EValueType::QWord:
-			os << static_cast<vasm::core::t_qword>(oValue);
+			os << +static_cast<vasm::core::t_qword>(oValue);
 			break;
 		case vasm::core::EValueType::Char:
 			os << static_cast<vasm::t_char>(oValue);
@@ -341,7 +342,7 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 			{
 				if (i > 0)
 					os << ", ";
-				os << *(&static_cast<vasm::core::t_byte const&>(oValue) + i);
+				os << +(*(&static_cast<vasm::core::t_byte const&>(oValue) + i));
 			}
 			os << "}";
 			break;
@@ -353,7 +354,7 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 			{
 				if (i > 0)
 					os << ", ";
-				os << *(&static_cast<vasm::core::t_word const&>(oValue) + i);
+				os << +(*(&static_cast<vasm::core::t_word const&>(oValue) + i));
 			}
 			os << "}";
 			break;
@@ -365,7 +366,7 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 			{
 				if (i > 0)
 					os << ", ";
-				os << *(&static_cast<vasm::core::t_dword const&>(oValue) + i);
+				os << +(*(&static_cast<vasm::core::t_dword const&>(oValue) + i));
 			}
 			os << "}";
 			break;
@@ -377,7 +378,7 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 			{
 				if (i > 0)
 					os << ", ";
-				os << *(&static_cast<vasm::core::t_qword const&>(oValue) + i);
+				os << +(*(&static_cast<vasm::core::t_qword const&>(oValue) + i));
 			}
 			os << "}";
 			break;

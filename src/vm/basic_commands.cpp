@@ -255,49 +255,49 @@ CBasicCommands::CBasicCommands() : CCommandBase()
 	FuncCmdExec apfnShl[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::ShlB), FuncCmdExec(&CBasicCommands::ShlW),
 		FuncCmdExec(&CBasicCommands::ShlDW), FuncCmdExec(&CBasicCommands::ShlQW) };
-	Register({t_csz("SHL"), EOpCode::SHL, EOprType::GR, EOprType::GRIMV, EImvType::Num8,
+	Register({t_csz("SHL"), EOpCode::SHL, EOprType::GR, EOprType::GRIMV, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			 apfnShl, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnShr[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::ShrB), FuncCmdExec(&CBasicCommands::ShrW),
 		FuncCmdExec(&CBasicCommands::ShrDW), FuncCmdExec(&CBasicCommands::ShrQW) };
-	Register({t_csz("SHR"), EOpCode::SHR, EOprType::GR, EOprType::GRIMV, EImvType::Num8,
+	Register({t_csz("SHR"), EOpCode::SHR, EOprType::GR, EOprType::GRIMV, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			 apfnShr, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnRol[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::RolB), FuncCmdExec(&CBasicCommands::RolW),
 		FuncCmdExec(&CBasicCommands::RolDW), FuncCmdExec(&CBasicCommands::RolQW) };
-	Register({t_csz("ROL"), EOpCode::ROL, EOprType::GR, EOprType::GRIMV, EImvType::Num8,
+	Register({t_csz("ROL"), EOpCode::ROL, EOprType::GR, EOprType::GRIMV, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			 apfnRol, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnRor[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::RorB), FuncCmdExec(&CBasicCommands::RorW),
 		FuncCmdExec(&CBasicCommands::RorDW), FuncCmdExec(&CBasicCommands::RorQW) };
-	Register({t_csz("ROR"), EOpCode::ROR, EOprType::GR, EOprType::GRIMV, EImvType::Num8,
+	Register({t_csz("ROR"), EOpCode::ROR, EOprType::GR, EOprType::GRIMV, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			 apfnRor, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnSal[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::SalB), FuncCmdExec(&CBasicCommands::SalW),
 		FuncCmdExec(&CBasicCommands::SalDW), FuncCmdExec(&CBasicCommands::SalQW) };
-	Register({t_csz("SAL"), EOpCode::SAL, EOprType::GR, EOprType::GRIMV, EImvType::Num8,
+	Register({t_csz("SAL"), EOpCode::SAL, EOprType::GR, EOprType::GRIMV, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			 apfnSal, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnSar[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::SarB), FuncCmdExec(&CBasicCommands::SarW),
 		FuncCmdExec(&CBasicCommands::SarDW), FuncCmdExec(&CBasicCommands::SarQW) };
-	Register({t_csz("SAR"), EOpCode::SAR, EOprType::GR, EOprType::GRIMV, EImvType::Num8,
+	Register({t_csz("SAR"), EOpCode::SAR, EOprType::GR, EOprType::GRIMV, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			 apfnSar, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnRcl[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::RclB), FuncCmdExec(&CBasicCommands::RclW),
 		FuncCmdExec(&CBasicCommands::RclDW), FuncCmdExec(&CBasicCommands::RclQW) };
-	Register({t_csz("RCL"), EOpCode::RCL, EOprType::GR, EOprType::GRIMV, EImvType::Num8,
+	Register({t_csz("RCL"), EOpCode::RCL, EOprType::GR, EOprType::GRIMV, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			 apfnRcl, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnRcr[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::RcrB), FuncCmdExec(&CBasicCommands::RcrW),
 		FuncCmdExec(&CBasicCommands::RcrDW), FuncCmdExec(&CBasicCommands::RcrQW) };
-	Register({t_csz("RCR"), EOpCode::RCR, EOprType::GR, EOprType::GRIMV, EImvType::Num8,
+	Register({t_csz("RCR"), EOpCode::RCR, EOprType::GR, EOprType::GRIMV, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			 apfnRcr, FuncCmdDisasm(&CBasicCommands::DisAsm));
 

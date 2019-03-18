@@ -74,7 +74,7 @@ enum class EOpCode : uchar
 	LOAD,	// IL(4) LOAD  [opsz] AR(n)|GR(n) <- *AR(n)		Reads from memory into the target register
 	STORE,	// IL(4) STORE [opsz] AR(n)|GR(n) -> *AR(n)		Writes into memory from the target register
 	LEA,	// IL(6) LEA AR(n) <- *AR(n)+Index24			Loads effective address, Index is signed 24 bit numeric value
-			//												Reads with from in memory address table by index into address register
+			//												Reads from in memory address table by 24 bit index into the address register
 
 	// Stack instructions
 	PUSHSF,	// IL(2) PUSHSF							Pushes stack frame
@@ -258,20 +258,21 @@ enum class EImvType : uchar
 {
 	None,
 	
-	Num8,	// 8 bit numeric value
+	Num8,	// 8 bit unsigned numeric value
 	SNum8,	// 8 bit signed numeric value
 
-	Num16,	// 16 bit numeric value
+	Num16,	// 16 bit unsigned numeric value
 	SNum16,	// 16 bit signed numeric value
 	
-	Num32,	// 32 bit numeric value
+	Num32,	// 32 bit unsigned numeric value
 	SNum32,	// 32 bit signed numeric value
 	
-	Num64,	// 64 bit numeric value
+	Num64,	// 64 bit unsigned numeric value
 	SNum64,	// 64 bit signed numeric value
 	
-	Num12,	// 12 bit numeric value, in this case 4 highest bits are lowest bits of the extension
-	SNum24	// 24 bit signed numeric value, becomes lower 24 bits of SNum32 value with 1 filled highest byte 
+	Count,	// 8 bit unsigned numeric value that serves as Count of something (shift bits, registers & etc...)
+	Port,	// 12 bit unsigned numeric value that serves as I/O Port number, (4 highest bits packed in the lowest bits of the extension)
+	Index	// 24 bit signed numeric value that serves as index, (lower 24 bits of SNum32 value)
 };
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -16,6 +16,24 @@ using namespace vasm;
 
 CStringComparator<EComparisonType::Equal_CI> compare;
 
+class X
+{
+public:
+
+	void f();
+};
+
+void X::f()
+{
+	class XX
+	{
+	public:
+		inline XX() {}
+	};
+
+	XX o;
+}
+
 
 //
 //	Main
@@ -30,7 +48,7 @@ int main(int argc, char* argv[])
 	std::cout << "Usage: VASM [<program_source>.vasm [...]] | [<binary_program_name>.vasm.bin]" << std::endl;
 	std::cout << "Type ? for the detailed help" << std::endl;
 
-	int nRetCode = 0;
+	int nRetCode = 0; char ch;
 	try
 	{
 		t_string sExtension(".vasm");
@@ -70,6 +88,7 @@ int main(int argc, char* argv[])
 				
 				// Finished!
 				std::cout << "Compilattion success!" << std::endl;
+				std::cin.get(ch);
 				return 0;
 			}
 			else if (compare(sFirstArg, t_csz("disasm")))
@@ -95,6 +114,7 @@ int main(int argc, char* argv[])
 
 				// Finished!
 				std::cout << "Disassembly success!" << std::endl;
+				std::cin.get(ch);
 				return 0;
 			}
 			else if (compare(sFirstArg, t_csz("test")))
@@ -127,6 +147,7 @@ int main(int argc, char* argv[])
 
 				// Finished!
 				std::cout << "Test completed!" << std::endl;
+				std::cin.get(ch);
 				return 0;
 			}
 		}
@@ -168,14 +189,14 @@ int main(int argc, char* argv[])
 	catch (base::CException& e)
 	{
 		nRetCode = -1;
-		std::cout << std::endl << t_csz("Program exited due to error!") << std::endl;
 		std::cout << std::endl << e.GetErrorMsg(true) << std::endl;
+		std::cout << t_csz("Program exited due to error!") << std::endl;
 	}
 	catch (std::exception& e)
 	{
 		nRetCode = -2;
-		std::cout << std::endl << t_csz("Program exited due to std error!") << std::endl;
 		std::cout << std::endl << e.what() << std::endl;
+		std::cout << t_csz("Program exited due to std error!") << std::endl;
 	}
 	catch (...)
 	{
@@ -183,6 +204,6 @@ int main(int argc, char* argv[])
 		std::cout << std::endl << t_csz("Program exited due to unknown error!") << std::endl;
 	}
 
-	std::cin.get();
+	std::cin.get(ch);
 	return nRetCode;
 }

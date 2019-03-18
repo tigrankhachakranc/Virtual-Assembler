@@ -40,8 +40,8 @@ public:
 		typedef base::CException Base;
 	public:
 		inline CError();
-		inline CError(t_csz psErrMsg, CInput const&, t_index nPos, t_string const& sToken);
-		inline CError(t_string const& sErrMsg, CInput const&, t_index nPos, t_string const& sToken);
+		inline CError(t_csz psErrMsg, t_index nLine, t_index nPos, t_string const& sToken);
+		inline CError(t_string const& sErrMsg, t_index nLine, t_index nPos, t_string const& sToken);
 		inline ~CError() = default;
 
 		inline CError(CError const&) = default;
@@ -129,14 +129,14 @@ inline CAsmParser::CError::CError() :
 }
 
 inline CAsmParser::CError::CError(
-	t_csz psErrMsg, CInput const& oInput, t_index nPos, t_string const& sToken) :
-	Base(psErrMsg), m_nLineNumber(oInput.GetLineNumber()), m_nPosition(nPos), m_sToken(sToken)
+	t_csz psErrMsg, t_index nLine, t_index nPos, t_string const& sToken) :
+	Base(t_string(psErrMsg)), m_nLineNumber(nLine), m_nPosition(nPos), m_sToken(sToken)
 {
 }
 
 inline CAsmParser::CError::CError(
-	t_string const& sErrMsg, CInput const& oInput, t_index nPos, t_string const& sToken) :
-	Base(sErrMsg), m_nLineNumber(oInput.GetLineNumber()), m_nPosition(nPos), m_sToken(sToken)
+	t_string const& sErrMsg, t_index nLine, t_index nPos, t_string const& sToken) :
+	Base(sErrMsg), m_nLineNumber(nLine), m_nPosition(nPos), m_sToken(sToken)
 {
 }
 

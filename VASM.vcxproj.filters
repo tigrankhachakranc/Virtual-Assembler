@@ -20,10 +20,6 @@
       <UniqueIdentifier>{45fb53bc-ea8d-4ecf-bbf1-33f81da0138c}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
-    <Filter Include="Test">
-      <UniqueIdentifier>{c138c0a8-8f9c-45c4-be35-7b32237cade5}</UniqueIdentifier>
-      <Extensions>vasm</Extensions>
-    </Filter>
     <Filter Include="Developement Environemtn Files">
       <UniqueIdentifier>{282d6483-5e55-48f9-a5d9-00f7999161d4}</UniqueIdentifier>
     </Filter>
@@ -34,12 +30,6 @@
     <Filter Include="Include">
       <UniqueIdentifier>{1355ba2c-f13c-483f-9b60-8484e008d4d3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Core">
-      <UniqueIdentifier>{f147b319-410c-4035-9b5a-69ad05bbc1da}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Core\Impl">
-      <UniqueIdentifier>{a05ba761-0cda-4668-b189-2fa31c02aeec}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Compiler Files">
       <UniqueIdentifier>{1ba16ae3-74c4-4da3-9f04-9b92907625d6}</UniqueIdentifier>
     </Filter>
@@ -48,6 +38,16 @@
     </Filter>
     <Filter Include="Developement Environemtn Files\Impl">
       <UniqueIdentifier>{d4522691-6dff-4bbf-b55c-1d33e65cba05}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core Files">
+      <UniqueIdentifier>{f147b319-410c-4035-9b5a-69ad05bbc1da}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Core Files\Impl">
+      <UniqueIdentifier>{a05ba761-0cda-4668-b189-2fa31c02aeec}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Test Modules">
+      <UniqueIdentifier>{c138c0a8-8f9c-45c4-be35-7b32237cade5}</UniqueIdentifier>
+      <Extensions>vasm</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -70,19 +70,19 @@
       <Filter>VM Files\Impl</Filter>
     </ClCompile>
     <ClCompile Include="src\core\command.cpp">
-      <Filter>Core\Impl</Filter>
+      <Filter>Core Files\Impl</Filter>
     </ClCompile>
     <ClCompile Include="src\core\command_library.cpp">
-      <Filter>Core\Impl</Filter>
+      <Filter>Core Files\Impl</Filter>
     </ClCompile>
     <ClCompile Include="src\core\decoder.cpp">
-      <Filter>Core\Impl</Filter>
+      <Filter>Core Files\Impl</Filter>
     </ClCompile>
     <ClCompile Include="src\core\io_controller.cpp">
-      <Filter>Core\Impl</Filter>
+      <Filter>Core Files\Impl</Filter>
     </ClCompile>
     <ClCompile Include="src\core\value.cpp">
-      <Filter>Core\Impl</Filter>
+      <Filter>Core Files\Impl</Filter>
     </ClCompile>
     <ClCompile Include="src\vm\machine.cpp">
       <Filter>VM Files\Impl</Filter>
@@ -127,16 +127,13 @@
       <Filter>Developement Environemtn Files\Impl</Filter>
     </ClCompile>
     <ClCompile Include="src\core\address_recovery.cpp">
-      <Filter>Core\Impl</Filter>
+      <Filter>Core Files\Impl</Filter>
     </ClCompile>
     <ClCompile Include="src\devenv\disassembly.cpp">
       <Filter>Developement Environemtn Files\Impl</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\base\notification.h">
-      <Filter>Base Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\base\exception.h">
       <Filter>Base Files</Filter>
     </ClInclude>
@@ -174,25 +171,25 @@
       <Filter>Include</Filter>
     </ClInclude>
     <ClInclude Include="src\core\command.h">
-      <Filter>Core</Filter>
+      <Filter>Core Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\command_library.h">
-      <Filter>Core</Filter>
+      <Filter>Core Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\decoder.h">
-      <Filter>Core</Filter>
+      <Filter>Core Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\definitions.h">
-      <Filter>Core</Filter>
+      <Filter>Core Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\flags.h">
-      <Filter>Core</Filter>
+      <Filter>Core Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\memory.h">
-      <Filter>Core</Filter>
+      <Filter>Core Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\io_controller.h">
-      <Filter>Core</Filter>
+      <Filter>Core Files</Filter>
     </ClInclude>
     <ClInclude Include="src\include\core_command.h">
       <Filter>Include</Filter>
@@ -216,7 +213,7 @@
       <Filter>Include</Filter>
     </ClInclude>
     <ClInclude Include="src\core\value.h">
-      <Filter>Core</Filter>
+      <Filter>Core Files</Filter>
     </ClInclude>
     <ClInclude Include="src\include\base_exception.h">
       <Filter>Include</Filter>
@@ -228,7 +225,7 @@
       <Filter>Include</Filter>
     </ClInclude>
     <ClInclude Include="src\core\package_info.h">
-      <Filter>Core</Filter>
+      <Filter>Core Files</Filter>
     </ClInclude>
     <ClInclude Include="src\vm\machine.h">
       <Filter>VM Files</Filter>
@@ -297,7 +294,7 @@
       <Filter>Developement Environemtn Files</Filter>
     </ClInclude>
     <ClInclude Include="src\core\address_recovery.h">
-      <Filter>Core</Filter>
+      <Filter>Core Files</Filter>
     </ClInclude>
     <ClInclude Include="src\include\core_address_recovery.h">
       <Filter>Include</Filter>
@@ -318,14 +315,8 @@
     </MASM>
   </ItemGroup>
   <ItemGroup>
-    <None Include="test1.vasm">
-      <Filter>Test</Filter>
-    </None>
-    <None Include="test2.vasm">
-      <Filter>Test</Filter>
-    </None>
-    <None Include="test3.vasm">
-      <Filter>Test</Filter>
+    <None Include="test\test1.vasm">
+      <Filter>Test Modules</Filter>
     </None>
   </ItemGroup>
 </Project>

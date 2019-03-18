@@ -167,6 +167,7 @@ inline void CException::Clear()
 #	define VASM_ASSERT(_cndtn_)		assert((bool) (_cndtn_))
 #	define VASM_VERIFY(_cndtn_)		VASM_ASSERT(_cndtn_)
 #endif
+#define VASM_ASSERT_PTR(_ptr_)		VASM_ASSERT(_ptr_ != nullptr)
 
 #define VASM_CHECK(_cndtn_)							if( !bool(_cndtn_) ) { VASM_ASSERT(false); VASM_THROW_INVALID_CONDITION(); }
 #define VASM_CHECK_X(_cndtn_, _message_)			if( !bool(_cndtn_) ) { VASM_ASSERT(false); VASM_THROW_ERROR(_message_); }

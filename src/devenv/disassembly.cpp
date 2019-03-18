@@ -52,7 +52,7 @@ void CDisassembler::Disassemble(std::istream& oInput, std::ostream& oOutput)
 
 	// First put .stack section
 	if (m_tPackage.nStackSize > 0)
-		oOutput << ".stack = " << m_tPackage.nStackSize << std::endl;
+		oOutput << ".STACK = " << m_tPackage.nStackSize << std::endl;
 
 	// put .data section
 	ProcessVariables(oOutput);
@@ -64,7 +64,7 @@ void CDisassembler::Disassemble(std::istream& oInput, std::ostream& oOutput)
 	if (m_tPackage.nProgramStart > 0)
 	{
 		t_string sMain = m_pAddressRecovery->ToSymbol(m_tPackage.nProgramStart);
-		oOutput << ".main = " << sMain << std::endl;
+		oOutput << ".MAIN = " << sMain << std::endl;
 	}
 }
 
@@ -104,10 +104,12 @@ void CDisassembler::ProcessVariables(std::ostream& oOutput)
 {
 	if (!m_tPackage.aVariableTable.empty())
 	{
-		oOutput << std::endl << ".data" << std::endl << std::endl;
+		oOutput << std::endl << ".DATA" << std::endl << std::endl;
 
 		for (auto const& tItem : m_tPackage.aVariableTable)
 		{
+			oOutput << std::resetiosflags(0);
+
 			switch (tItem.eType)
 			{
 			case EValueType::Byte:
@@ -146,51 +148,65 @@ void CDisassembler::ProcessVariables(std::ostream& oOutput)
 				VASM_THROW_ERROR(t_csz("Disassembler: Empty variable definition"));
 			}
 
+			// Do not write the size for strings
 			if (tItem.nSize > 1)
-				oOutput << "[" << tItem.nSize << "]";
+			{
+				if (tItem.eType == EValueType::Char)
+					oOutput << "[]";
+				else
+					oOutput << "[" << tItem.nSize << "]";
+			}
 
 			// Read value contentr from the memory
 			CValue oValue = m_pMemory->ReadValue(tItem.nAddress, tItem.eType, tItem.nSize);
 			if (oValue.IsValid() && !oValue.IsNull() && oValue.GetCount() > 0)
 			{
-				oOutput << "\t = ";
-
 				switch (tItem.eType)
 				{
 				case EValueType::Byte:
 				{
-					oOutput << static_cast<t_byte>(oValue);
+					oOutput << "\t= " << +(static_cast<t_byte>(oValue)); // promotes value to a type printable as a number
 					for (t_index i = 1; i < tItem.nSize; ++i)
-						oOutput << ", " << oValue.operator[]<t_byte>(i);
+						oOutput << ", " << +(oValue.operator[]<t_byte>(i));
 					break;
 				}
 				case EValueType::Word:
 				{
-					oOutput << static_cast<t_word>(oValue);
+					oOutput << "\t= " << static_cast<t_word>(oValue);
 					for (t_index i = 1; i < tItem.nSize; ++i)
 						oOutput << ", " << oValue.operator[]<t_word>(i);
 					break;
 				}
 				case EValueType::DWord:
 				{
-					oOutput << static_cast<t_dword>(oValue);
+					oOutput << std::hex << std::uppercase;
+					t_dword dw = static_cast<t_dword>(oValue);
+					oOutput << "\t= " << (dw == 0 ? "" : "0x") << dw;
 					for (t_index i = 1; i < tItem.nSize; ++i)
-						oOutput << ", " << oValue.operator[]<t_dword>(i);
+					{
+						dw = oValue.operator[]<t_dword>(i);
+						oOutput << ", " << (dw == 0 ? "" : "0x") << dw;
+					}
 					break;
 				}
 				case EValueType::QWord:
 				{
-					oOutput << static_cast<t_qword>(oValue);
+					oOutput << std::hex << std::uppercase;
+					t_qword qw = static_cast<t_qword>(oValue);
+					oOutput << "\t= " << (qw == 0 ? "" : "0x") << qw;
 					for (t_index i = 1; i < tItem.nSize; ++i)
-						oOutput << ", " << oValue.operator[]<t_qword>(i);
+					{
+						qw = oValue.operator[]<t_qword>(i);
+						oOutput << ", " << (qw == 0 ? "" : "0x") << qw;
+					}
 					break;
 				}
 				case EValueType::Char:
 				{
 					if (oValue.IsString())
-						oOutput << '"' << static_cast<t_csz>(oValue) << '"';
-					else
-						oOutput << static_cast<t_char>(oValue);
+						oOutput << " = " << '"' << static_cast<t_csz>(oValue) << '"';
+					else if (static_cast<t_char>(oValue) != 0)
+						oOutput << "\t= " << "'" << static_cast<t_char>(oValue) << "'";
 					break;
 				}
 				default:
@@ -207,14 +223,15 @@ void CDisassembler::ProcessFunctions(std::ostream& oOutput)
 {
 	if (!m_tPackage.aFunctionTable.empty())
 	{
-		oOutput << std::endl << ".code" << std::endl << std::endl;
+		oOutput << std::endl << ".CODE" << std::endl << std::endl;
 
 		// At first put forward declarations for all functions mentioning their source units 
 		for (auto const& tItem : m_tPackage.aFunctionTable)
 		{
+			oOutput << "Func " << tItem.sName << ';';
 			if (!tItem.sSrcUnit.empty())
-				oOutput << "# Unit: " << tItem.sSrcUnit << std::endl;
-			oOutput << "Func " << tItem.sName << ';' << std::endl;
+				oOutput << "\t# Unit: " << tItem.sSrcUnit;
+			oOutput << std::endl;
 
 			if (tItem.sName.empty())
 			{
@@ -227,7 +244,7 @@ void CDisassembler::ProcessFunctions(std::ostream& oOutput)
 		// Put function definitions
 		for (auto const& tItem : m_tPackage.aFunctionTable)
 		{
-			oOutput << "Func " << tItem.sName << ':' << std::endl;
+			oOutput << std::endl << "Func " << tItem.sName << ':' << std::endl;
 			ProcessFunction(oOutput, tItem);
 			oOutput << "EndF" << std::endl;
 		}
@@ -269,8 +286,13 @@ void CDisassembler::ProcessFunction(std::ostream& oOutput, vm::SFunctionInfo con
 		}
 
 		core::SCommandInfo tDecodedCmd;
+		tDecodedCmd.nAddress = nCurrIP;
 		oDecoder.Decode(reinterpret_cast<uchar*>(&eOpCode), tDecodedCmd);
-		oOutput << '\t' << tCmd.pDisasm->Translate(tDecodedCmd, false) << std::endl;
+		nCurrIP += tDecodedCmd.tMetaInfo.nLength;
+
+		bool bHex = (tDecodedCmd.tMetaInfo.eImvType >= core::EImvType::Num32 &&
+					 tDecodedCmd.tMetaInfo.eImvType <= core::EImvType::SNum64);
+		oOutput << '\t' << tCmd.pDisasm->Translate(tDecodedCmd, bHex) << std::endl;
 	}
 }
 
@@ -280,7 +302,7 @@ void CDisassembler::ProcessFunction(std::ostream& oOutput, vm::SFunctionInfo con
 void CDisassembler::Disassemble(t_string const& sBinaryFile, t_string const& sOutputFile)
 {
 	// Open input file
-	std::ifstream oBinFile(sBinaryFile, std::ios_base::in);
+	std::ifstream oBinFile(sBinaryFile, std::ios::in | std::ios::binary);
 	if (oBinFile.fail())
 		VASM_THROW_ERROR(base::toStr("Failed to open input file '%1'", sBinaryFile));
 

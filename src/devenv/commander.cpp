@@ -641,7 +641,7 @@ void CCommander::cmd_dump(CCmdParser& oParser)
 		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 
 	// Open file
-	std::ofstream oDumpFile(sFilePath , std::ios_base::out);
+	std::ofstream oDumpFile(sFilePath, (nFormat == 0) ? (std::ios_base::out | std::ios::binary | std::ios::trunc) : (std::ios_base::out));
 	if (oDumpFile.fail())
 		VASM_THROW_ERROR(base::toStr("Failed to open output dump file '%1'", sFilePath));
 

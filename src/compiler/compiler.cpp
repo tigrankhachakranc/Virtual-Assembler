@@ -164,7 +164,7 @@ void CCompiler::Build(
 	std::vector<t_string> const& aSrcFiles, t_string const& sOutputFile)
 {
 	// Open output file
-	std::ofstream oOutFile(sOutputFile, std::ios_base::out);
+	std::ofstream oOutFile(sOutputFile, std::ios::out | std::ios::binary | std::ios::trunc);
 	if (oOutFile.fail())
 		VASM_THROW_ERROR(base::toStr("Failed to open output file '%1'", sOutputFile));
 
@@ -177,8 +177,8 @@ void CCompiler::Build(
 	// Lambda function to find out pure name
 	auto fnPureName = [](t_string const& sPath) -> t_string
 	{
-		t_size nStartPos = (t_size) sPath.find_last_of(t_csz("/\\"), 2, g_ciInvalid);
-		if (nStartPos == g_ciInvalid)
+		t_size nStartPos = (t_size) sPath.find_last_of(t_csz("/\\"), t_string::npos, 2);
+		if (nStartPos == t_string::npos)
 			nStartPos = 0;
 		t_size nLength = sPath.size() - nStartPos;
 		if (base::EndsWith(sPath, t_csz(".vasm.bin")))
@@ -200,7 +200,7 @@ void CCompiler::Build(
 	cl::CCompiler oCompiler;
 	for (t_string const& sFilePath : aSrcFiles)
 	{
-		std::ifstream oSrcFile(sFilePath);
+		std::ifstream oSrcFile(sFilePath, std::ios::in);
 		if (oSrcFile.fail())
 			VASM_THROW_ERROR(base::toStr("Failed to open source file '%1'", sFilePath));
 

@@ -106,7 +106,7 @@ inline t_string toStr(t_csz pcsz, t_string const& sArg1, t_string const& sArg2)
 
 inline t_string toStr(int8 nArg, bool bHex = false)
 {
-	if (bHex)
+	if (bHex && nArg != 0)
 	{
 		std::stringstream buff(std::ios_base::out);
 		buff << t_csz("0x") << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << uint8(nArg);
@@ -117,7 +117,7 @@ inline t_string toStr(int8 nArg, bool bHex = false)
 
 inline t_string toStr(uint8 nArg, bool bHex = false)
 {
-	if (bHex)
+	if (bHex && nArg != 0)
 	{
 		std::stringstream buff(std::ios_base::out);
 		buff << t_csz("0x") << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << nArg;
@@ -128,7 +128,7 @@ inline t_string toStr(uint8 nArg, bool bHex = false)
 
 inline t_string toStr(int16 nArg, bool bHex = false)
 {
-	if (bHex)
+	if (bHex && nArg != 0)
 	{
 		std::stringstream buff(std::ios_base::out);
 		buff << t_csz("0x") << std::hex << std::uppercase << std::setfill('0') << std::setw(4) << uint16(nArg);
@@ -139,7 +139,7 @@ inline t_string toStr(int16 nArg, bool bHex = false)
 
 inline t_string toStr(uint16 nArg, bool bHex = false)
 {
-	if (bHex)
+	if (bHex && nArg != 0)
 	{
 		std::stringstream buff(std::ios_base::out);
 		if (bHex)
@@ -151,7 +151,7 @@ inline t_string toStr(uint16 nArg, bool bHex = false)
 
 inline t_string toStr(int32 nArg, bool bHex = false)
 {
-	if (bHex)
+	if (bHex && nArg != 0)
 	{
 		std::stringstream buff(std::ios_base::out);
 		buff << t_csz("0x") << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << uint32(nArg);
@@ -162,7 +162,7 @@ inline t_string toStr(int32 nArg, bool bHex = false)
 
 inline t_string toStr(uint32 nArg, bool bHex = false)
 {
-	if (bHex)
+	if (bHex && nArg != 0)
 	{
 		std::stringstream buff(std::ios_base::out);
 		buff << t_csz("0x") << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << nArg;
@@ -173,7 +173,7 @@ inline t_string toStr(uint32 nArg, bool bHex = false)
 
 inline t_string toStr(int64 nArg, bool bHex = false)
 {
-	if (bHex)
+	if (bHex && nArg != 0)
 	{
 		std::stringstream buff(std::ios_base::out);
 		buff << t_csz("0x") << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << uint64(nArg);
@@ -184,7 +184,7 @@ inline t_string toStr(int64 nArg, bool bHex = false)
 
 inline t_string toStr(uint64 nArg, bool bHex = false)
 {
-	if (bHex)
+	if (bHex && nArg != 0)
 	{
 		std::stringstream buff(std::ios_base::out);
 		buff << t_csz("0x") << std::hex << std::uppercase << std::setfill('0') << std::setw(16) << nArg;
@@ -261,7 +261,7 @@ public:
 	inline TString const* ptr() const;
 
 private:
-	TString const* m_pstr;
+	TString m_str;
 };
 
 //
@@ -315,54 +315,54 @@ struct TStringRefComparator : std::binary_function<TStringRef<TString>, TStringR
 
 template <typename TString>
 inline TStringRef<TString>::TStringRef(TString const* pstr) :
-	m_pstr(pstr)
+	m_str(*pstr)
 {
 }
 
 template <typename TString>
 inline TStringRef<TString>& TStringRef<TString>::operator=(nullptr_t)
 {
-	m_pstr = nullptr;
+	m_str.clear();
 	return *this;
 }
 
 template <typename TString>
 inline TStringRef<TString>& TStringRef<TString>::operator=(TString const* pstr)
 {
-	m_pstr = pstr;
+	m_str = *pstr;
 	return *this;
 }
 
 template <typename TString>
 inline bool TStringRef<TString>::operator==(nullptr_t)
 {
-	return (m_pstr == nullptr);
+	return (m_str.empty());
 }
 
 template <typename TString>
 inline bool TStringRef<TString>::operator!=(nullptr_t)
 {
-	return (m_pstr != nullptr);
+	return (!m_str.empty());
 }
 
 template <typename TString>
 inline TStringRef<TString>::operator TString const&() const
 {
-	VASM_CHECK_PTR(m_pstr);
-	return *m_pstr;
+	//VASM_CHECK_PTR(m_pstr);
+	return m_str;
 }
 
 template <typename TString>
 inline TString const& TStringRef<TString>::str() const
 {
-	VASM_CHECK_PTR(m_pstr);
-	return *m_pstr;
+	//VASM_CHECK_PTR(m_pstr);
+	return m_str;
 }
 
 template <typename TString>
 inline TString const* TStringRef<TString>::ptr() const
 {
-	return m_pstr;
+	return &m_str;
 }
 
 template <typename TString, EComparisonType ComparisonType>

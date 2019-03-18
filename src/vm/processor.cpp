@@ -281,10 +281,13 @@ void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)
 				case EImvType::SNum64:
 					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u64Imv;
 					break;
-				case EImvType::Num12:
+				case EImvType::Count:
+					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u8Imv;
+					break;
+				case EImvType::Port:
 					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u16Imv;
 					break;
-				case EImvType::SNum24:
+				case EImvType::Index:
 					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.i32Imv;
 					break;
 				default:

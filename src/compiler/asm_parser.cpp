@@ -90,11 +90,11 @@ void CAsmParser::Parse()
 		
 		try
 		{
-		// Parse section
+			// Parse section
 			base::CParser oParser(sLine);
 			t_string sToken = std::move(oParser.ParseToken());
 			if (sToken.size() != 1 || sToken.front() != s_cchSection)
-				throw CError("Invalid token", oInput, oParser.GetCurrentPos(), sToken);
+				throw CError("Invalid token", oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 			ESection eSection = ESection::Invalid;
 			sToken = std::move(oParser.ParseToken());
@@ -103,7 +103,7 @@ void CAsmParser::Parse()
 				eSection = it->second;
 
 			if (oSectionTestPlace.count(eSection) > 0)
-				throw CError("Section duplication", oInput, oParser.GetCurrentPos(), sToken);
+				throw CError("Section duplication", oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 			switch (eSection)
 			{
@@ -118,7 +118,8 @@ void CAsmParser::Parse()
 			{
 				// Parse variables
 				if (oSectionTestPlace.count(ESection::Code) > 0)
-					throw CError("Data section could not follow code section", oInput, oParser.GetCurrentPos(), sToken);
+					throw CError("Data section could not follow code section",
+								 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 				oSectionTestPlace.insert(eSection);
 				ParseVariables();
@@ -129,14 +130,16 @@ void CAsmParser::Parse()
 				// Parse stack size declaration
 				char ch = oParser.GetChar(true);
 				if (ch != '=')
-					throw CError("Ill formed stack section, it should look like '.Stack = <num_size>'", oInput, oParser.GetCurrentPos(), sToken);
+					throw CError("Ill formed stack section, it should look like '.Stack = <num_size>'",
+								 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 				// Parse stack size
 				oUnit.nStackSize = oParser.ParseNumber<t_uoffset, 0>();
 
 				if (oUnit.nStackSize < t_size(core::CMemory::MinStackSize) ||
 					oUnit.nStackSize > t_size(core::CMemory::MaxStackSize))
-					throw CError("Bad stack size, stack should be in range [256b - 1MB]", oInput, oParser.GetCurrentPos(), sToken);
+					throw CError("Bad stack size, stack should be in range [256b - 1MB]",
+								 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 				// Round specified size
 				t_uoffset nReminder = oUnit.nStackSize % t_size(core::CMemory::MinStackSize);
@@ -150,11 +153,13 @@ void CAsmParser::Parse()
 			{
 				// Parse main entry point declaration
 				if (oSectionTestPlace.count(ESection::Code) == 0)
-					throw CError("Main section should follow code section", oInput, oParser.GetCurrentPos(), sToken);
+					throw CError("Main section should follow code section",
+								 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 				char ch = oParser.GetChar(true);
 				if (ch != '=')
-					throw CError("Ill formed main section, it should look like '.Main = <func_name>'", oInput, oParser.GetCurrentPos(), sToken);
+					throw CError("Ill formed main section, it should look like '.Main = <func_name>'",
+								 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 				t_string sMainFunc = std::move(oParser.ParseToken());
 				for (t_index i = 0; i < oUnit.aFunctions.size(); ++i)
@@ -167,18 +172,18 @@ void CAsmParser::Parse()
 				}
 
 				if (oUnit.nMainFuncIdx == g_ciInvalid)
-					throw CError("Specified main function not found", oInput, oParser.GetCurrentPos(), sMainFunc);
+					throw CError("Specified main function not found", oInput.GetLineNumber(), oParser.GetCurrentPos(), sMainFunc);
 
 				oSectionTestPlace.insert(eSection);
 				break;
 			}
 			default:
-				throw CError("Invalid section", oInput, oParser.GetCurrentPos(), sToken);
+				throw CError("Invalid section", oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 			}
 		}
 		catch (base::CParser::CError const& err)
 		{
-			throw CError(err.ErrorMsg(), oInput, err.Position(), err.Token());
+			throw CError(err.ErrorMsg(), oInput.GetLineNumber(), err.Position(), err.Token());
 		}
 	}
 }
@@ -203,28 +208,32 @@ void CAsmParser::ParseVariables()
 			break;
 		}
 
-		// Variable declaration
-		CValue oValue(it->second);
-
 		// Parse variable name
 		sToken = std::move(oParser.ParseToken());
 		if (sToken.empty())
-			throw CError("Expected variale name", oInput, oParser.GetCurrentPos(), sToken);
+			throw CError("Expected variale name", oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
-		t_size nSize = 1;
 		t_string sVarName = std::move(sToken);
 		char chAfterName = oParser.GetChar(true);
 
+		// Variable definition
+		t_size nSize = 1;
+		CValue oValue(it->second);
+
 		if (chAfterName == '[')
 		{	// Array specifier
-			if (oParser.PeekChar() == ']')
+			char ch = oParser.GetChar(true);
+			if (ch == ']')
 				nSize = 0; // Dynamic size
 			else
+			{
+				oParser.RevertPreviousParse();
 				nSize = oParser.ParseNumber<t_count>(']');
-			if (nSize > 0x00010000)
-				throw CError("Bad array size", oInput, oParser.GetCurrentPos(), sToken);
+				if (nSize > 0x00010000)
+					throw CError("Bad array size", oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
+			}
 
-			char ch = oParser.GetChar(true);
+			ch = oParser.GetChar(true);
 			if (ch == '=')
 			{	// Parse initializer
 				switch (oValue.GetType())
@@ -235,10 +244,18 @@ void CAsmParser::ParseVariables()
 					aValues.reserve(nSize);
 					do
 					{
-						t_byte n = oParser.ParseNumberSafe<t_byte, 0>(t_char(','));
-						aValues.push_back(n);
+						try
+						{
+							t_byte n = oParser.ParseNumberSafe<t_byte, 0>(t_char(','), &sToken);
+							aValues.push_back(n);
+						}
+						catch (base::CException const& e)
+						{
+							throw CError(e.GetErrorMsg(), oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
+						}
 						if (nSize > 0 && aValues.size() > nSize)
-							throw CError("Initializer elements count exceeds array size", oInput, oParser.GetCurrentPos(), sToken);
+							throw CError("Initializer elements count exceeds array size",
+										 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 					} while (!oParser.IsFinished());
 					
 					oValue = std::move(CValue(aValues));
@@ -250,10 +267,18 @@ void CAsmParser::ParseVariables()
 					aValues.reserve(nSize);
 					do
 					{
-						t_word n = oParser.ParseNumberSafe<t_word, 0>(t_char(','));
-						aValues.push_back(n);
+						try
+						{
+							t_word n = oParser.ParseNumberSafe<t_word, 0>(t_char(','), &sToken);
+							aValues.push_back(n);
+						}
+						catch (base::CException const& e)
+						{
+							throw CError(e.GetErrorMsg(), oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
+						}
 						if (nSize > 0 && aValues.size() > nSize)
-							throw CError("Initializer elements count exceeds array size", oInput, oParser.GetCurrentPos(), sToken);
+							throw CError("Initializer elements count exceeds array size",
+										 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 					} while (!oParser.IsFinished());
 
 					oValue = std::move(CValue(aValues));
@@ -265,10 +290,18 @@ void CAsmParser::ParseVariables()
 					aValues.reserve(nSize);
 					do
 					{
-						t_dword n = oParser.ParseNumberSafe<t_dword, 0>(t_char(','));
-						aValues.push_back(n);
+						try
+						{
+							t_dword n = oParser.ParseNumberSafe<t_dword, 0>(t_char(','), &sToken);
+							aValues.push_back(n);
+						}
+						catch (base::CException const& e)
+						{
+							throw CError(e.GetErrorMsg(), oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
+						}
 						if (nSize > 0 && aValues.size() > nSize)
-							throw CError("Initializer elements count exceeds array size", oInput, oParser.GetCurrentPos(), sToken);
+							throw CError("Initializer elements count exceeds array size",
+										 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 					} while (!oParser.IsFinished());
 
 					oValue = std::move(CValue(aValues));
@@ -280,10 +313,18 @@ void CAsmParser::ParseVariables()
 					aValues.reserve(nSize);
 					do
 					{
-						t_qword n = oParser.ParseNumberSafe<t_qword, 0>(t_char(','));
-						aValues.push_back(n);
+						try
+						{
+							t_qword n = oParser.ParseNumberSafe<t_qword, 0>(t_char(','), &sToken);
+							aValues.push_back(n);
+						}
+						catch (base::CException const& e)
+						{
+							throw CError(e.GetErrorMsg(), oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
+						}
 						if (nSize > 0 && aValues.size() > nSize)
-							throw CError("Initializer elements count exceeds array size", oInput, oParser.GetCurrentPos(), sToken);
+							throw CError("Initializer elements count exceeds array size",
+										 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 					} while (!oParser.IsFinished());
 
 					oValue = std::move(CValue(aValues));
@@ -291,20 +332,30 @@ void CAsmParser::ParseVariables()
 				}
 				case EValueType::Char:
 				{
-					t_string sLiteral = std::move(oParser.ParseString());
-					if (nSize > 0 && sLiteral.size() >= nSize) // Also take into account '\0'
-						throw CError("String literal size exceeds array size", oInput, oParser.GetCurrentPos(), sToken);
-					oValue = std::move(CValue(sLiteral));
+					try
+					{
+						t_string sLiteral = std::move(oParser.ParseString());
+						oValue = std::move(CValue(sLiteral));
+					}
+					catch (base::CException const& e)
+					{
+						throw CError(e.GetErrorMsg(), oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
+					}
+					if (nSize > 0 && oValue.GetCount() - 1 > nSize) // Also take into account '\0'
+						throw CError("String literal size exceeds array size", oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
 					break;
 				}
 				default:
-					throw CError("Invalid variable type", oInput, oParser.GetCurrentPos(), sToken);
+					throw CError("Invalid variable type", oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
 				}
 			} //fi (ch == '=')
 			else if (ch != 0)
-				throw CError("Unknown token after variable definition", oInput, oParser.GetCurrentPos(), sToken);
+				throw CError("Unknown token after variable definition", oInput.GetLineNumber(), oParser.GetCurrentPos(), {1, ch});
 			else if (nSize == 0)
-				throw CError("Zero sized array is not allowed", oInput, oParser.GetCurrentPos(), sToken);
+				throw CError("Zero sized array is not allowed", oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
+			else
+				oValue = std::move(CValue(oValue.GetType(), nSize));
+
 		} // fi (']')
 		else if (chAfterName == '=')
 		{	// Single value intializer
@@ -312,39 +363,74 @@ void CAsmParser::ParseVariables()
 			{
 			case EValueType::Byte:
 			{
-				t_byte n = oParser.ParseNumberSafe<t_byte, 0>();
-				oValue = std::move(CValue(n));
+				try
+				{
+					t_byte n = oParser.ParseNumberSafe<t_byte, 0>();
+					oValue = std::move(CValue(n));
+				}
+				catch (base::CException const& e)
+				{
+					throw CError(e.GetErrorMsg(), oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
+				}
 				break;
 			}
 			case EValueType::Word:
 			{
-				t_word n = oParser.ParseNumberSafe<t_word, 0>();
-				oValue = std::move(CValue(n));
+				try
+				{
+					t_word n = oParser.ParseNumberSafe<t_word, 0>();
+					oValue = std::move(CValue(n));
+				}
+				catch (base::CException const& e)
+				{
+					throw CError(e.GetErrorMsg(), oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
+				}
 				break;
 			}
 			case EValueType::DWord:
 			{
-				t_dword n = oParser.ParseNumberSafe<t_dword, 0>();
-				oValue = std::move(CValue(n));
+				try
+				{
+					t_dword n = oParser.ParseNumberSafe<t_dword, 0>();
+					oValue = std::move(CValue(n));
+				}
+				catch (base::CException const& e)
+				{
+					throw CError(e.GetErrorMsg(), oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
+				}
 				break;
 			}
 			case EValueType::QWord:
 			{
-				t_qword n = oParser.ParseNumberSafe<t_qword, 0>();
-				oValue = std::move(CValue(n));
+				try
+				{
+					t_qword n = oParser.ParseNumberSafe<t_qword, 0>();
+					oValue = std::move(CValue(n));
+				}
+				catch (base::CException const& e)
+				{
+					throw CError(e.GetErrorMsg(), oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
+				}
 				break;
 			}
 			case EValueType::Char:
 			{
-				t_char ch = oParser.ParseCharacter();
-				oValue = std::move(CValue(ch));
+				try
+				{
+					t_char ch = oParser.ParseCharacter();
+					oValue = std::move(CValue(ch));
+				}
+				catch (base::CException const& e)
+				{
+					throw CError(e.GetErrorMsg(), oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
+				}
 				break;
 			}
 			default:
-				throw CError("Invalid variable type", oInput, oParser.GetCurrentPos(), sToken);
+				throw CError("Invalid variable type", oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
 			}
 		} // fi '='
-		else if (chAfterName == ';')
+		else if (chAfterName == t_char(';'))
 			; // Variable declaration
 		else if (chAfterName == 0)
 		{
@@ -358,13 +444,14 @@ void CAsmParser::ParseVariables()
 				oValue = std::move(CValue(oValue.GetType(), 1));
 				break;
 			default:
-				throw CError("Invalid variable type", oInput, oParser.GetCurrentPos(), sToken);
+				throw CError("Invalid variable type", oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
 			}
 		}
 		else
-			throw CError("Unknown token after variable declaration", oInput, oParser.GetCurrentPos(), sToken);
+			throw CError("Unknown token after variable declaration",
+						 oInput.GetLineNumber(), oParser.GetCurrentPos(), {1, chAfterName});
 
-		auto itVar = m_mapVariableTable.find(CStringRef(&sToken));
+		auto itVar = m_mapVariableTable.find(CStringRef(&sVarName));
 		if (itVar == m_mapVariableTable.end())
 		{	// Define/Declare variable
 			oUnit.aVariables.push_back({std::move(sVarName), std::move(oValue)});
@@ -374,13 +461,15 @@ void CAsmParser::ParseVariables()
 		{
 			t_index nVarIdx = itVar->second;
 			if (oUnit.aVariables.at(nVarIdx).tValue.GetType() != oValue.GetType())
-				throw CError("Variable type does not match with its previous declaration", oInput, oParser.GetCurrentPos(), sVarName);
+				throw CError("Variable type does not match with its previous declaration",
+							 oInput.GetLineNumber(), oParser.GetCurrentPos(), sVarName);
 			if (oValue.IsNull())
 				; // Do nothing, just repeated variable declaration
 			else if (oUnit.aVariables.at(nVarIdx).tValue.IsNull())
 				oUnit.aVariables[nVarIdx].tValue = std::move(oValue); // Overwite variable declaration with its definition 
-		else
-			throw CError("Variable with the specified name already defined", oInput, oParser.GetCurrentPos(), sVarName);
+			else
+				throw CError("Variable with the specified name already defined",
+							 oInput.GetLineNumber(), oParser.GetCurrentPos(), sVarName);
 		}
 	} //fi (!eof)
 }
@@ -408,7 +497,7 @@ void CAsmParser::ParseFnctions()
 		// Parse function name
 		sToken = std::move(oParser.ParseToken());
 		if (sToken.empty())
-			throw CError("Expected functon name", oInput, oParser.GetCurrentPos(), sToken);
+			throw CError("Expected functon name", oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 		// Function declaration/definition
 		// Get or Create function 
@@ -426,26 +515,30 @@ void CAsmParser::ParseFnctions()
 		SFunction& tFunction = oUnit.aFunctions.at(nFuncLocation);
 
 		sToken = std::move(oParser.ParseToken());
-		bool isDefinition = (sToken.size() == 1 && sToken.front() == ':');
-		bool isDeclaration = (sToken.size() == 1 && sToken.front() == ';');
+		bool isDefinition = (sToken.size() == 1 && sToken.front() == t_char(':'));
+		bool isDeclaration = (sToken.size() == 1 && sToken.front() == t_char(';'));
 		if (!isDefinition && !isDeclaration)
-			throw CError("Function name should end with ':' or ';'", oInput, oParser.GetCurrentPos(), sToken);
+			throw CError("Function name should end with ':' or ';'",
+						 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 		sToken = std::move(oParser.ParseToken());
 		if (!sToken.empty() && sToken.front() != CInput::s_cchComment)
-			throw CError(isDefinition ? "Invalid token follows function definition" : "Invalid token follows function declaration", oInput, oParser.GetCurrentPos(), sToken);
+			throw CError(isDefinition ? "Invalid token follows function definition" : "Invalid token follows function declaration",
+						 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 		if (isDefinition)
 		{
 			if (!tFunction.aCommands.empty())
-				throw CError(base::toStr("Function '%1' already defined", tFunction.sName), oInput, oParser.GetCurrentPos(), {});
+				throw CError(base::toStr("Function '%1' already defined", tFunction.sName),
+							 oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
 
 			tFunction.nBaseLine = oInput.GetLineNumber();
 			ParseFunctionBody(tFunction);
 			tFunction.nSizeLine = oInput.GetLineNumber() - tFunction.nBaseLine;
 
 			if (tFunction.aCommands.empty())
-				throw CError(base::toStr("Empty Function definition '%1'", tFunction.sName), oInput, oParser.GetCurrentPos(), {});
+				throw CError(base::toStr("Empty Function definition '%1'", tFunction.sName),
+							 oInput.GetLineNumber(), oParser.GetCurrentPos(), {});
 		}
 	}
 }
@@ -492,6 +585,8 @@ void CAsmParser::ParseFunctionBody(SFunction& tFunction)
 			oParser.SkipWhiteSpaces();
 			chNext = oParser.PeekChar();
 		}
+		else
+			oParser.RevertPreviousParse();
 
 		if (!oParser.IsFinished() && chNext != CCommandParser::s_cchComment)
 		{
@@ -521,7 +616,7 @@ void CAsmParser::ParseFunctionBody(SFunction& tFunction)
 		}
 		catch (CCommandParser::CError& e)
 		{
-			throw CError(e.ErrorMsg(), oInput, e.Position(), e.Token());
+			throw CError(e.ErrorMsg(), tRawCmd.second, e.Position(), e.Token());
 		}
 	}
 }

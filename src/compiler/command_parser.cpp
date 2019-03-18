@@ -29,6 +29,7 @@ void ReadjustInMemoryNumber(TSrcType& num, EImvType eTargetType);
 const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands {
 	//
 	{t_csz("NOP"),	{EOpCode::NOP}},
+	{t_csz("BREAK"),{EOpCode::BREAK}},
 	{t_csz("EXIT"), {EOpCode::EXIT}},
 	//
 	// Execution control
@@ -79,14 +80,14 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands {
 	//	
 	// Flags manipulation instructions
 	//
-	{t_csz("GFLR"),	  {EOpCode::GFLR, EOprType::GR}},
-	{t_csz("SFLR"),	  {EOpCode::SFLR, EOprType::GR}},
+	{t_csz("GFLR"),	{EOpCode::GFLR, EOprType::GR}},
+	{t_csz("SFLR"),	{EOpCode::SFLR, EOprType::GR}},
 	//
 	// Memory access instructions
 	//
 	{t_csz("LOAD"),	{EOpCode::LOAD, EOprType::AGR, EOprType::AR, true}},
 	{t_csz("STORE"),{EOpCode::STORE,EOprType::AGR, EOprType::AR, true}},
-	{t_csz("LEA"),	{EOpCode::LEA,	EOprType::AR,  EOprType::AR, EOprType::IMV, EImvType::SNum24}},
+	{t_csz("LEA"),	{EOpCode::LEA,	EOprType::AR,  EOprType::AR, EOprType::IMV, EImvType::Index}},
 	//
 	// Stack instructions
 	//
@@ -96,13 +97,13 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands {
 	{t_csz("POP"),	  {EOpCode::POPA,	EOprType::AR}},
 	{t_csz("PUSH"),	  {EOpCode::PUSHR,	EOprType::GR, true}},
 	{t_csz("POP"),	  {EOpCode::POPR,	EOprType::GR, true}},
-	{t_csz("PUSH"),	  {EOpCode::PUSHR,	EOprType::GR, EOprType::IMV, EImvType::Num8, true}},
-	{t_csz("POP"),	  {EOpCode::POPR,	EOprType::GR, EOprType::IMV, EImvType::Num8, true}},
+	{t_csz("PUSH"),	  {EOpCode::PUSHR,	EOprType::GR, EOprType::IMV, EImvType::Count, true}},
+	{t_csz("POP"),	  {EOpCode::POPR,	EOprType::GR, EOprType::IMV, EImvType::Count, true}},
 	//
 	// I/O instructions
 	//
-	{t_csz("IN"),	{EOpCode::IN,  EOprType::GR, EOprType::GRIMV, EImvType::Num12, true}},
-	{t_csz("OUT"),	{EOpCode::OUT, EOprType::GR, EOprType::GRIMV, EImvType::Num12, true}},
+	{t_csz("IN"),	{EOpCode::IN,  EOprType::GR, EOprType::GRIMV, EImvType::Port, true}},
+	{t_csz("OUT"),	{EOpCode::OUT, EOprType::GR, EOprType::GRIMV, EImvType::Port, true}},
 	//
 	// Address calculation instructions
 	//
@@ -218,14 +219,14 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands {
 	//
 	// Shift instructions
 	//
-	{t_csz("SHL"),	{EOpCode::SHL,	EOprType::GR, EOprType::GRIMV, EImvType::Num8, true}},
-	{t_csz("SHR"),	{EOpCode::SHR,	EOprType::GR, EOprType::GRIMV, EImvType::Num8, true}},
-	{t_csz("ROL"),	{EOpCode::ROL,	EOprType::GR, EOprType::GRIMV, EImvType::Num8, true}},
-	{t_csz("ROR"),	{EOpCode::ROR,	EOprType::GR, EOprType::GRIMV, EImvType::Num8, true}},
-	{t_csz("SAL"),	{EOpCode::SAL,	EOprType::GR, EOprType::GRIMV, EImvType::Num8, true}},
-	{t_csz("SAR"),	{EOpCode::SAR,	EOprType::GR, EOprType::GRIMV, EImvType::Num8, true}},
-	{t_csz("RCL"),	{EOpCode::RCL,	EOprType::GR, EOprType::GRIMV, EImvType::Num8, true}},
-	{t_csz("RCR"),	{EOpCode::RCR,	EOprType::GR, EOprType::GRIMV, EImvType::Num8, true}},
+	{t_csz("SHL"),	{EOpCode::SHL,	EOprType::GR, EOprType::GRIMV, EImvType::Count, true}},
+	{t_csz("SHR"),	{EOpCode::SHR,	EOprType::GR, EOprType::GRIMV, EImvType::Count, true}},
+	{t_csz("ROL"),	{EOpCode::ROL,	EOprType::GR, EOprType::GRIMV, EImvType::Count, true}},
+	{t_csz("ROR"),	{EOpCode::ROR,	EOprType::GR, EOprType::GRIMV, EImvType::Count, true}},
+	{t_csz("SAL"),	{EOpCode::SAL,	EOprType::GR, EOprType::GRIMV, EImvType::Count, true}},
+	{t_csz("SAR"),	{EOpCode::SAR,	EOprType::GR, EOprType::GRIMV, EImvType::Count, true}},
+	{t_csz("RCL"),	{EOpCode::RCL,	EOprType::GR, EOprType::GRIMV, EImvType::Count, true}},
+	{t_csz("RCR"),	{EOpCode::RCR,	EOprType::GR, EOprType::GRIMV, EImvType::Count, true}},
 	//
 	// Unsigned integral arithmetic instructions
 	//
@@ -333,7 +334,7 @@ void CCommandParser::Parse(SCommand& tCommand)
 		{
 			// Parse next aregument, it should not be empty or comment
 			sToken = std::move(ParseToken());
-			if (sToken.empty() || sToken.front() != s_cchComment)
+			if (sToken.empty() || sToken.front() == s_cchComment)
 				throw CError("Invalid command: expecting valid argument", GetCurrentPos(), sToken);
 			if (tCommand.nArgCount == EOprIdx::Count)
 				throw CError("Invalid command: Too many arguments", GetCurrentPos(), sToken);
@@ -369,7 +370,7 @@ void CCommandParser::Parse(SCommand& tCommand)
 			// When IMV type is specifed also match by sign
 			if (tArg.eType == EArgType::SNUM && tCmdInfo.eImvType != EImvType::None)
 			{
-				// There is implicit rule that all unsigned types are odd and signed ones are even numberd
+				// There is implicit rule that all unsigned types are odd and signed ones are even numbers
 				if (uchar(tCmdInfo.eImvType) % 2 != 0)
 					break;
 			}
@@ -378,7 +379,7 @@ void CCommandParser::Parse(SCommand& tCommand)
 			continue; // Skip
 
 		// If Operand size parsed and there is IMV type, also match by the IMV Type 
-		if (bOprSizeParsed && tCmdInfo.eImvType != EImvType::None)
+		if (tCmdInfo.hasOprSize && tCmdInfo.eImvType >= EImvType::Num8 && tCmdInfo.eImvType <= EImvType::SNum64)
 		{
 			EOprSize eTargetOprSz = EOprSize::Count;
 			switch (tCmdInfo.eImvType)
@@ -406,6 +407,8 @@ void CCommandParser::Parse(SCommand& tCommand)
 			if (tCommand.eOprSize != eTargetOprSz)
 				continue; // Skip
 		}
+
+		break; // Command found, do not continue!
 	}
 
 	if (it == itCmdRange.second)
@@ -463,6 +466,7 @@ void CCommandParser::Parse(SCommand& tCommand)
 
 			// Readjust number in-memory representation
 			ReadjustInMemoryNumber(tArg.u64Val, tCommand.eImvType);
+			break;
 		}
 		case EArgType::SNUM:
 		{
@@ -472,7 +476,18 @@ void CCommandParser::Parse(SCommand& tCommand)
 
 			// Readjust number in-memory representation
 			ReadjustInMemoryNumber(tArg.i64Val, tCommand.eImvType);
+			break;
 		}}
+
+		// Special handling for the PUSH/POP Rx command
+		if ((tCommand.eOpCode == EOpCode::PUSHR || tCommand.eOpCode == EOpCode::POPR) && tCommand.nArgCount == 1)
+		{
+			// Push Rx command has default second argument Count =0 , complete it
+			tCommand.nArgCount = 2;
+			tCommand.aArguments[1].eType = EArgType::NUM;
+			tCommand.aArguments[1].u8Val = 0;
+			tCommand.eImvType = EImvType::Count;
+		}
 	}
 }
 
@@ -569,9 +584,11 @@ std::pair<int64, int64> SValuRangeFromType(EImvType eType)
 	case EImvType::Num64:
 	case EImvType::SNum64:
 		return {INT64_MIN, INT64_MAX};
-	case EImvType::Num12:
+	case EImvType::Count:
+		return {INT8_MIN, INT8_MAX};
+	case EImvType::Port:
 		return {-2048i16, 0x07FFi16};
-	case EImvType::SNum24:
+	case EImvType::Index:
 		return {-8388608i32, 0x007FFFFFi32};
 	default:
 		break;
@@ -599,9 +616,11 @@ std::pair<uint64, uint64> UValuRangeFromType(EImvType eType)
 		return {0, (uint64) INT64_MAX};
 	case EImvType::SNum64:
 		return {0, UINT64_MAX};
-	case EImvType::Num12:
+	case EImvType::Count:
+		return {0, (uint64) UINT8_MAX};
+	case EImvType::Port:
 		return {0, (uint64) 0x0FFFi16};
-	case EImvType::SNum24:
+	case EImvType::Index:
 		return {0, (uint64) 0x00FFFFFFi32};
 	default:
 		break;
@@ -638,10 +657,13 @@ void ReadjustInMemoryNumber(TSrcType& num, EImvType eTargetType)
 	case EImvType::SNum64:
 		reinterpret_cast<int64&>(num) = static_cast<int64>(num);
 		break;
-	case EImvType::Num12:
+	case EImvType::Count:
+		reinterpret_cast<uint8&>(num) = static_cast<uint8>(num);
+		break;
+	case EImvType::Port:
 		reinterpret_cast<uint16&>(num) = static_cast<uint16>(num);
 		break;
-	case EImvType::SNum24:
+	case EImvType::Index:
 		reinterpret_cast<int32&>(num) = static_cast<int32>(num);
 		break;
 	default:

@@ -44,4 +44,4 @@ VASM.vcxproj.user
 *.ilk
 
 # Test files
-*.vasm
+*.vasm.bin

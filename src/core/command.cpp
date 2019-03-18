@@ -79,25 +79,29 @@ SCommandMetaInfo::SCommandMetaInfo(
 		nLength = (ext == NoExtension) ? 2 : 4; // bad case
 		break;
 	case EImvType::Num8:
+	case EImvType::SNum8:
 		nLength = (ext == NoExtension) ? 2 : 4;
 		break;
 	case EImvType::Num16:
-		nLength = 4;
-		break;
-	case EImvType::Num32:
-		nLength = 6;
-		break;
-	case EImvType::Num64:
-		nLength = 10;
-		break;
-	case EImvType::Num12:
-		VASM_THROW_INVALID_CONDITION(); // bad case
-		break;
 	case EImvType::SNum16:
 		nLength = 4;
 		break;
+	case EImvType::Num32:
 	case EImvType::SNum32:
 		nLength = 6;
+		break;
+	case EImvType::Num64:
+	case EImvType::SNum64:
+		nLength = 10;
+		break;
+	case EImvType::Count:
+		VASM_THROW_INVALID_CONDITION(); // bad case
+		break;
+	case EImvType::Port:
+		VASM_THROW_INVALID_CONDITION(); // bad case
+		break;
+	case EImvType::Index:
+		VASM_THROW_INVALID_CONDITION(); // bad case
 		break;
 	default:
 		VASM_THROW_INVALID_CONDITION();
@@ -138,28 +142,30 @@ SCommandMetaInfo::SCommandMetaInfo(
 		nLength = 4;
 		break;
 	case EImvType::Num8:
+	case EImvType::SNum8:
 		nLength = 4;
 		break;
 	case EImvType::Num16:
-		nLength = (ext == NoExtension) ? 4 : 6;
-		break;
-	case EImvType::Num32:
-		nLength = (ext == NoExtension) ? 6 : 8;
-		break;
-	case EImvType::Num64:
-		nLength = (ext == NoExtension) ? 10 : 12;
-		break;
-	case EImvType::Num12:
-		nLength = 4;
-		break;
 	case EImvType::SNum16:
 		nLength = (ext == NoExtension) ? 4 : 6;
 		break;
+	case EImvType::Num32:
 	case EImvType::SNum32:
 		nLength = (ext == NoExtension) ? 6 : 8;
 		break;
+	case EImvType::Num64:
 	case EImvType::SNum64:
 		nLength = (ext == NoExtension) ? 10 : 12;
+		break;
+	case EImvType::Count:
+		nLength = 4;
+		break;
+	case EImvType::Port:
+		nLength = 4;
+		break;
+	case EImvType::Index:
+		VASM_ASSERT(opr3);
+		nLength = 6;
 		break;
 	default:
 		VASM_THROW_INVALID_CONDITION(); // bad case
@@ -363,15 +369,15 @@ t_string CCommandBase::DisAsmCmd(SCommandInfo const& tCmd)
 t_string CCommandBase::DisAsmOprSize(SCommandInfo const& tCmd)
 {
 	t_string sCmd;
-	if (tCmd.tMetaInfo.eExtInfo | SCommandMetaInfo::HasOprSize)
+	if (tCmd.tMetaInfo.eExtInfo & SCommandMetaInfo::HasOprSize)
 	{
 		switch (tCmd.eOprSize)
 		{
 		case EOprSize::Byte:
-			sCmd = t_csz(" B");
+			sCmd = t_csz(" B ");
 			break;
 		case EOprSize::Word:
-			sCmd = t_csz(" W");
+			sCmd = t_csz(" W ");
 			break;
 		case EOprSize::DWord:
 			sCmd = t_csz(" DW");
@@ -432,6 +438,7 @@ t_string CCommandBase::DisAsmArg(SCommandInfo const& tCmd, bool bHexadecimal, t_
 			sCmd = base::toStr(t_csz("R%1"), (uint) tCmd.nRegIdx[nArg] * OperandSize(tCmd.eOprSize));
 		else
 			sCmd = DisAsmImv(tCmd, bHexadecimal);
+		break;
 	}
 	default:
 		VASM_ASSERT(false);
@@ -469,10 +476,13 @@ t_string CCommandBase::DisAsmImv(SCommandInfo const& tCmd, bool bHexadecimal)
 	case EImvType::SNum64:
 		sCmd = std::move(base::toStr(tCmd.i64Imv, bHexadecimal));
 		break;
-	case EImvType::Num12:
+	case EImvType::Count:
+		sCmd = std::move(base::toStr(tCmd.u8Imv, false));
+		break;
+	case EImvType::Port:
 		sCmd = std::move(base::toStr(tCmd.u16Imv, bHexadecimal));
 		break;
-	case EImvType::SNum24:
+	case EImvType::Index:
 		sCmd = std::move(base::toStr(tCmd.i32Imv, bHexadecimal));
 		break;
 	}

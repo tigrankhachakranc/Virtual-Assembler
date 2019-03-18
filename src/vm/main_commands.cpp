@@ -26,7 +26,7 @@ CMainCommands::CMainCommands() : CCommandBase()
 	Register({t_csz("NOP"), EOpCode::NOP},
 			 FuncCmdExec(&CMainCommands::Nop), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("BREAK"), EOpCode::BREAK},
-			 FuncCmdExec(&CMainCommands::Exit), FuncCmdDisasm(nullptr));
+			 FuncCmdExec(&CMainCommands::Exit), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("EXIT"), EOpCode::EXIT},
 			 FuncCmdExec(&CMainCommands::Exit), FuncCmdDisasm(&CMainCommands::DisAsm));
 
@@ -61,7 +61,7 @@ CMainCommands::CMainCommands() : CCommandBase()
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			 apfnStore, FuncCmdDisasm(&CMainCommands::DisAsm));
 
-	Register({t_csz("LEA"), EOpCode::LEA, EOprType::AR, EOprType::AR, EImvType::SNum24, SCommandMetaInfo::NoExtension, true},
+	Register({t_csz("LEA"), EOpCode::LEA, EOprType::AR, EOprType::AR, EImvType::Index, SCommandMetaInfo::NoExtension, true},
 			 FuncCmdExec(&CMainCommands::LEA), FuncCmdDisasm(&CMainCommands::DisAsm));
 
 	Register({t_csz("PUSH"), EOpCode::PUSHA, EOprType::AR},
@@ -75,12 +75,12 @@ CMainCommands::CMainCommands() : CCommandBase()
 	FuncCmdExec apfnPushR[int(EOprSize::Count)] = {
 		FuncCmdExec(&CMainCommands::PushR<uint8>), FuncCmdExec(&CMainCommands::PushR<uint16>), 
 		FuncCmdExec(&CMainCommands::PushR<uint32>), FuncCmdExec(&CMainCommands::PushR<uint64>) };
-	Register({t_csz("PUSH"), EOpCode::PUSHR, EOprType::GR, EOprType::IMV, EImvType::Num8, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("PUSH"), EOpCode::PUSHR, EOprType::GR, EOprType::IMV, EImvType::Count, SCommandMetaInfo::HasOprSize},
 			 apfnPushR, FuncCmdDisasm(&CMainCommands::DisAsm));
 	FuncCmdExec apfnPopR[int(EOprSize::Count)] = {
 		FuncCmdExec(&CMainCommands::PopR<uint8>), FuncCmdExec(&CMainCommands::PopR<uint16>), 
 		FuncCmdExec(&CMainCommands::PopR<uint32>), FuncCmdExec(&CMainCommands::PopR<uint64>) };
-	Register({t_csz("POP"), EOpCode::POPR, EOprType::GR, EOprType::IMV, EImvType::Num8, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("POP"), EOpCode::POPR, EOprType::GR, EOprType::IMV, EImvType::Count, SCommandMetaInfo::HasOprSize},
 			 apfnPopR, FuncCmdDisasm(&CMainCommands::DisAsm));
 }
 

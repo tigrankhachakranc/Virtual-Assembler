@@ -97,15 +97,13 @@ inline bool CInput::IsInput(bool bSkipEmptyLinesAndComments)
 	else while (m_oInput.good())
 	{
 		std::getline(m_oInput, m_sLastLine);
+		++m_nLine;
 
 		// Find comments and eliminate
 		base::CParser oParser(m_sLastLine);
 		oParser.SkipWhiteSpaces();
 		if (oParser.IsFinished() || oParser.PeekChar() == s_cchComment)
-		{
-			++m_nLine;
 			continue; // Skip empty lines & comments
-		}
 
 		isInput = true;
 		break;
@@ -119,7 +117,6 @@ inline t_string CInput::GetLine()
 	if (!m_sLastLine.empty())
 	{
 		sLine = std::move(m_sLastLine);
-		++m_nLine;
 	}
 	else if (m_oInput.good())
 	{
@@ -138,7 +135,6 @@ inline void CInput::PutBack(t_string sLine)
 		VASM_THROW_ERROR(t_csz("Input: Can't put back more than one line"));
 
 	m_sLastLine = std::move(sLine);
-	--m_nLine;
 }
 
 inline t_index CInput::GetLineNumber() const

@@ -165,11 +165,15 @@ void CDecoder::ReadIMV(uchar const*& pCmd, SCommandInfo& tCmdInfo)
 		std::memcpy(&tCmdInfo.u64Imv, pCmd, sizeof(uint64));
 		pCmd += sizeof(uint64); // Skip IMV
 		break;
-	case EImvType::Num12:
+	case EImvType::Count:
+		tCmdInfo.u8Imv = *pCmd;
+		pCmd += sizeof(uchar); // Skip IMV
+		break;
+	case EImvType::Port:
 		tCmdInfo.u16Imv = uint16(*pCmd) + (((uint16)(tCmdInfo.nExtension & 0xF0ui8)) << 4);
 		pCmd += sizeof(uchar); // Skip IMV
 		break;
-	case EImvType::SNum24:
+	case EImvType::Index:
 		std::memcpy((&tCmdInfo.i8Imv) + 1, pCmd, 3);
 		tCmdInfo.i32Imv = tCmdInfo.i32Imv >> 8;
 		pCmd += sizeof(3); // Skip IMV

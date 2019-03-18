@@ -117,7 +117,7 @@ void CLoader::Load(std::istream& is, CMemoryPtr pMemory, SPackageInfo& tPkgInfo)
 	
 	if (tCodeSection.nBase == 0 || tCodeSection.nSize == 0)
 		VASM_THROW_ERROR(t_csz("Invalid package: Code is missing"));
-	VASM_CHECK(tPkgInfo.nCodeBase % 64 == 0); // Alignment check
+	VASM_CHECK(tPkgInfo.nCodeBase % 16 == 0); // Alignment check
 	tPkgInfo.nCodeSize = tCodeSection.nSize;
 	//
 	nMemorySize = tPkgInfo.nCodeBase + tPkgInfo.nCodeSize;
@@ -169,16 +169,6 @@ void CLoader::Load(std::istream& is, CMemoryPtr pMemory, SPackageInfo& tPkgInfo)
 	if (nMemorySize > CMemory::MaxSize)
 		VASM_THROW_ERROR(t_csz("Invalid package: Total memory size exceeds maximum allowed size"));
 
-	// Load Symbols
-	if (tSymbolsSection.nBase > 0 && tSymbolsSection.nSize > 0)
-	{
-		LoadSymbols(is, tPkgInfo, tSymbolsSection, tPkgInfo.nCodeBase, tPkgInfo.nDataBase);
-
-		// Load debug info (it has dependency from symbols and could be loaded only after symbols)
-		if (tDbgInfoSection.nBase > 0 && tDbgInfoSection.nSize > 0)
-			LoadDebuginfo(is, tPkgInfo, tDbgInfoSection);
-	}
-
 	// Allocate requested memory
 	pMemory->Resize(nMemorySize);
 
@@ -188,6 +178,16 @@ void CLoader::Load(std::istream& is, CMemoryPtr pMemory, SPackageInfo& tPkgInfo)
 	// Load data section
 	if (tPkgInfo.nDataBase > 0 && tPkgInfo.nDataSize > 0)
 		LoadIntoMemory(is, pMemory, tDataSection, tPkgInfo.nDataBase);
+
+	// Load Symbols
+	if (tSymbolsSection.nBase > 0 && tSymbolsSection.nSize > 0)
+	{
+		LoadSymbols(is, tPkgInfo, tSymbolsSection, tPkgInfo.nCodeBase, tPkgInfo.nDataBase);
+
+		// Load debug info (it has dependency from symbols and could be loaded only after symbols)
+		if (tDbgInfoSection.nBase > 0 && tDbgInfoSection.nSize > 0)
+			LoadDebuginfo(is, tPkgInfo, tDbgInfoSection);
+	}
 }
 
 void CLoader::LoadSymbols(
@@ -196,32 +196,26 @@ void CLoader::LoadSymbols(
 {
 	m_aSymbolToPackageFuncIdx.clear();
 
-	SSymbolTableSection tSymbols;
+	// Read buffer
+	std::vector<uint8> aSymbolsBuffer(tSection.nSize);
+	uint8* const cpSmblBuffer = aSymbolsBuffer.data();
+
 	is.seekg((std::istream::pos_type) tSection.nBase);
 	VASM_CHECK_X(is.good(), t_csz("Loader: Symbols section could not be loaded"));
-	is.read((char*) &tSymbols, sizeof(SSymbolTableSection));
+	is.read((char*) cpSmblBuffer, tSection.nSize);
 	VASM_CHECK_X(is.good(), t_csz("Loader: Symbols section could not be loaded"));
 
+	SSymbolTableSection& tSymbols = reinterpret_cast<SSymbolTableSection&>(*cpSmblBuffer);
 	if (tSymbols.nEntryCount == 0)
 		return;
 
-	// Read Symbol entries
-	std::vector<SSymbolTableSection::SEntry> aEntries(tSymbols.nEntryCount);
-	is.read((char*) aEntries.data(), tSymbols.nEntryCount * sizeof(SSymbolTableSection::SEntry));
-	VASM_CHECK_X(is.good(), t_csz("Loader: Symbols section entries could not be loaded"));
-
 	m_aSymbolToPackageFuncIdx.resize(tSymbols.nEntryCount, g_ciInvalid);
-
 	for (t_index i = 0; i < tSymbols.nEntryCount; ++i)
 	{
-		SSymbolTableSection::SEntry const& tEntry = aEntries.at(i);
+		SSymbolTableSection::SEntry const& tEntry = tSymbols.aEntries[i];
 		// Read symbol name
 		VASM_CHECK_X(tEntry.nNamePos > 0 && tEntry.nNameSize > 0, base::toStr("Loader: Invalid symbol entry at index %1", i));
-		t_string sSymbolName((t_string::size_type) tEntry.nNameSize, char(0));
-		is.seekg((std::istream::pos_type) tEntry.nNamePos);
-		VASM_CHECK_X(is.good(), t_csz("Loader: Symbol name could not be loaded"));
-		is.read(&sSymbolName.front(), tEntry.nNameSize);
-		VASM_CHECK_X(is.good(), t_csz("Loader: Symbol name could not be loaded"));
+		t_string sSymbolName( (t_csz) &aSymbolsBuffer[tEntry.nNamePos], (t_string::size_type) tEntry.nNameSize);
 
 		if (tEntry.isFunc)
 		{
@@ -240,40 +234,35 @@ void CLoader::LoadSymbols(
 void CLoader::LoadDebuginfo(
 	std::istream& is, SPackageInfo& tPkgInfo, SSectionInfo const& tSection)
 {
-	SDebugInfoSection tDbgInfo;
+	// Read buffer
+	std::vector<uint8> aDbgBuffer(tSection.nSize);
+	uint8* const cpDbgBuffer = aDbgBuffer.data();
+
 	is.seekg((std::istream::pos_type) tSection.nBase);
 	VASM_CHECK_X(is.good(), t_csz("Loader: Debug info section could not be loaded"));
-	is.read((char*) &tDbgInfo, sizeof(SDebugInfoSection));
+	is.read((char*) cpDbgBuffer, tSection.nSize);
 	VASM_CHECK_X(is.good(), t_csz("Loader: Debug info section could not be loaded"));
 
+	SDebugInfoSection& tDbgInfo = reinterpret_cast<SDebugInfoSection&>(*cpDbgBuffer);
 	if (tDbgInfo.nEntryCount == 0)
 		return;
 
 	// Read debug entries
-	std::vector<SDebugInfoSection::SEntry> aEntries(tDbgInfo.nEntryCount);
-	is.read((char*) aEntries.data(), tDbgInfo.nEntryCount * sizeof(SDebugInfoSection::SEntry));
-	VASM_CHECK_X(is.good(), t_csz("Loader: Debug info section entries could not be loaded"));
-
 	for (t_index i = 0; i < tDbgInfo.nEntryCount; ++i)
 	{
-		SDebugInfoSection::SEntry const& tEntry = aEntries.at(i);
+		SDebugInfoSection::SEntry const& tEntry = tDbgInfo.aEntries[i];
 		VASM_CHECK_IDX_X(tEntry.nSymbolIndex, (t_size) m_aSymbolToPackageFuncIdx.size(),
-					     t_csz("Loader: Debug info symbol index doesn't match with symbol table"));
+						 t_csz("Loader: Debug info symbol index doesn't match with symbol table"));
 
 		t_index nFuncIdx = m_aSymbolToPackageFuncIdx[tEntry.nSymbolIndex];
-		VASM_CHECK_X(nFuncIdx != g_ciInvalid, 
-					 t_csz("Loader: Debug info symbol index doesn't match with symbol table"));
+		VASM_CHECK_X(nFuncIdx != g_ciInvalid, t_csz("Loader: Debug info symbol index doesn't match with symbol table"));
 
 		SFunctionInfo& tFuncInfo = tPkgInfo.aFunctionTable[nFuncIdx];
 
 		// Read source unit name
 		if (tEntry.nSrcUnitPos > 0 && tEntry.nSrcUnitSize > 0)
 		{
-			t_string sUnitName((t_string::size_type) tEntry.nSrcUnitSize, char(0));
-			is.seekg((std::istream::pos_type) tEntry.nSrcUnitPos);
-			VASM_CHECK_X(is.good(), t_csz("Loader: DbgInfo(source unit name) could not be loaded"));
-			is.read(&sUnitName.front(), tEntry.nSrcUnitSize);
-			VASM_CHECK_X(is.good(), t_csz("Loader: DbgInfo(source unit name) could not be loaded"));
+			t_string sUnitName( (t_csz) &aDbgBuffer[tEntry.nSrcUnitPos], (t_string::size_type) tEntry.nSrcUnitSize);
 			tFuncInfo.sSrcUnit = std::move(sUnitName);
 		}
 
@@ -284,25 +273,15 @@ void CLoader::LoadDebuginfo(
 		// Read function local labels entries
 		if (tEntry.nLabelEntriesPos > 0 && tEntry.nLabelEntryCount > 0)
 		{
-			std::vector<SDebugInfoSection::SLabelEntry> aLblEntries(tEntry.nLabelEntryCount);
-			is.seekg((std::istream::pos_type) tEntry.nLabelEntriesPos);
-			VASM_CHECK_X(is.good(), t_csz("Loader: DbgInfo(label entries) could not be loaded"));
-			is.read((char*) aLblEntries.data(), tEntry.nLabelEntryCount * sizeof(SDebugInfoSection::SLabelEntry));
-			VASM_CHECK_X(is.good(), t_csz("Loader: DbgInfo(label entries) could not be loaded"));
-
+			SDebugInfoSection::SLabelEntry const* aLblEntries = (SDebugInfoSection::SLabelEntry const*) (&aDbgBuffer[tEntry.nLabelEntriesPos]);
 			for (t_index j = 0; j < tEntry.nLabelEntryCount; ++j)
 			{
-				SDebugInfoSection::SLabelEntry const& tLblEntry = aLblEntries.at(j);
+				SDebugInfoSection::SLabelEntry const& tLblEntry = aLblEntries[j];
 
 				// Read label name
 				VASM_CHECK_X(tLblEntry.nNamePos > 0 && tLblEntry.nNameSize > 0,
 							 base::toStr("Loader: Invalid function label entry at index (%1, %2)", i, j));
-				t_string sLblName((t_string::size_type) tLblEntry.nNameSize, char(0));
-				is.seekg((std::istream::pos_type) tLblEntry.nNamePos);
-				VASM_CHECK_X(is.good(), t_csz("Loader: Local label name could not be loaded"));
-				is.read(&sLblName.front(), tLblEntry.nNameSize);
-				VASM_CHECK_X(is.good(), t_csz("Loader: Loal label name could not be loaded"));
-
+				t_string sLblName( (t_csz) &aDbgBuffer[tLblEntry.nNamePos], (t_string::size_type) tLblEntry.nNameSize);
 				tFuncInfo.aLabels.push_back(SSymbolInfo(std::move(sLblName), tFuncInfo.nAddress + tLblEntry.nOffset));
 			}
 		}
@@ -310,18 +289,14 @@ void CLoader::LoadDebuginfo(
 		// And finally load the PDB (line number to address mapping)
 		if (tEntry.nCodeTblPos > 0)
 		{
-			std::vector<t_address> aCodeTbl(tEntry.nSizeLine, 0);
+			tFuncInfo.aCodeTbl.resize(tEntry.nSizeLine, 0);
 
-			is.seekg((std::istream::pos_type) tEntry.nCodeTblPos);
-			VASM_CHECK_X(is.good(), t_csz("Loader: DbgInfo(code table) could not be loaded"));
-			is.read((char*) aCodeTbl.data(), tEntry.nSizeLine * sizeof(t_address));
-			VASM_CHECK_X(is.good(), t_csz("Loader: DbgInfo(code table) could not be loaded"));
+			t_size nCodeSize = sizeof(t_uoffset) * (tFuncInfo.aCodeTbl.size());
+			std::memcpy(tFuncInfo.aCodeTbl.data(), &aDbgBuffer[tEntry.nCodeTblPos], nCodeSize);
 
 			// Adjust addresses
-			for (auto& nVal : aCodeTbl)
+			for (auto& nVal : tFuncInfo.aCodeTbl)
 				nVal += tFuncInfo.nAddress;
-
-			tFuncInfo.aCodeTbl = std::move(aCodeTbl);
 		}
 	}
 }
@@ -331,7 +306,7 @@ void CLoader::LoadIntoMemory(
 {
 	is.seekg((std::istream::pos_type) tSection.nBase);
 	VASM_CHECK_X(is.good(), base::toStr("Loader: Section %1 could not be loaded", int(tSection.eType)));
-	is.read( &(pMemory->operator[]<char>(nBase)), tSection.nSize);
+	is.read( (char*) pMemory->Buffer(nBase), tSection.nSize);
 	VASM_CHECK_X(is.good(), base::toStr("Loader: Section %1 could not be loaded", int(tSection.eType)));
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

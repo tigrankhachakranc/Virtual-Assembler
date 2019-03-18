@@ -65,7 +65,7 @@ public:
 	void Skip(int nCharCount);
 	void SkipWhiteSpaces();
 
-	t_char PeekChar(int nOffset = 0) const;
+	inline t_char PeekChar(int nOffset = 0) const;
 	t_char GetChar(bool bSkipEmptySpaces = false);
 
 	using fnIsDelimiter = std::function<bool(t_char)>;
@@ -161,6 +161,14 @@ inline bool CParser::IsWhiteSpace() const
 	return (m_nPos < m_sInput.size() && IsSpace(m_sInput[m_nPos]));
 }
 
+inline t_char CParser::PeekChar(int nOffset) const
+{
+	char ch = 0;
+	if (m_nPos + nOffset < m_sInput.size())
+		ch = m_sInput.at(m_nPos + nOffset);
+	return ch;
+}
+
 inline void CParser::FixCurrentPos()
 {
 	m_nPrevPos = m_nPos;
@@ -233,7 +241,7 @@ inline CParser::CError::CError() :
 
 inline CParser::CError::CError(
 	t_csz psErrMsg, t_index nPos, t_string const& sToken) :
-	Base(psErrMsg), m_nPosition(nPos), m_sToken(sToken)
+	Base(t_string(psErrMsg)), m_nPosition(nPos), m_sToken(sToken)
 {
 }
 

@@ -80,14 +80,6 @@ void CParser::SkipWhiteSpaces()
 		++m_nPos;
 }
 
-t_char CParser::PeekChar(int nOffset) const
-{
-	char ch = 0;
-	if (m_nPos + nOffset < m_sInput.size())
-		ch = m_sInput.at(m_nPos + nOffset);
-	return ch;
-}
-
 t_char CParser::GetChar(bool bSkipEmptySpaces)
 {
 	char ch = 0;
@@ -115,13 +107,13 @@ t_string CParser::ParseToken(fnIsDelimiter pfnDelimiter)
 
 	if (pfnDelimiter)
 	{
-		while (!pfnDelimiter(PeekChar()))
-			sToken.push_back(GetChar(false));
+		while (m_nPos < m_sInput.size() && !pfnDelimiter(m_sInput.at(m_nPos)))
+			sToken.push_back(m_sInput.at(m_nPos++));
 	}
 	else
 	{
-		while (IsAlphaNum(PeekChar()))
-			sToken.push_back(GetChar(false));
+		while (m_nPos < m_sInput.size() && IsAlphaNum(m_sInput.at(m_nPos)))
+			sToken.push_back(m_sInput.at(m_nPos++));
 	}
 
 	if (GetCurrentPos() == GetPreviousPos() && !IsFinished())
@@ -174,6 +166,9 @@ t_string CParser::ParseName()
 template <typename TNumType>
 TNumType CParser::ParseNumberInternal(int nRadix, t_char const chDelimiter, t_string* psToken)
 {
+	if (psToken)
+		psToken->clear();
+
 	SkipWhiteSpaces();
 	if (IsFinished())
 		throw CException("Unexpected end of line: Expecting numeric value");
@@ -188,6 +183,8 @@ TNumType CParser::ParseNumberInternal(int nRadix, t_char const chDelimiter, t_st
 	if (std::is_signed<TNumType>::value)
 	{
 		int64 i64Number = std::strtoll(pchStartPos, &pchLastPos, nRadix);
+		if (psToken != nullptr && pchLastPos <= pchStartPos)
+			*psToken = std::move(t_string(pchStartPos, pchLastPos - pchStartPos));
 		if (pchLastPos <= pchStartPos ||
 			i64Number > (int64) std::numeric_limits<TNumType>::max() ||
 			i64Number < (int64) std::numeric_limits<TNumType>::min())
@@ -197,6 +194,8 @@ TNumType CParser::ParseNumberInternal(int nRadix, t_char const chDelimiter, t_st
 	else
 	{
 		uint64 ui64Number = std::strtoull(pchStartPos, &pchLastPos, nRadix);
+		if (psToken != nullptr && pchLastPos <= pchStartPos)
+			*psToken = std::move(t_string(pchStartPos, pchLastPos - pchStartPos));
 		if (pchLastPos <= pchStartPos ||
 			ui64Number > (uint64) std::numeric_limits<TNumType>::max())
 			throw CException("Invalid numeric value");
@@ -215,9 +214,6 @@ TNumType CParser::ParseNumberInternal(int nRadix, t_char const chDelimiter, t_st
 	{	// Should be white space or end of string
 		throw CException("Invalid numeric value");
 	}
-
-	if (psToken != nullptr && pchLastPos <= pchStartPos)
-		*psToken = std::move(t_string(pchStartPos, pchLastPos - pchStartPos));
 
 	return nNumber;
 }

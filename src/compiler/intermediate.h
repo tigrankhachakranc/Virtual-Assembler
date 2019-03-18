@@ -73,8 +73,8 @@ enum class EArgType
 	VAR	 = 0x04, // Variable index in variables table
 	FUNC = 0x14, // Function index in functions table
 	LBL  = 0x24, // Label index in local symbol table
-	NUM  = 0x34, // Intermediate value (byte)
-	SNUM = 0x44	 // Intermediate value (word)
+	NUM  = 0x34, // Unsigned intermediate value
+	SNUM = 0x44	 // Signed intermediate value
 };
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -117,7 +117,7 @@ struct SCommand
 	uint8		nArgCount;	// Argument count
 	SArgument	aArguments[EOprIdx::Count];
 
-	t_index		nLineNumber; // Original line number
+	t_index		nLineNumber; // Original line number (src file relative)
 
 	inline SCommand();
 };

@@ -47,9 +47,12 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 	//
 	//	Symbols section preparation
 	//
+	t_size const cnSmblTblSctnSize = sizeof(SSymbolTableSection);
+	t_size const cnSmblTblSctnEntrySize = sizeof(SSymbolTableSection::SEntry);
+
 	// Determine buffer size for symbols
-	t_size nBufferSize = sizeof(SSymbolTableSection);
-	nBufferSize += sizeof(SSymbolTableSection::SEntry) * tPackage.oSymbolTbl.aEntries.size();
+	t_size nBufferSize = cnSmblTblSctnSize;
+	nBufferSize += cnSmblTblSctnEntrySize * tPackage.oSymbolTbl.aEntries.size();
 	t_size nBufferMarker = nBufferSize;
 	for (t_index i = 0; i < tPackage.oSymbolTbl.aEntries.size(); ++i)
 		nBufferSize += sizeof(t_string::value_type) * (tPackage.oSymbolTbl.aEntries[i].sName.size() + 1); // One more for '\0'
@@ -59,7 +62,8 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 	// Fill Symbols buffer
 	std::vector<uint8> aSymbolsBuff((size_t) nBufferSize, 0ui8);
 
-	SSymbolTableSection& tSymbolsSctn = reinterpret_cast<SSymbolTableSection&>(aSymbolsBuff[0]);
+	uint8* const cpSymbolsBuff = &aSymbolsBuff[0];
+	SSymbolTableSection& tSymbolsSctn = reinterpret_cast<SSymbolTableSection&>(*cpSymbolsBuff);
 	tSymbolsSctn.nEntryCount = (t_count) tPackage.oSymbolTbl.aEntries.size();
 
 	for (t_index i = 0; i < tSymbolsSctn.nEntryCount; ++i)
@@ -80,8 +84,10 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 	//
 	//	Relocation table section preparation
 	//
+	t_size const cnRelocTblSctnSize = sizeof(SRelocationTableSection);
+
 	// Determine buffer size
-	nBufferSize = sizeof(SRelocationTableSection);
+	nBufferSize = cnRelocTblSctnSize;
 	nBufferSize += sizeof(t_uoffset) * (tPackage.oRelocTbl.aCodeAddressLocations.size() + tPackage.oRelocTbl.aDataAddressLocations.size());
 	if (nBufferSize % 16 != 0)
 		nBufferSize += 16 - nBufferSize % 16;
@@ -89,7 +95,8 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 	// Fill relocation table buffer
 	std::vector<uint8> aRelocTblBuff((size_t) nBufferSize, 0ui8);
 
-	SRelocationTableSection& tRelocTblSctn = reinterpret_cast<SRelocationTableSection&>(aRelocTblBuff[0]);
+	uint8* const cpRelocTblBuff = &aRelocTblBuff[0];
+	SRelocationTableSection& tRelocTblSctn = reinterpret_cast<SRelocationTableSection&>(*cpRelocTblBuff);
 	tRelocTblSctn.nFuncCount = (t_count) tPackage.oRelocTbl.aCodeAddressLocations.size();
 	tRelocTblSctn.nVarCount  = (t_count) tPackage.oRelocTbl.aDataAddressLocations.size();
 
@@ -101,9 +108,13 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 	//
 	//	Debug info section preparation
 	//
+	t_size const cnDbgTblSctnSize = sizeof(SDebugInfoSection);
+	t_size const cnDbgTblSctnEntrySize = sizeof(SDebugInfoSection::SEntry);
+	t_size const cnDbgTblSctnLblEntrySize = sizeof(SDebugInfoSection::SLabelEntry);
+
 	// Determine buffer size
-	nBufferSize = sizeof(SDebugInfoSection);
-	nBufferSize += sizeof(SDebugInfoSection::SEntry) * tPackage.oDebugInfo.aEntries.size();
+	nBufferSize = cnDbgTblSctnSize;
+	nBufferSize += cnDbgTblSctnEntrySize * tPackage.oDebugInfo.aEntries.size();
 	nBufferMarker = nBufferSize;
 	for (SDebugInfo::SEntry const& tEntry : tPackage.oDebugInfo.aEntries)
 	{
@@ -119,8 +130,9 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 
 	// Fill Debug info buffer
 	std::vector<uint8> aDbgInfoBuff((size_t) nBufferSize, 0ui8);
+	uint8* const cpDbgInfoBuff = &aDbgInfoBuff[0];
 
-	SDebugInfoSection& tDbgInfoSctn = reinterpret_cast<SDebugInfoSection&>(aDbgInfoBuff[0]);
+	SDebugInfoSection& tDbgInfoSctn = reinterpret_cast<SDebugInfoSection&>(*cpDbgInfoBuff);
 	tDbgInfoSctn.nEntryCount = (t_count) tPackage.oDebugInfo.aEntries.size();
 
 	for (t_index i = 0; i < tDbgInfoSctn.nEntryCount; ++i)
@@ -146,7 +158,7 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 			nBufferMarker += nCodeSize;
 		}
 
-		t_size nBufferSubMarker = nBufferMarker + sizeof(SDebugInfoSection::SLabelEntry) * tEntry.aLabelEntries.size();
+		t_size nBufferSubMarker = nBufferMarker + cnDbgTblSctnLblEntrySize * tEntry.aLabelEntries.size();
 		tDbgInfoSctn.aEntries[i].nLabelEntryCount = (t_count) tEntry.aLabelEntries.size();
 		tDbgInfoSctn.aEntries[i].nLabelEntriesPos = tEntry.aLabelEntries.empty() ? core::cnInvalidAddress : nBufferMarker;
 		for (t_index j = 0; j < tEntry.aLabelEntries.size(); ++j)
@@ -154,7 +166,7 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 			SDebugInfo::SLabelEntry const& tLblEntry = tEntry.aLabelEntries[j];
 			SDebugInfoSection::SLabelEntry& tLblSctnEntry = 
 				reinterpret_cast<SDebugInfoSection::SLabelEntry&>(aDbgInfoBuff[nBufferMarker]);
-			nBufferMarker += sizeof(SDebugInfoSection::SLabelEntry);
+			nBufferMarker += cnDbgTblSctnLblEntrySize;
 
 			tLblSctnEntry.nOffset = tLblEntry.nOffset;
 			tLblSctnEntry.nNamePos = nBufferSubMarker;
@@ -194,13 +206,15 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 
 	// Fill in package header
 	SPackageHeader tHedr;
-	t_size nOutputMarker = sizeof(SPackageHeader);
+	t_size const cnPkgHedrSize = sizeof(SPackageHeader);
+	t_size nOutputMarker = cnPkgHedrSize;
 	VASM_ASSERT(nOutputMarker % 16 == 0);
 
 	// Write Program section header info
+	t_size const cnProgInfoSctnSize = sizeof(SProgramInfoSection);
 	tHedr.aSections[0].eType = SSectionInfo::EType::Info;
 	tHedr.aSections[0].nBase = nOutputMarker;
-	tHedr.aSections[0].nSize = sizeof(SProgramInfoSection);
+	tHedr.aSections[0].nSize = cnProgInfoSctnSize;
 	nOutputMarker += tHedr.aSections[0].nSize;
 	VASM_ASSERT(nOutputMarker % 16 == 0);
 
@@ -240,23 +254,24 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 	VASM_ASSERT(nOutputMarker % 16 == 0);
 
 	// Write Checksum section header info
+	t_size const cnChkSumSctnSize = sizeof(SCheckSumSection);
 	tHedr.aSections[6].eType = SSectionInfo::EType::CeckSum;
 	tHedr.aSections[6].nBase = nOutputMarker;
-	tHedr.aSections[6].nSize = sizeof(SCheckSumSection);
+	tHedr.aSections[6].nSize = cnChkSumSctnSize;
 	nOutputMarker += tHedr.aSections[6].nSize;
 	VASM_ASSERT(nOutputMarker % 16 == 0);
 
 	//
 	// Write outout to the stream
 	//
-	os.write((char const*) &tHedr, sizeof(SPackageHeader));
-	os.write((char const*) &tInfoSctn, sizeof(SProgramInfoSection));
-	os.write((char const*) &tPackage.aCode, tPackage.aCode.size());
-	os.write((char const*) &tPackage.aData, tPackage.aData.size());
-	os.write((char const*) &aSymbolsBuff, aSymbolsBuff.size());
-	os.write((char const*) &aRelocTblBuff, aRelocTblBuff.size());
-	os.write((char const*) &aDbgInfoBuff, aDbgInfoBuff.size());
-	os.write((char const*) &tChkSumSctn, sizeof(SCheckSumSection));
+	os.write((char const*) &tHedr, cnPkgHedrSize);
+	os.write((char const*) &tInfoSctn, cnProgInfoSctnSize);
+	os.write((char const*) tPackage.aCode.data(), tPackage.aCode.size());
+	os.write((char const*) tPackage.aData.data(), tPackage.aData.size());
+	os.write((char const*) aSymbolsBuff.data(), aSymbolsBuff.size());
+	os.write((char const*) aRelocTblBuff.data(), aRelocTblBuff.size());
+	os.write((char const*) aDbgInfoBuff.data(), aDbgInfoBuff.size());
+	os.write((char const*) &tChkSumSctn, cnChkSumSctnSize);
 	os.flush();
 }
 
