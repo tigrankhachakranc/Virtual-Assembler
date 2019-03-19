@@ -188,12 +188,14 @@ void CCodeGenerator::MakeFunc(
 
 		// Is the current command labeld?
 		if (nCurrLbl < tFunc.aLabels.size() && tFunc.aLabels.at(nCurrLbl).nIndex == nCmd)
-			aLblLocations[nCurrLbl++] = nCodeMarker;
+			// Keep function relative label offset
+			aLblLocations[nCurrLbl++] = (nCodeMarker - nCodeMarkerBase);
 
 		// Check code buffer available space
 		if (tPackage.aCode.size() < nCodeMarker + core::cnCmdMaxLength)
 			tPackage.aCode.resize(nCodeMarker + (tFunc.aCommands.size() - nCmd) * cnCmdAvrgLength + core::cnCmdMaxLength);
 
+		// Collect function relative line number to Function relative command offset mapping
 		if (pDbgInfo != nullptr)
 		{
 			t_size nRelativeLineIdx = tCmd.nLineNumber - tFunc.nBaseLine;

@@ -244,9 +244,9 @@ void CDisassembler::ProcessFunctions(std::ostream& oOutput)
 		// Put function definitions
 		for (auto const& tItem : m_tPackage.aFunctionTable)
 		{
-			oOutput << std::endl << "Func " << tItem.sName << ':' << std::endl;
+			oOutput << "Func " << tItem.sName << ':' << std::endl;
 			ProcessFunction(oOutput, tItem);
-			oOutput << "EndF" << std::endl;
+			oOutput << "EndF" << std::endl << std::endl;
 		}
 		oOutput << std::endl;
 	}
