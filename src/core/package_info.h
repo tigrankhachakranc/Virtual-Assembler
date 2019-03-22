@@ -80,8 +80,8 @@ struct SProgramInfoSection
 									 // 0 means load from the first available address
 	t_uoffset	nDataBase		= 0; // Preferred base address from where Data section should be loaded						
 									 // 0 means load from the first available address
-	t_uoffset	nProgramStart	= 0; // Program entry point offset within the code section
 	t_uoffset	nStackSize		= 0; // Stack size used by the program, 0 means use default stack size
+	t_uoffset	nProgramStart	= 0; // Program entry point offset within the code section
 
 	inline SProgramInfoSection() = default;
 	inline SProgramInfoSection(SProgramInfoSection const&) = default;
@@ -106,6 +106,7 @@ struct SSymbolTableSection
 		t_uoffset	nNameSize = 0;	// Symbol name size
 	};
 
+	t_index	nMainIndex = g_ciInvalid; // Index of the main entry point
 	t_count	nEntryCount = 0;
 	SEntry	aEntries[];
 
@@ -125,8 +126,7 @@ struct SRelocationTableSection
 {
 	enum { Type = int(SSectionInfo::EType::RelocTbl) };
 
-	t_count		nFuncCount	= 0;
-	t_count		nVarCount	= 0;
+	t_count		nCount	= 0;
 
 	// Offsets within the code section where immediate address value is written 
 	// At first function address locations are stored then Variable address locations

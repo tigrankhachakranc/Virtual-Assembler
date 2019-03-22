@@ -209,6 +209,7 @@ void CLoader::LoadSymbols(
 	if (tSymbols.nEntryCount == 0)
 		return;
 
+	// Create function baed on the symbol table info
 	m_aSymbolToPackageFuncIdx.resize(tSymbols.nEntryCount, g_ciInvalid);
 	for (t_index i = 0; i < tSymbols.nEntryCount; ++i)
 	{
@@ -219,6 +220,10 @@ void CLoader::LoadSymbols(
 
 		if (tEntry.isFunc)
 		{
+			// Keep Main symbol index
+			if (i == tSymbols.nMainIndex)
+				tPkgInfo.nMainFuncIndex = tPkgInfo.aFunctionTable.size();
+			
 			m_aSymbolToPackageFuncIdx[i] = (t_index) tPkgInfo.aFunctionTable.size();
 			tPkgInfo.aFunctionTable.push_back(SFunctionInfo(
 				std::move(sSymbolName), tEntry.eType, tEntry.nBase + nCodeBase, tEntry.nSize));

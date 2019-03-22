@@ -281,6 +281,10 @@ void CAsmParser::ParseVariables()
 										 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 					} while (!oParser.IsFinished());
 
+					// Fill unspecified part if so
+					while (aValues.size() < nSize)
+						aValues.push_back(t_word(0));
+
 					oValue = std::move(CValue(aValues));
 					break;
 				}

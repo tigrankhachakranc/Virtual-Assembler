@@ -78,11 +78,10 @@ struct SSymbolTable
 //
 struct SRelocationTable
 {
-	// Offsets within the code section where immediate address value is written 
-	// At first function address locations are stored then Variable address locations
+	// Offsets within the code section at where Immediate address values are written 
+	// Functions and Variables address locations are stored together
 	// Usually it is ASSIGN A?, ADDR_VAL instruction, table elements point to the address location relative to the code
-	std::vector<t_uoffset>	aCodeAddressLocations; 
-	std::vector<t_uoffset>	aDataAddressLocations;
+	std::vector<t_uoffset>	aAddressLocations; 
 
 	inline SRelocationTable() = default;
 	inline SRelocationTable(SRelocationTable const&) = default;

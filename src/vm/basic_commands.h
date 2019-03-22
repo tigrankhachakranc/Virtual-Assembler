@@ -206,7 +206,9 @@ private:
 	//
 	// Custom Disassembly functions
 	//
+	t_string dasmAssignA0(SCommandInfo const&, bool bHexadecimal);
 	t_string dasmAssignA4(SCommandInfo const&, bool bHexadecimal);
+	t_string dasmAssignRn(SCommandInfo const&, bool bHexadecimal);
 	t_string dasmCast(SCommandInfo const&, bool bHexadecimal);
 };
 ////////////////////////////////////////////////////////////////////////////////

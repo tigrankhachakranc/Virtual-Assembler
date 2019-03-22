@@ -38,8 +38,7 @@ void CCodeGenerator::Make(SUnit const& tUnit, SPackage& tPackage)
 	tPackage.aData.clear();
 	tPackage.oSymbolTbl.aEntries.clear();
 	tPackage.oDebugInfo.aEntries.clear();
-	tPackage.oRelocTbl.aDataAddressLocations.clear();
-	tPackage.oRelocTbl.aCodeAddressLocations.clear();
+	tPackage.oRelocTbl.aAddressLocations.clear();
 
 	// Unit name
 	tPackage.tInfo.sName = tUnit.sName;
@@ -57,6 +56,7 @@ void CCodeGenerator::Make(SUnit const& tUnit, SPackage& tPackage)
 void CCodeGenerator::MakeData(SUnit const& tUnit, SPackage& tPackage)
 {
 	t_uoffset nDataMarker = 0; // Tracks offset within the Data section
+	m_aVarToSymblIdxMapping.reserve(tUnit.aVariables.size());
 	for (SVariable const& tVar : tUnit.aVariables)
 	{
 		VASM_CHECK(m_mapSymbolTable.count(&tVar.sName) == 0);
@@ -72,6 +72,7 @@ void CCodeGenerator::MakeData(SUnit const& tUnit, SPackage& tPackage)
 		
 		// Keep symbol index
 		m_mapSymbolTable.insert({&tEntry.sName, tPackage.oSymbolTbl.aEntries.size() - 1});
+		m_aVarToSymblIdxMapping.push_back(tPackage.oSymbolTbl.aEntries.size() - 1);
 		
 		if (tVar.tValue.IsNull())
 		{	// Variable declared without definition (forward declaration)
@@ -100,6 +101,7 @@ void CCodeGenerator::MakeData(SUnit const& tUnit, SPackage& tPackage)
 void CCodeGenerator::MakeCode(SUnit const& tUnit, SPackage& tPackage, bool bIncludeDebugInfo)
 {
 	t_uoffset nCodeMarker = 0; // Tracks offset within the Code section
+	m_aFuncToSymblIdxMapping.resize(tUnit.aFunctions.size());
 	for (t_index nFunc = 0; nFunc < tUnit.aFunctions.size(); ++nFunc)
 	{
 		SFunction const& tFunc = tUnit.aFunctions.at(nFunc);
@@ -117,6 +119,7 @@ void CCodeGenerator::MakeCode(SUnit const& tUnit, SPackage& tPackage, bool bIncl
 		tEntry.nBase = core::cnInvalidAddress;
 		// Keep symbol index
 		m_mapSymbolTable.insert({&tEntry.sName, nSymbolIdx});
+		m_aFuncToSymblIdxMapping[nFunc] = nSymbolIdx;
 
 		// Entry point (main)
 		if (nFunc == tUnit.nMainFuncIdx)
@@ -162,9 +165,10 @@ void CCodeGenerator::MakeFunc(
 
 	// Instantiate the Encoder
 	CEncoder oEncoder(tPackage.aCode,
-					  tPackage.oRelocTbl.aDataAddressLocations,
-					  tPackage.oRelocTbl.aCodeAddressLocations,
+					  tPackage.oRelocTbl.aAddressLocations,
 					  aLabelRelocationTbl,
+					  m_aVarToSymblIdxMapping,
+					  m_aFuncToSymblIdxMapping,
 					  m_pCmdLibrary);
 	
 	// Keep Functions starting offset
@@ -212,7 +216,7 @@ void CCodeGenerator::MakeFunc(
 		t_index nLblIndx = reinterpret_cast<uint16&>(tPackage.aCode[nCodeOffset]);
 		VASM_CHECK_IDX(nLblIndx, aLblLocations.size());
 		t_uoffset nLblOffset = aLblLocations[nLblIndx];
-		t_soffset nRelativeOffset = nLblOffset - (nCodeOffset + sizeof(uint16)); // Asjust offset to command boundary
+		t_soffset nRelativeOffset = nLblOffset - (nCodeOffset - nCodeMarkerBase + sizeof(uint16)); // Asjust offset to command boundary
 		if (nRelativeOffset < INT16_MIN || nRelativeOffset > INT16_MAX)
 			throw CEncoder::CError(base::toStr("Encoder: Label relative offset exceeds allowed range of Int-16 '%1'", 
 									base::toStr("%1.%2", tFunc.sName, tFunc.aLabels[nLblIndx].sName)),

@@ -60,11 +60,11 @@ void CDisassembler::Disassemble(std::istream& oInput, std::ostream& oOutput)
 	// Put .code section
 	ProcessFunctions(oOutput);
 
-	// put .main section
-	if (m_tPackage.nProgramStart > 0)
+	// Put .main section
+	if (m_tPackage.nMainFuncIndex != g_ciInvalid)
 	{
-		t_string sMain = m_pAddressRecovery->ToSymbol(m_tPackage.nProgramStart);
-		oOutput << ".MAIN = " << sMain << std::endl;
+		VASM_CHECK_IDX_X(m_tPackage.nMainFuncIndex, m_tPackage.aFunctionTable.size(), t_csz("Disassembler: Invalid main function index"));
+		oOutput << ".MAIN = " << m_tPackage.aFunctionTable.at(m_tPackage.nMainFuncIndex).sName << std::endl;
 	}
 }
 
@@ -95,7 +95,7 @@ void CDisassembler::InitAddressRecovery()
 			mapSymbols.insert({tItem.nAddress, &tItem.sName});
 	}
 
-	// Niti address recover
+	// Init address recovery
 	m_pAddressRecovery = CAddressRecoveryPtr(new core::CAddressRecovery(std::move(mapSymbols)));
 	m_pCmdLib->SetAddressRecovery(m_pAddressRecovery);
 }
@@ -248,7 +248,6 @@ void CDisassembler::ProcessFunctions(std::ostream& oOutput)
 			ProcessFunction(oOutput, tItem);
 			oOutput << "EndF" << std::endl << std::endl;
 		}
-		oOutput << std::endl;
 	}
 }
 

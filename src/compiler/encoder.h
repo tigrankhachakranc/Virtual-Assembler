@@ -30,9 +30,10 @@ class CEncoder final
 {
 public:
 	CEncoder(t_aCode& aCodeBuffer,
-			 t_aRelocTable& aVarRelocTbl,
-			 t_aRelocTable& aFuncRelocTbl,
+			 t_aRelocTable& aSymblRelocTbl,
 			 t_aRelocTable& aLblRelocTbl,
+			 std::vector<t_index> const& aVarToSymblIdxMapping,
+			 std::vector<t_index> const& aFuncToSymblIdxMapping,
 			 CCommandLibraryPtr pCmdLib);
 	~CEncoder();
 
@@ -78,11 +79,12 @@ public:
 	t_uoffset Encode(SCommand const& tCmd, t_uoffset nCodeOffset);
 
 private:
-	t_aCode&			m_aCodeBuffer;
-	t_aRelocTable&		m_aVarRelocTbl;
-	t_aRelocTable&		m_aFuncRelocTbl;
-	t_aRelocTable&		m_aLblRelocTbl;
-	CCommandLibraryPtr	m_pCmdLibrary;
+	t_aCode&					m_aCodeBuffer;
+	t_aRelocTable&				m_aSymblRelocTbl;
+	t_aRelocTable&				m_aLblRelocTbl;
+	CCommandLibraryPtr			m_pCmdLibrary;
+	std::vector<t_index> const&	m_aVarToSymblIdxMapping;
+	std::vector<t_index> const&	m_aFuncToSymblIdxMapping;
 };
 
 // CCommandBase smart pointers

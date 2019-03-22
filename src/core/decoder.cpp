@@ -31,7 +31,7 @@ void CDecoder::Decode(uchar const* pCmd, SCommandInfo& tCmdInfo)
 	tCmdInfo.tMetaInfo = (*m_pCmdLibrary)[(EOpCode) *pCmd].tMetaInfo;
 	++pCmd; // Skip OpCode and move to next byte
 
-	if (tCmdInfo.tMetaInfo.eExtInfo == SCommandMetaInfo::NoExtension)
+	if (0 == (tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::MaskExtension))
 	{	// No OpCode extension
 		tCmdInfo.nExtension = 0;
 		tCmdInfo.eOprSize = EOprSize::Default;
@@ -170,7 +170,8 @@ void CDecoder::ReadIMV(uchar const*& pCmd, SCommandInfo& tCmdInfo)
 		pCmd += sizeof(uchar); // Skip IMV
 		break;
 	case EImvType::Port:
-		tCmdInfo.u16Imv = uint16(*pCmd) + (((uint16)(tCmdInfo.nExtension & 0xF0ui8)) << 4);
+		// Read lower 8 bits from argument and unpack elder 4 bits from lower bits of the extension
+		tCmdInfo.u16Imv = uint16(*pCmd) + (static_cast<uint16>(tCmdInfo.nExtension & 0x0Fui8) << 8);
 		pCmd += sizeof(uchar); // Skip IMV
 		break;
 	case EImvType::Index:

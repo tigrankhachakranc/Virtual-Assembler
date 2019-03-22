@@ -73,7 +73,7 @@ private:
 	//	Implementation
 	//
 	// Writes program header code wich is the actual program entry point
-	void WriteHeader(SPackage& tFinalPackage);
+	void WriteCodeHeader(SPackage& tFinalPackage);
 	// Merges packages together
 	void Merge(SPackage& tFinalPackage, t_lstPackages const& lstPackages);
 	// Resolves label indexes and fills in final offsets

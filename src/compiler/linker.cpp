@@ -36,31 +36,35 @@ SPackage CLinker::Build(t_lstPackages const& lstPackages, t_string sProgramName)
 	tFinalPkg.tInfo.sName = std::move(sProgramName);
 
 	// Write program header (which will call main and exits)
-	WriteHeader(tFinalPkg);
+	WriteCodeHeader(tFinalPkg);
 	// Merge packages into single package
 	Merge(tFinalPkg, lstPackages);
 
 	// Fill program entry point
 	if (tFinalPkg.tInfo.nEntryPoint == g_ciInvalid)
 		throw CError(t_csz("Linker: Program entry point not defined"), tFinalPkg.tInfo.sName);
-	t_uoffset nMainJumpOffset = tFinalPkg.oRelocTbl.aCodeAddressLocations.front();
-	std::memcpy(&tFinalPkg.aCode[nMainJumpOffset], &nMainJumpOffset, sizeof(t_address));
+	t_uoffset nMainJumpOffset = tFinalPkg.oRelocTbl.aAddressLocations.front();
+	t_address nMainFuncSymbolIdx = tFinalPkg.tInfo.nEntryPoint;
+	std::memcpy(&tFinalPkg.aCode[nMainJumpOffset], &nMainFuncSymbolIdx, sizeof(t_address));
 
-	// Resolve symbol indexes to final offsets
+	// Convert symbol indexes to final offsets
 	ResolveOffsets(tFinalPkg);
 
 	return std::move(tFinalPkg);
 }
 
-void CLinker::WriteHeader(SPackage& tFinalPkg)
+void CLinker::WriteCodeHeader(SPackage& tFinalPkg)
 {
+	t_aRelocTable aDummy;
+	std::vector<t_index> aDummyVarIdxMapping;
+	std::vector<t_index> aDummyFuncIdxMapping(1, 0);
+
 	tFinalPkg.aCode.resize(s_cnGranul, 0);
 
-	t_aRelocTable aDummy;
 	CEncoder oEncoder(tFinalPkg.aCode,
-					  tFinalPkg.oRelocTbl.aDataAddressLocations,
-					  tFinalPkg.oRelocTbl.aCodeAddressLocations,
-					  aDummy, m_pCmdLib);
+					  tFinalPkg.oRelocTbl.aAddressLocations,
+					  aDummy, aDummyVarIdxMapping, aDummyFuncIdxMapping,
+					  m_pCmdLib);
 
 	SCommand tCmd;
 	int nCodeOffset = 0;
@@ -71,7 +75,7 @@ void CLinker::WriteHeader(SPackage& tFinalPkg)
 	tCmd.aArguments[EOprIdx::First].eType = EArgType::AR;
 	tCmd.aArguments[EOprIdx::First].nIdx = core::SCPUStateBase::eARBaseIndex;
 	tCmd.aArguments[EOprIdx::Second].eType = EArgType::FUNC;
-	tCmd.aArguments[EOprIdx::Second].nIdx = g_ciInvalid;
+	tCmd.aArguments[EOprIdx::Second].nIdx = 0;
 	nCodeOffset += oEncoder.Encode(tCmd, nCodeOffset);
 
 	tCmd.eOpCode = EOpCode::CALL;
@@ -101,7 +105,7 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 		tFinalPkg.aData.resize(nFinalSize);
 		std::memcpy(&tFinalPkg.aData[nLastDataSize], &tPkg.aData[0], nCurrSize);
 		if (nReminder > 0)
-			std::memset(&tFinalPkg.aData.back() - nReminder, 0, nReminder);
+			std::memset(&tFinalPkg.aData[nLastDataSize + nCurrSize], 0, s_cnGranul - nReminder);
 
 		// Merge Code sections
 		t_uoffset nLastCodeSize = tFinalPkg.aCode.size();
@@ -111,7 +115,7 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 		tFinalPkg.aCode.resize(nFinalSize);
 		std::memcpy(&tFinalPkg.aCode[nLastCodeSize], &tPkg.aCode[0], nCurrSize);
 		if (nReminder > 0)
-			std::memset(&tFinalPkg.aCode.back() - nReminder, 0, nReminder);
+			std::memset(&tFinalPkg.aCode[nLastCodeSize + nCurrSize], 0, s_cnGranul - nReminder);
 
 		std::vector<t_index> aSymbolIndexRemapping(tPkg.oSymbolTbl.aEntries.size());
 
@@ -165,15 +169,13 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 				t_uoffset uRelativeAddress = aFinalTbl[i];
 				// WARNING! Machine level alignment check risk
 				// TODO: do it with memory copy 
-				t_address nSymbolIndex = reinterpret_cast<t_address&>(tFinalPkg.aCode[uRelativeAddress]);
+				t_address& nSymbolIndex = reinterpret_cast<t_address&>(tFinalPkg.aCode[uRelativeAddress]);
 				nSymbolIndex = aSymbolIndexRemapping[nSymbolIndex];
 			}
 		};
 
-		// Adjust relocation for Data
-		fnRelocMerge(tFinalPkg.oRelocTbl.aDataAddressLocations, tPkg.oRelocTbl.aDataAddressLocations);
-		// Adjust relocation for Code
-		fnRelocMerge(tFinalPkg.oRelocTbl.aCodeAddressLocations, tPkg.oRelocTbl.aCodeAddressLocations);
+		// Adjust relocation table
+		fnRelocMerge(tFinalPkg.oRelocTbl.aAddressLocations, tPkg.oRelocTbl.aAddressLocations);
 
 		// Merge debug info
 		for (auto const& tEntry : tPkg.oDebugInfo.aEntries)
@@ -201,14 +203,14 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 
 void CLinker::ResolveOffsets(SPackage& tPkg)
 {
-	// Replace symbol indexes within the code with actual (resolved addresses
+	// Replace symbol indexes within the code with actual (resolved) addresses
 	auto fnResolver = [&tPkg](std::vector<t_uoffset> const& aRelocTbl)
 	{
 		for (t_uoffset nOffset : aRelocTbl)
 		{
-			t_address* nAddresPlace = reinterpret_cast<t_address*>(&tPkg.aCode[nOffset]);
+			t_address* pAddresPlace = reinterpret_cast<t_address*>(&tPkg.aCode[nOffset]);
 			t_address nSymbolIndex;
-			std::memcpy(&nSymbolIndex, nAddresPlace, sizeof(t_address));
+			std::memcpy(&nSymbolIndex, pAddresPlace, sizeof(t_address));
 			VASM_CHECK_IDX(nSymbolIndex, tPkg.oSymbolTbl.aEntries.size());
 			SSymbolTable::SEntry const& tSymbol = tPkg.oSymbolTbl.aEntries.at(nSymbolIndex);
 			if (tSymbol.nBase == core::cnInvalidAddress)
@@ -216,12 +218,11 @@ void CLinker::ResolveOffsets(SPackage& tPkg)
 			t_address nSymbolAddress = tSymbol.nBase;
 			if (!tSymbol.isFunc)
 				nSymbolAddress += tPkg.aCode.size(); // Data starts right after the code
-			std::memcpy(nAddresPlace, &nSymbolAddress, sizeof(t_address));
+			std::memcpy(pAddresPlace, &nSymbolAddress, sizeof(t_address));
 		}
 	};
 
-	fnResolver(tPkg.oRelocTbl.aDataAddressLocations);
-	fnResolver(tPkg.oRelocTbl.aCodeAddressLocations);
+	fnResolver(tPkg.oRelocTbl.aAddressLocations);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

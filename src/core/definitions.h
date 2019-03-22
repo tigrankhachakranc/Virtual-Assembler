@@ -102,7 +102,7 @@ enum class EOpCode : uchar
 	DEC2,	// IL(4) DEC AR(n) <- Offset16			Decrements specified address register by the specified Offset
 
 	// Assignemnt instuctions
-	ASSIGNA0,// IL(2)  ASSIGN AR(n) <- 0 (nullptr)
+	ASSIGNA0,// IL(2)  ASSIGN AR(n) <- null
 	ASSIGNA4,// IL(6)  ASSIGN AR(n) <- Number32
 	ASSIGNR1,// IL(4)  ASSIGN GR(n) <- Number8
 	ASSIGNR2,// IL(4)  ASSIGN GR(n) <- Number16

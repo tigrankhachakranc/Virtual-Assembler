@@ -57,7 +57,7 @@ SCommandMetaInfo::SCommandMetaInfo(
 	aeOprTypes[1] = EOprType::None;
 	aeOprTypes[2] = EOprType::None;
 	eImvType = EImvType::None;
-	nLength = (ext == NoExtension) ? 2 : 4;
+	nLength = bool(ext & MaskExtension) ? 4 : 2;
 }
 
 SCommandMetaInfo::SCommandMetaInfo(
@@ -76,11 +76,11 @@ SCommandMetaInfo::SCommandMetaInfo(
 	switch (imv)
 	{
 	case EImvType::None:
-		nLength = (ext == NoExtension) ? 2 : 4; // bad case
+		nLength = bool(ext & MaskExtension) ? 4 : 2; // bad case
 		break;
 	case EImvType::Num8:
 	case EImvType::SNum8:
-		nLength = (ext == NoExtension) ? 2 : 4;
+		nLength = bool(ext & MaskExtension) ? 4 : 2;
 		break;
 	case EImvType::Num16:
 	case EImvType::SNum16:
@@ -147,15 +147,15 @@ SCommandMetaInfo::SCommandMetaInfo(
 		break;
 	case EImvType::Num16:
 	case EImvType::SNum16:
-		nLength = (ext == NoExtension) ? 4 : 6;
+		nLength = bool(ext & MaskExtension) ? 6 : 4;
 		break;
 	case EImvType::Num32:
 	case EImvType::SNum32:
-		nLength = (ext == NoExtension) ? 6 : 8;
+		nLength = bool(ext & MaskExtension) ? 8 : 6;
 		break;
 	case EImvType::Num64:
 	case EImvType::SNum64:
-		nLength = (ext == NoExtension) ? 10 : 12;
+		nLength = bool(ext & MaskExtension) ? 12 : 10;
 		break;
 	case EImvType::Count:
 		nLength = 4;
@@ -366,10 +366,10 @@ t_string CCommandBase::DisAsmCmd(SCommandInfo const& tCmd)
 	return std::move(sCmd);
 }
 
-t_string CCommandBase::DisAsmOprSize(SCommandInfo const& tCmd)
+t_string CCommandBase::DisAsmOprSize(SCommandInfo const& tCmd, bool bForce)
 {
 	t_string sCmd;
-	if (tCmd.tMetaInfo.eExtInfo & SCommandMetaInfo::HasOprSize)
+	if (bForce || (tCmd.tMetaInfo.eExtInfo & SCommandMetaInfo::HasOprSize))
 	{
 		switch (tCmd.eOprSize)
 		{

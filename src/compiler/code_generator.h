@@ -51,8 +51,10 @@ private:
 	//
 	//	Contents
 	//
-	CCommandLibraryPtr	m_pCmdLibrary;
-	t_mapSymbolTable	m_mapSymbolTable;
+	CCommandLibraryPtr	 m_pCmdLibrary;
+	t_mapSymbolTable	 m_mapSymbolTable;
+	std::vector<t_index> m_aVarToSymblIdxMapping;
+	std::vector<t_index> m_aFuncToSymblIdxMapping;
 };
 ////////////////////////////////////////////////////////////////////////////////
 

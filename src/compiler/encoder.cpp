@@ -28,15 +28,17 @@ using SCommandMetaInfo = core::SCommandMetaInfo;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CEncoder::CEncoder(t_aCode& aCodeBuffer,
-				   t_aRelocTable& aVarRelocTbl,
-				   t_aRelocTable& aFuncRelocTbl,
+				   t_aRelocTable& aSymblRelocTbl,
 				   t_aRelocTable& aLblRelocTbl,
+				   std::vector<t_index> const& aVarToSymblIdxMapping,
+				   std::vector<t_index> const& aFuncToSymblIdxMapping,
 				   CCommandLibraryPtr pCmdLib) :
 	m_aCodeBuffer(aCodeBuffer),
-	m_aVarRelocTbl(aVarRelocTbl),
-	m_aFuncRelocTbl(aFuncRelocTbl),
+	m_aSymblRelocTbl(aSymblRelocTbl),
 	m_aLblRelocTbl(aLblRelocTbl),
-	m_pCmdLibrary(pCmdLib)
+	m_pCmdLibrary(pCmdLib),
+	m_aVarToSymblIdxMapping(aVarToSymblIdxMapping),
+	m_aFuncToSymblIdxMapping(aFuncToSymblIdxMapping)
 {
 	VASM_CHECK_PTR(pCmdLib);
 }
@@ -64,7 +66,7 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 	*pCode = (uint8) tInfo.eOpCode;
 	++pCode; // Move to next byte
 
-	if (tInfo.eExtInfo != SCommandMetaInfo::NoExtension)
+	if (tInfo.eExtInfo & SCommandMetaInfo::MaskExtension)
 	{
 		uint8 nExt = 0;
 
@@ -159,10 +161,13 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 			if (tInfo.eOpCode != EOpCode::ASSIGNA4) // Variables could be used only with the instruction ASSIGN A?, VAR_NAME 
 				throw CError(t_csz("Encoder: Invalid use of variable"), tCmd.nLineNumber, tInfo.pcszName);
 
-			// Writ variable index for now, actual address will be resolved later by the linker
-			std::memcpy(pCode, &tArg.nIdx, sizeof(t_address));
+			// Convert variable index into corresponding symbol index
+			VASM_CHECK_IDX(tArg.nIdx, m_aVarToSymblIdxMapping.size());
+			t_address nSymbolIdx = m_aVarToSymblIdxMapping[tArg.nIdx];
+			// Write variable's symbol index for now, actual address will be resolved later by the linker
+			std::memcpy(pCode, &nSymbolIdx, sizeof(t_address));
 			// Keep lbl offset in the relocation table to complete with correct address later
-			m_aVarRelocTbl.push_back(nCodeOffset + (pCode - pCodeBase));
+			m_aSymblRelocTbl.push_back(nCodeOffset + (pCode - pCodeBase));
 			pCode += sizeof(t_address); // Move to next byte
 			break;
 		}
@@ -173,10 +178,13 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 			if (tInfo.eOpCode != EOpCode::ASSIGNA4) // Variables could be used only with the instruction ASSIGN A?, VAR_NAME 
 				throw CError(t_csz("Encoder: Invalid use of Function"), tCmd.nLineNumber, tInfo.pcszName);
 
-			// Writ index index for now, actual address will be resolved later by the linker
-			std::memcpy(pCode, &tArg.nIdx, sizeof(t_address));
+			// Convert function index into corresponding symbol index
+			VASM_CHECK_IDX(tArg.nIdx, m_aFuncToSymblIdxMapping.size());
+			t_address nSymbolIdx = m_aFuncToSymblIdxMapping[tArg.nIdx];
+			// Write function's symbol index for now, actual address will be resolved later by the linker
+			std::memcpy(pCode, &nSymbolIdx, sizeof(t_address));
 			// Keep lbl offset in the relocation table to complete with correct address later
-			m_aFuncRelocTbl.push_back(nCodeOffset + (pCode - pCodeBase));
+			m_aSymblRelocTbl.push_back(nCodeOffset + (pCode - pCodeBase));
 			pCode += sizeof(t_address); // Move to next byte
 			break;
 		}
@@ -241,8 +249,9 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 			case EImvType::Port:
 				// write lower 8 bits of 12 bit value in place of the argument
 				*reinterpret_cast<uint8*>(pCode) = static_cast<uint8>(tArg.u16Val);
-				// Pack elder 4 bits of 12 bit value into elder 4 bits of the extension
-				*(pCodeBase + 1) = (static_cast<uint8>(tArg.u16Val >> 8) << 4) | (*(pCodeBase + 1) & 0x0Fui8);
+				// Pack elder 4 bits of 12 bit value into lower 4 bits of the extension
+				*(pCodeBase + 1) = (static_cast<uint8>(tArg.u16Val >> 8) & 0x0Fui8) | (*(pCodeBase + 1) & 0xF0ui8);
+				pCode += sizeof(uint8); // Move to next operand
 				break;
 			case EImvType::Index:
 				//TODO! Failed to preserve endianess, this code is Little Endian speciifc

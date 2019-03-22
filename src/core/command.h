@@ -35,6 +35,7 @@ struct SCommandMetaInfo
 		// Non zero value means that second byte is the extension
 		// which could contain OprSize, ArgSpec, CC bits & etc.
 		NoExtension		= 0,
+		MaskExtension	= 0x0F,
 
 		HasCndtnCode	= 0x01,
 		HasOprSize		= 0x02,
@@ -108,16 +109,16 @@ struct SCommandInfo
 	// Immediate value for Op1, Op2 or Op3 (when applicable)
 	union
 	{
-		uint8	i8Imv;
+		int8	i8Imv;
 		uint8	u8Imv;
 
-		uint16	i16Imv;
+		int16	i16Imv;
 		uint16	u16Imv;
 
-		uint32	i32Imv;
+		int32	i32Imv;
 		uint32	u32Imv;
 		
-		uint64	i64Imv;
+		int64	i64Imv;
 		uint64	u64Imv;
 	};
 
@@ -400,7 +401,7 @@ protected:
 	t_string DisAsm(SCommandInfo const&, bool bHexadecimal);
 	// Disassembly partial helpers
 	virtual t_string DisAsmCmd(SCommandInfo const& tCmd);
-	virtual t_string DisAsmOprSize(SCommandInfo const& tCmd);
+	virtual t_string DisAsmOprSize(SCommandInfo const& tCmd, bool bForce = false);
 	virtual t_string DisAsmArgs(SCommandInfo const& tCmd, bool bHexadecimal);
 	virtual t_string DisAsmArg(SCommandInfo const& tCmd, bool bHexadecimal, t_index nArgIdx);
 	virtual t_string DisAsmImv(SCommandInfo const& tCmd, bool bHexadecimal);

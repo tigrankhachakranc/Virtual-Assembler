@@ -176,17 +176,17 @@ CBasicCommands::CBasicCommands() : CCommandBase()
 			 FuncCmdExec(&CBasicCommands::Dec2), FuncCmdDisasm(&CBasicCommands::DisAsm));
 
 	Register({t_csz("ASSIGN"), EOpCode::ASSIGNA0, EOprType::AR},
-			 FuncCmdExec(&CBasicCommands::AssignA0), FuncCmdDisasm(&CBasicCommands::DisAsm));
+			 FuncCmdExec(&CBasicCommands::AssignA0), FuncCmdDisasm(&CBasicCommands::dasmAssignA0));
 	Register({t_csz("ASSIGN"), EOpCode::ASSIGNA4, EOprType::AR, EOprType::IMV, EImvType::Num32},
 			 FuncCmdExec(&CBasicCommands::AssignA4), FuncCmdDisasm(&CBasicCommands::dasmAssignA4));
 	Register({t_csz("ASSIGN"), EOpCode::ASSIGNR1, EOprType::GR, EOprType::IMV, EImvType::SNum8, SCommandMetaInfo::FixedOprSizeByte},
-			 FuncCmdExec(&CBasicCommands::AssignR1), FuncCmdDisasm(&CBasicCommands::DisAsm));
+			 FuncCmdExec(&CBasicCommands::AssignR1), FuncCmdDisasm(&CBasicCommands::dasmAssignRn));
 	Register({t_csz("ASSIGN"), EOpCode::ASSIGNR2, EOprType::GR, EOprType::IMV, EImvType::SNum16, SCommandMetaInfo::FixedOprSizeWord},
-			 FuncCmdExec(&CBasicCommands::AssignR2), FuncCmdDisasm(&CBasicCommands::DisAsm));
+			 FuncCmdExec(&CBasicCommands::AssignR2), FuncCmdDisasm(&CBasicCommands::dasmAssignRn));
 	Register({t_csz("ASSIGN"), EOpCode::ASSIGNR4, EOprType::GR, EOprType::IMV, EImvType::SNum32, SCommandMetaInfo::FixedOprSizeDWord},
-			 FuncCmdExec(&CBasicCommands::AssignR4), FuncCmdDisasm(&CBasicCommands::DisAsm));
+			 FuncCmdExec(&CBasicCommands::AssignR4), FuncCmdDisasm(&CBasicCommands::dasmAssignRn));
 	Register({t_csz("ASSIGN"), EOpCode::ASSIGNR8, EOprType::GR, EOprType::IMV, EImvType::SNum64, SCommandMetaInfo::FixedOprSizeQWord},
-			 FuncCmdExec(&CBasicCommands::AssignR8), FuncCmdDisasm(&CBasicCommands::DisAsm));
+			 FuncCmdExec(&CBasicCommands::AssignR8), FuncCmdDisasm(&CBasicCommands::dasmAssignRn));
 
 	FuncCmdExec apfnMove[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::Move<uint8>), FuncCmdExec(&CBasicCommands::Move<uint16>), 
@@ -1380,6 +1380,16 @@ void CBasicCommands::Cast(SCommandContext& tCtxt)
 //
 //	Disassembly functions
 //
+t_string CBasicCommands::dasmAssignA0(SCommandInfo const& tCmd, bool)
+{
+	// Command name
+	t_string sCmd = DisAsmCmd(tCmd);
+	// Arguments
+	sCmd += base::toStr(t_csz(" A%1, null"), (uint) tCmd.nRegIdx[EOprIdx::First]);
+	//
+	return std::move(sCmd);
+}
+
 t_string CBasicCommands::dasmAssignA4(SCommandInfo const& tCmd, bool bHexadecimal)
 {
 	t_string sCmd;
@@ -1395,6 +1405,14 @@ t_string CBasicCommands::dasmAssignA4(SCommandInfo const& tCmd, bool bHexadecima
 		// Arguments
 		sCmd += base::toStr(t_csz(" A%1, %2"), (uint) tCmd.nRegIdx[EOprIdx::First], sSymbol);
 	}
+	return std::move(sCmd);
+}
+
+t_string CBasicCommands::dasmAssignRn(SCommandInfo const& tCmd, bool bHexadecimal)
+{
+	t_string sCmd = DisAsmCmd(tCmd);
+	sCmd += DisAsmOprSize(tCmd, true);
+	sCmd += DisAsmArgs(tCmd, bHexadecimal);
 	return std::move(sCmd);
 }
 

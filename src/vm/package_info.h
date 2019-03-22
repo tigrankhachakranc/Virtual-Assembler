@@ -108,8 +108,14 @@ struct SPackageInfo
 	// Program stack size in bytes, 0 means use default stack size
 	t_uoffset		nStackSize = 0;
 
-	// Address of the main entry point of the program
+	// Address of the entry point of the program
 	t_address		nProgramStart = 0;
+
+	// Index of the Main function
+	t_index			nMainFuncIndex = g_ciInvalid;
+
+	// Reserved
+	uint32			nPadding = 0; 
 
 	// Variables information defined in the package
 	t_VariableTable	aVariableTable;

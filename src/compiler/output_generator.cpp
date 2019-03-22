@@ -64,6 +64,7 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 
 	uint8* const cpSymbolsBuff = &aSymbolsBuff[0];
 	SSymbolTableSection& tSymbolsSctn = reinterpret_cast<SSymbolTableSection&>(*cpSymbolsBuff);
+	tSymbolsSctn.nMainIndex = tPackage.tInfo.nEntryPoint;
 	tSymbolsSctn.nEntryCount = (t_count) tPackage.oSymbolTbl.aEntries.size();
 
 	for (t_index i = 0; i < tSymbolsSctn.nEntryCount; ++i)
@@ -88,7 +89,7 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 
 	// Determine buffer size
 	nBufferSize = cnRelocTblSctnSize;
-	nBufferSize += sizeof(t_uoffset) * (tPackage.oRelocTbl.aCodeAddressLocations.size() + tPackage.oRelocTbl.aDataAddressLocations.size());
+	nBufferSize += sizeof(t_uoffset) * tPackage.oRelocTbl.aAddressLocations.size();
 	if (nBufferSize % 16 != 0)
 		nBufferSize += 16 - nBufferSize % 16;
 
@@ -97,13 +98,9 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 
 	uint8* const cpRelocTblBuff = &aRelocTblBuff[0];
 	SRelocationTableSection& tRelocTblSctn = reinterpret_cast<SRelocationTableSection&>(*cpRelocTblBuff);
-	tRelocTblSctn.nFuncCount = (t_count) tPackage.oRelocTbl.aCodeAddressLocations.size();
-	tRelocTblSctn.nVarCount  = (t_count) tPackage.oRelocTbl.aDataAddressLocations.size();
-
-	for (t_index i = 0; i < tRelocTblSctn.nFuncCount; ++i)
-		tRelocTblSctn.aAddressLocations[i] = tPackage.oRelocTbl.aCodeAddressLocations[i];
-	for (t_index i = 0, j = tRelocTblSctn.nFuncCount; i < tRelocTblSctn.nVarCount; ++i)
-		tRelocTblSctn.aAddressLocations[j] = tPackage.oRelocTbl.aDataAddressLocations[i];
+	tRelocTblSctn.nCount = (t_count) tPackage.oRelocTbl.aAddressLocations.size();
+	for (t_index i = 0; i < tRelocTblSctn.nCount; ++i)
+		tRelocTblSctn.aAddressLocations[i] = tPackage.oRelocTbl.aAddressLocations[i];
 
 	//
 	//	Debug info section preparation
