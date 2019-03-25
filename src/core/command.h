@@ -34,21 +34,22 @@ struct SCommandMetaInfo
 	{
 		// Non zero value means that second byte is the extension
 		// which could contain OprSize, ArgSpec, CC bits & etc.
-		NoExtension		= 0,
-		MaskExtension	= 0x0F,
+		NoExtension			= 0,
+		MaskExtension		= 0x0F,
 
-		HasCndtnCode	= 0x01,
-		HasOprSize		= 0x02,
-		HasOprSwitch	= 0x04,
-		CustomExtension	= 0x08,
+		HasCndtnCode		= 0x01,
+		HasOprSize			= 0x02,
+		HasOprSwitch		= 0x04,
+		CustomExtension		= 0x08,
 
-		SkipCdtnCheck	= 0x10,
+		SkipCdtnCheck		= 0x10,
+		SingularOperandSize	= 0x20,
 
-		FixedOprSizeByte  = 0x00,
-		FixedOprSizeWord  = 0x40,
-		FixedOprSizeDWord = 0x80,
-		FixedOprSizeQWord = 0xC0,
-		MaskFixedOprSize  = 0xC0,
+		FixedOprSizeByte	= 0x00,
+		FixedOprSizeWord	= 0x40,
+		FixedOprSizeDWord	= 0x80,
+		FixedOprSizeQWord	= 0xC0,
+		MaskFixedOprSize	= 0xC0,
 
 		// | OpSwitch1 | OpSwitch2 | OpSize | Cndtn Code | 
 		//       7           6        5  4    3  2  1  0

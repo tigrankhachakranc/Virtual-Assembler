@@ -112,7 +112,7 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		++pCode; // Move to next byte
 	}
 
-	for (uchar i = 0; i < tInfo.nOperandCount; ++i)
+	for (uint i = 0; i < tInfo.nOperandCount; ++i)
 	{
 		uchar eOprType = (uchar) tInfo.aeOprTypes[i];
 		SArgument const& tArg = tCmd.aArguments[i];
@@ -140,17 +140,25 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 			if (tArg.nIdx >= core::SCPUStateBase::eGeneralPurposeRegisterPoolSize)
 				throw CError(base::toStr("Encoder: Invalid general purpose register index '%1'", tArg.nIdx), tCmd.nLineNumber, tInfo.pcszName);
 
-			uchar nOprSizeInBytes = 0;
-			if (tInfo.eExtInfo & SCommandMetaInfo::HasOprSize)
-				nOprSizeInBytes = core::OperandSize(tCmd.eOprSize);
-			else
-				nOprSizeInBytes = core::OperandSize((EOprSize) ((tInfo.eExtInfo >> 6) & 0x03));
+			uchar nAlignedRIdx = (uchar) tArg.nIdx;
+			if (i == 0 || !bool(tInfo.eExtInfo & SCommandMetaInfo::SingularOperandSize))
+			{
+				uchar nOprSizeInBytes = 0;
+				if (tInfo.eExtInfo & SCommandMetaInfo::HasOprSize)
+					nOprSizeInBytes = core::OperandSize(tCmd.eOprSize);
+				else
+					nOprSizeInBytes = core::OperandSize((EOprSize) ((tInfo.eExtInfo & SCommandMetaInfo::MaskFixedOprSize) >> 6));
 
-			if (tArg.nIdx % nOprSizeInBytes != 0)
-				throw CError(base::toStr("Encoder: Unaligned general purpose register index '%1'", tArg.nIdx), tCmd.nLineNumber, tInfo.pcszName);
+				if (nOprSizeInBytes == 0)
+					throw CError(base::toStr("Encoder: Invalid operand size", tArg.nIdx), tCmd.nLineNumber, tInfo.pcszName);
+				else if (tArg.nIdx % nOprSizeInBytes != 0)
+					throw CError(base::toStr("Encoder: Unaligned general purpose register index '%1'", tArg.nIdx), tCmd.nLineNumber, tInfo.pcszName);
+
+				nAlignedRIdx = (uchar) tArg.nIdx / nOprSizeInBytes;
+			}
 
 			// Write operand
-			*pCode = (uchar) tArg.nIdx / nOprSizeInBytes;
+			*pCode = nAlignedRIdx;
 			++pCode; // Move to next byte
 			break;
 		}
