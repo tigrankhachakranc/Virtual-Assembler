@@ -174,11 +174,6 @@ void CDecoder::ReadIMV(uchar const*& pCmd, SCommandInfo& tCmdInfo)
 		tCmdInfo.u16Imv = uint16(*pCmd) + (static_cast<uint16>(tCmdInfo.nExtension & 0x0Fui8) << 8);
 		pCmd += sizeof(uchar); // Skip IMV
 		break;
-	case EImvType::Index:
-		std::memcpy((&tCmdInfo.i8Imv) + 1, pCmd, 3);
-		tCmdInfo.i32Imv = tCmdInfo.i32Imv >> 8;
-		pCmd += sizeof(3); // Skip IMV
-		break;
 	default:
 		VASM_THROW_INVALID_CONDITION();
 	}

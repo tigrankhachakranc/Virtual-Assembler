@@ -17,6 +17,8 @@ std::pair<uint64, uint64> UValuRangeFromType(EImvType eType);
 template <typename TSrcType>
 void ReadjustInMemoryNumber(TSrcType& num, EImvType eTargetType);
 
+CStringComparator<EComparisonType::Equal_CI> isEqual;
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 //	Static memebers intiailization
@@ -87,7 +89,8 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands {
 	//
 	{t_csz("LOAD"),	{EOpCode::LOAD, EOprType::AGR, EOprType::AR, true}},
 	{t_csz("STORE"),{EOpCode::STORE,EOprType::AGR, EOprType::AR, true}},
-	{t_csz("LEA"),	{EOpCode::LEA,	EOprType::AR,  EOprType::AR, EOprType::IMV, EImvType::Index}},
+	{t_csz("LDREL"),{EOpCode::LDREL,EOprType::AGR, EOprType::AR, EOprType::IMV, EImvType::SNum32, true}},
+	{t_csz("STREL"),{EOpCode::STREL,EOprType::AGR, EOprType::AR, EOprType::IMV, EImvType::SNum32, true}},
 	//
 	// Stack instructions
 	//
@@ -313,6 +316,8 @@ void CCommandParser::Parse(SCommand& tCommand)
 		sToken = std::move(ParseToken());
 	}
 
+	// Null keyword is reserved only for ASSIGN commands
+	bool bAcceptNull = (itCmdRange.first->second.eOpCode == EOpCode::ASSIGNA0);
 
 	// Parse arguments if any
 	tCommand.nArgCount = 0;
@@ -323,12 +328,16 @@ void CCommandParser::Parse(SCommand& tCommand)
 
 		// Parse argument
 		SArgument& tArg = tCommand.aArguments[tCommand.nArgCount];
-		tArg = ParseArgument(std::move(sToken));
+		tArg = ParseArgument(std::move(sToken), bAcceptNull);
+
+		// Parse next token
+		sToken = std::move(ParseToken());
+
+		if (tArg.eType == EArgType::None)
+			break;
 
 		// Increase argument count
 		++tCommand.nArgCount;
-		// Parse next token
-		sToken = std::move(ParseToken());
 
 		if (sToken.size() == 1 && sToken.front() == s_cchArgSep)
 		{
@@ -491,7 +500,7 @@ void CCommandParser::Parse(SCommand& tCommand)
 	}
 }
 
-SArgument CCommandParser::ParseArgument(t_string sToken)
+SArgument CCommandParser::ParseArgument(t_string sToken, bool bAcceptNull)
 {
 	SArgument tArg;
 	t_mapSymbolTable::const_iterator it;
@@ -519,16 +528,41 @@ SArgument CCommandParser::ParseArgument(t_string sToken)
 		else // (chFirst == 'R')
 			tArg.eType = EArgType::GR;
 	}
+	else if (isEqual(sToken, t_csz("RIP")))
+	{
+		tArg.eType = EArgType::AR;
+		tArg.nIdx = (t_index) core::SCPUStateBase::SCPUStateBase::eRIPIndex;
+	}
+	else if (isEqual(sToken, t_csz("SP")))
+	{
+		tArg.eType = EArgType::AR;
+		tArg.nIdx = (t_index) core::SCPUStateBase::SCPUStateBase::eSPIndex;
+	}
+	else if (isEqual(sToken, t_csz("SF")) || isEqual(sToken, t_csz("BP")))
+	{
+		tArg.eType = EArgType::AR;
+		tArg.nIdx = (t_index) core::SCPUStateBase::SCPUStateBase::eSFIndex;
+	}
+	else if (bAcceptNull && isEqual(sToken, t_csz("null")))
+	{	// Null is reserved only for assign command
+		tArg.eType = EArgType::None;
+	}
 	else if (chFirst == '+' || chFirst == '-')
 	{	// Signed numeric
 		tArg.eType = EArgType::SNUM;
 
 		// Convert will determine number format (hexadecimal, 10 base & etc)
 		size_t nStrPos = 0;
-		tArg.i64Val = std::stoll(sToken, &nStrPos, 0);
-
+		try
+		{
+			tArg.i64Val = std::stoll(sToken, &nStrPos, 0);
+		}
+		catch (std::exception const& e)
+		{
+			throw CError(base::toStr("Invalid numeric value -> %1", e.what()), GetCurrentPos(), sToken);
+		}
 		if (nStrPos != sToken.size())
-			throw CError("Invalid numeric value", GetCurrentPos(), sToken);
+			throw CError(t_csz("Invalid numeric value"), GetCurrentPos(), sToken);
 	}
 	else if (base::CParser::IsNum(chFirst))
 	{	// Numeric
@@ -536,9 +570,16 @@ SArgument CCommandParser::ParseArgument(t_string sToken)
 
 		// Check if it is hexadecimal
 		size_t nStrPos = 0;
-		tArg.u64Val = std::stoull(sToken, &nStrPos, 0);
+		try
+		{
+			tArg.u64Val = std::stoull(sToken, &nStrPos, 0);
+		}
+		catch (std::exception const& e)
+		{
+			throw CError(base::toStr("Invalid numeric value -> %1", e.what()), GetCurrentPos(), sToken);
+		}
 		if (nStrPos != sToken.size())
-			throw CError("Invalid numeric value", GetCurrentPos(), sToken);
+			throw CError(t_csz("Invalid numeric value"), GetCurrentPos(), sToken);
 	}
 	else if ((it = m_mapLabelTable.find(&sToken)) != m_mapLabelTable.end())
 	{	// Label name
@@ -588,8 +629,6 @@ std::pair<int64, int64> SValuRangeFromType(EImvType eType)
 		return {INT8_MIN, INT8_MAX};
 	case EImvType::Port:
 		return {-2048i16, 0x07FFi16};
-	case EImvType::Index:
-		return {-8388608i32, 0x007FFFFFi32};
 	default:
 		break;
 	}
@@ -620,8 +659,6 @@ std::pair<uint64, uint64> UValuRangeFromType(EImvType eType)
 		return {0, (uint64) UINT8_MAX};
 	case EImvType::Port:
 		return {0, (uint64) 0x0FFFi16};
-	case EImvType::Index:
-		return {0, (uint64) 0x00FFFFFFi32};
 	default:
 		break;
 	}
@@ -662,9 +699,6 @@ void ReadjustInMemoryNumber(TSrcType& num, EImvType eTargetType)
 		break;
 	case EImvType::Port:
 		reinterpret_cast<uint16&>(num) = static_cast<uint16>(num);
-		break;
-	case EImvType::Index:
-		reinterpret_cast<int32&>(num) = static_cast<int32>(num);
 		break;
 	default:
 		break;

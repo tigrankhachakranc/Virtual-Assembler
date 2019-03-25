@@ -253,11 +253,6 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 				*(pCodeBase + 1) = (static_cast<uint8>(tArg.u16Val >> 8) & 0x0Fui8) | (*(pCodeBase + 1) & 0xF0ui8);
 				pCode += sizeof(uint8); // Move to next operand
 				break;
-			case EImvType::Index:
-				//TODO! Failed to preserve endianess, this code is Little Endian speciifc
-				std::memcpy(pCode, &tArg.i64Val, 3);
-				pCode += sizeof(int64); // Move to next operand
-				break;
 			default:
 				break;
 			}
@@ -266,9 +261,6 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		case EArgType::SNUM:
 		{
 			if (!bool(eOprType & (uchar) EOprType::IMV))
-				throw CError(t_csz("Encoder: Invalid use of signed numeric value"), tCmd.nLineNumber, tInfo.pcszName);
-			if (tInfo.eOpCode != EOpCode::JUMPR && tInfo.eOpCode != EOpCode::ASSIGNR2)
-				// Label could be used only with the JUMP & ASSIGN R?, LBL_NAME instructions
 				throw CError(t_csz("Encoder: Invalid use of signed numeric value"), tCmd.nLineNumber, tInfo.pcszName);
 
 			switch (tCmd.eImvType)
@@ -306,11 +298,6 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 				break;
 			case EImvType::Port:
 				VASM_ASSERT(false);
-				break;
-			case EImvType::Index:
-				//TODO! Failed to preserve endianess, this code is Little Endian speciifc
-				std::memcpy(pCode, &tArg.i64Val, 3);
-				pCode += sizeof(int64); // Move to next operand
 				break;
 			default:
 				break;

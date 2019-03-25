@@ -61,8 +61,18 @@ CMainCommands::CMainCommands() : CCommandBase()
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			 apfnStore, FuncCmdDisasm(&CMainCommands::DisAsm));
 
-	Register({t_csz("LEA"), EOpCode::LEA, EOprType::AR, EOprType::AR, EImvType::Index, SCommandMetaInfo::NoExtension, true},
-			 FuncCmdExec(&CMainCommands::LEA), FuncCmdDisasm(&CMainCommands::DisAsm));
+	FuncCmdExec apfnLoadRel[int(EOprSize::Count)] = {
+		FuncCmdExec(&CMainCommands::LoadRel<uint8>), FuncCmdExec(&CMainCommands::LoadRel<uint16>),
+		FuncCmdExec(&CMainCommands::LoadRel<uint32>), FuncCmdExec(&CMainCommands::LoadRel<uint64>)};
+	Register({t_csz("LDREL"), EOpCode::LDREL, EOprType::AGR, EOprType::AR, EImvType::SNum32,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch, true},
+			 apfnLoadRel, FuncCmdDisasm(&CMainCommands::DisAsm));
+	FuncCmdExec apfnStoreRel[int(EOprSize::Count)] = {
+		FuncCmdExec(&CMainCommands::StoreRel<uint8>), FuncCmdExec(&CMainCommands::StoreRel<uint16>),
+		FuncCmdExec(&CMainCommands::StoreRel<uint32>), FuncCmdExec(&CMainCommands::StoreRel<uint64>)};
+	Register({t_csz("STREL"), EOpCode::STREL, EOprType::AGR, EOprType::AR, EImvType::SNum32,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch, true},
+			 apfnStoreRel, FuncCmdDisasm(&CMainCommands::DisAsm));
 
 	Register({t_csz("PUSH"), EOpCode::PUSHA, EOprType::AR},
 			 FuncCmdExec(&CMainCommands::PushA), FuncCmdDisasm(&CMainCommands::DisAsm));
@@ -116,29 +126,37 @@ void CMainCommands::JumpR(SCommandContext& tCtxt)
 
 void CMainCommands::Call(SCommandContext& tCtxt)
 {
-	if ((tCtxt.tCPUState.nSP - 2 * sizeof(t_address)) < tCtxt.tCPUState.cnStackUBound)
-		VASM_THROW_ERROR(t_csz("CPU: Stack overflow on Call"));
-	// Push IP
-	tCtxt.tCPUState.nSP -= sizeof(t_address);
-	tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nIP);
-	// Push stack frame
-	tCtxt.tCPUState.nSP -= sizeof(t_address);
-	tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nSF);
-	// Change IP & SF
+	// Save return address into RIP
+	tCtxt.tCPUState.nRIP = tCtxt.tCPUState.nIP;
+	// Change IP
 	tCtxt.tCPUState.nIP = *tCtxt.tOpr[EOprIdx::First].ptr<t_address>();
-	tCtxt.tCPUState.nSF = tCtxt.tCPUState.nSP;
+
+	//if ((tCtxt.tCPUState.nSP - 2 * sizeof(t_address)) < tCtxt.tCPUState.cnStackUBound)
+	//	VASM_THROW_ERROR(t_csz("CPU: Stack overflow on Call"));
+	//// Push IP
+	//tCtxt.tCPUState.nSP -= sizeof(t_address);
+	//tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nIP);
+	//// Push stack frame
+	//tCtxt.tCPUState.nSP -= sizeof(t_address);
+	//tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nSF);
+	//// Change IP & SF
+	//tCtxt.tCPUState.nIP = *tCtxt.tOpr[EOprIdx::First].ptr<t_address>();
+	//tCtxt.tCPUState.nSF = tCtxt.tCPUState.nSP;
 }
 
 void CMainCommands::Ret(SCommandContext& tCtxt)
 {
-	if ((tCtxt.tCPUState.nSP + 2 * sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
-		VASM_THROW_ERROR(t_csz("CPU: Stack underflow on Ret"));
-	// Pop stack frame
-	tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nSF);
-	tCtxt.tCPUState.nSP += sizeof(t_address);
-	// Pop IP
-	tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nIP);
-	tCtxt.tCPUState.nSP += sizeof(t_address);
+	// Restore IP from RIP
+	tCtxt.tCPUState.nIP = tCtxt.tCPUState.nRIP;
+
+	//if ((tCtxt.tCPUState.nSP + 2 * sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
+	//	VASM_THROW_ERROR(t_csz("CPU: Stack underflow on Ret"));
+	//// Pop stack frame
+	//tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nSF);
+	//tCtxt.tCPUState.nSP += sizeof(t_address);
+	//// Pop IP
+	//tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nIP);
+	//tCtxt.tCPUState.nSP += sizeof(t_address);
 }
 
 void CMainCommands::Ret2(SCommandContext& tCtxt)
@@ -181,14 +199,21 @@ void CMainCommands::Store(SCommandContext& tCtxt)
 	tCtxt.oMemory.WriteAt<TOperandType>(*tCtxt.tOpr[EOprIdx::Second].ptr<t_address>(), *tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>());
 }
 
-void CMainCommands::LEA(SCommandContext& tCtxt)
+template <typename TOperandType>
+void CMainCommands::LoadRel(SCommandContext& tCtxt)
 {
 	// Read effective address
-	t_address nEffectiveAddress = *tCtxt.tOpr[EOprIdx::Second].ptr<t_address>() + 
-								  *tCtxt.tOpr[EOprIdx::Third].pi32 * sizeof(t_address);
-	tCtxt.oMemory.ReadAt<t_address>(nEffectiveAddress, *tCtxt.tOpr[EOprIdx::First].ptr<t_address>());
+	t_address nEffectiveAddress = *tCtxt.tOpr[EOprIdx::Second].ptr<t_address>() + *tCtxt.tOpr[EOprIdx::Third].pi32;
+	tCtxt.oMemory.ReadAt<TOperandType>(nEffectiveAddress, *tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>());
 }
 
+template <typename TOperandType>
+void CMainCommands::StoreRel(SCommandContext& tCtxt)
+{
+	// Read effective address
+	t_address nEffectiveAddress = *tCtxt.tOpr[EOprIdx::Second].ptr<t_address>() + *tCtxt.tOpr[EOprIdx::Third].pi32;
+	tCtxt.oMemory.WriteAt<TOperandType>(nEffectiveAddress, *tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>());
+}
 
 //
 // Stack instructions
@@ -211,8 +236,12 @@ void CMainCommands::PopA(SCommandContext& tCtxt)
 
 void CMainCommands::PushSF(SCommandContext& tCtxt)
 {
-	if ((tCtxt.tCPUState.nSP - sizeof(t_address)) < tCtxt.tCPUState.cnStackUBound)
+	if ((tCtxt.tCPUState.nSP - 2 * sizeof(t_address)) < tCtxt.tCPUState.cnStackUBound)
 		VASM_THROW_ERROR(t_csz("CPU: Stack overflow"));
+
+	// Push RIP
+	tCtxt.tCPUState.nSP -= sizeof(t_address);
+	tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nRIP);
 	// Push stack frame
 	tCtxt.tCPUState.nSP -= sizeof(t_address);
 	tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nSF);
@@ -222,10 +251,16 @@ void CMainCommands::PushSF(SCommandContext& tCtxt)
 
 void CMainCommands::PopSF(SCommandContext& tCtxt)
 {
-	if ((tCtxt.tCPUState.nSP + sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
+	if ((tCtxt.tCPUState.nSP + 2 * sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
 		VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
+	
+	// Change SP to point to SF
+	tCtxt.tCPUState.nSP = tCtxt.tCPUState.nSF;
 	// Pop stack frame
 	tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nSF);
+	tCtxt.tCPUState.nSP += sizeof(t_address);
+	// Pop RIP
+	tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nRIP);
 	tCtxt.tCPUState.nSP += sizeof(t_address);
 }
 

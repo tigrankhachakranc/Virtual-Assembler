@@ -19,21 +19,13 @@ namespace vm {
 //
 ////////////////////////////////////////////////////////////////////////////////
 CProcessor::SState::SState(t_address cs, t_uoffset slb, t_uoffset sub) :
-	SCPUStateBase(anARPool[eIPIndex], anARPool[eCurrentIPIndex], anARPool[eSPIndex], anARPool[eSFIndex], cs, slb, sub)
+	SCPUStateBase(cs, slb, sub)
 {
-	std::memset(anARPool, 0, size_t(eAddressRegistersPoolSize * sizeof(t_address)));
-	std::memset(aui8GPRPool, 0, size_t(eGeneralPurposeRegisterPoolSize));
 }
 
 CProcessor::SState& CProcessor::SState::operator=(SState const& o)
 {
-	if (&o != this)
-	{
-		SCPUStateBase::operator=(o);
-
-		std::memcpy(anARPool, o.anARPool, size_t(eAddressRegistersPoolSize * sizeof(t_address)));
-		std::memcpy(aui8GPRPool, o.aui8GPRPool, size_t(eGeneralPurposeRegisterPoolSize));
-	}
+	SCPUStateBase::operator=(o);
 	return *this;
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -135,7 +127,7 @@ CProcessor::EStatus CProcessor::Run(bool bOnce)
 		try
 		{
 			// Save current IP
-			m_tState.anARPool[SState::eCurrentIPIndex] = m_tState.nIP;
+			m_tState.nCIP = m_tState.nIP;
 			// Fetch current command
 			uchar const* pCmd = Fetch();
 			// Decode current command
@@ -232,8 +224,8 @@ void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)
 		{
 			if (nRegIdx >= SState::eAddressRegistersPoolSize)
 				VASM_THROW_ERROR(base::toStr("CPU: Invalid Address register index #%1", int(nRegIdx)));
-			else if (nRegIdx < SState::eARBaseIndex)
-				VASM_THROW_ERROR(base::toStr("CPU: Address registers below #%1 are forbidden and may not be used", int(SState::eARBaseIndex)));
+			//else if (nRegIdx < SState::eARBaseIndex)
+			//	VASM_THROW_ERROR(base::toStr("CPU: Address registers below #%1 are forbidden and may not be used", int(SState::eARBaseIndex)));
 			tCmdCtxt.tOpr[eOprIdx].p = &m_tState.anARPool[nRegIdx];
 			break;
 		}
@@ -252,8 +244,8 @@ void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)
 			{
 				if (nRegIdx >= SState::eAddressRegistersPoolSize)
 					VASM_THROW_ERROR(base::toStr("CPU: Invalid Address register index #%1", int(nRegIdx)));
-				else if (nRegIdx < SState::eARBaseIndex)
-					VASM_THROW_ERROR(base::toStr("CPU: Address registers below #%1 are forbidden and may not be used", int(SState::eARBaseIndex)));
+				//else if (nRegIdx < SState::eARBaseIndex)
+				//	VASM_THROW_ERROR(base::toStr("CPU: Address registers below #%1 are forbidden and may not be used", int(SState::eARBaseIndex)));
 				tCmdCtxt.tOpr[eOprIdx].p = &m_tState.anARPool[nRegIdx];
 			}
 			break;
@@ -286,9 +278,6 @@ void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)
 					break;
 				case EImvType::Port:
 					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u16Imv;
-					break;
-				case EImvType::Index:
-					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.i32Imv;
 					break;
 				default:
 					VASM_THROW_ERROR(t_csz("CPU: Invalid IMV type"));

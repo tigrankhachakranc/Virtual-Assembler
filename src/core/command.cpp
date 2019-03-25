@@ -100,9 +100,6 @@ SCommandMetaInfo::SCommandMetaInfo(
 	case EImvType::Port:
 		VASM_THROW_INVALID_CONDITION(); // bad case
 		break;
-	case EImvType::Index:
-		VASM_THROW_INVALID_CONDITION(); // bad case
-		break;
 	default:
 		VASM_THROW_INVALID_CONDITION();
 	}
@@ -143,29 +140,25 @@ SCommandMetaInfo::SCommandMetaInfo(
 		break;
 	case EImvType::Num8:
 	case EImvType::SNum8:
-		nLength = 4;
+		nLength = (bool(ext & MaskExtension) && opr3) ? 6 : 4;
 		break;
 	case EImvType::Num16:
 	case EImvType::SNum16:
-		nLength = bool(ext & MaskExtension) ? 6 : 4;
+		nLength = (bool(ext & MaskExtension) || opr3) ? 6 : 4;
 		break;
 	case EImvType::Num32:
 	case EImvType::SNum32:
-		nLength = bool(ext & MaskExtension) ? 8 : 6;
+		nLength = (bool(ext & MaskExtension) || opr3) ? 8 : 6;
 		break;
 	case EImvType::Num64:
 	case EImvType::SNum64:
-		nLength = bool(ext & MaskExtension) ? 12 : 10;
+		nLength = (bool(ext & MaskExtension) || opr3) ? 12 : 10;
 		break;
 	case EImvType::Count:
 		nLength = 4;
 		break;
 	case EImvType::Port:
 		nLength = 4;
-		break;
-	case EImvType::Index:
-		VASM_ASSERT(opr3);
-		nLength = 6;
 		break;
 	default:
 		VASM_THROW_INVALID_CONDITION(); // bad case
@@ -192,6 +185,44 @@ SCommandMetaInfo::SCommandMetaInfo(
 	SCommandMetaInfo(name, opc, op1, op2, ext)
 {
 	pcszBaseName = basename;
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	SCPUStateBase implementations
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+SCPUStateBase::SCPUStateBase(
+	t_uoffset cs, t_uoffset slb, t_uoffset sub) :
+	nIP(0), nCIP(0), nRIP(anARPool[eRIPIndex]),
+	nSP(anARPool[eSPIndex]), nSF(anARPool[eSFIndex]),
+	cnCodeSize(cs), cnStackLBound(slb), cnStackUBound(sub),
+	bRun(false)
+{
+	std::memset(anARPool, 0, size_t(eAddressRegistersPoolSize * sizeof(t_address)));
+	std::memset(aui8GPRPool, 0, size_t(eGeneralPurposeRegisterPoolSize));
+}
+
+SCPUStateBase& SCPUStateBase::operator=(SCPUStateBase const& o)
+{
+	if (&o != this)
+	{
+		oFlags = o.oFlags;
+		bRun = o.bRun;
+
+		nIP = o.nIP;
+		nCIP = o.nCIP;
+
+		std::memcpy(anARPool, o.anARPool, size_t(eAddressRegistersPoolSize * sizeof(t_address)));
+		std::memcpy(aui8GPRPool, o.aui8GPRPool, size_t(eGeneralPurposeRegisterPoolSize));
+
+		const_cast<t_uoffset&>(cnCodeSize) = o.cnCodeSize;
+		const_cast<t_uoffset&>(cnStackLBound) = o.cnStackLBound;
+		const_cast<t_uoffset&>(cnStackUBound) = o.cnStackUBound;
+	}
+	return *this;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -481,9 +512,6 @@ t_string CCommandBase::DisAsmImv(SCommandInfo const& tCmd, bool bHexadecimal)
 		break;
 	case EImvType::Port:
 		sCmd = std::move(base::toStr(tCmd.u16Imv, bHexadecimal));
-		break;
-	case EImvType::Index:
-		sCmd = std::move(base::toStr(tCmd.i32Imv, bHexadecimal));
 		break;
 	}
 	return std::move(sCmd);

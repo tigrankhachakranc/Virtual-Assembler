@@ -64,6 +64,13 @@ inline t_string toStr(t_csz pcsz, t_string const& sArg1)
 	return str;
 }
 
+inline t_string toStr(t_csz pcsz, t_csz sArg1)
+{
+	t_string str(pcsz);
+	str.replace(str.find(t_csz("%1")), 2, sArg1);
+	return str;
+}
+
 inline t_string toStr(t_csz pcsz, int nArg1, t_string const& sArg2)
 {
 	t_string str(pcsz);

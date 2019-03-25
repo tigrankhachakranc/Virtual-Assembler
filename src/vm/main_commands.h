@@ -63,7 +63,10 @@ private:
 	void Load(SCommandContext&);	// Load operand from memory
 	template <typename TOperandType>
 	void Store(SCommandContext&);	// Store operand into memory
-	void LEA(SCommandContext&);		// Load effective addres into address register
+	template <typename TOperandType>
+	void LoadRel(SCommandContext&);	// Load operand from memory with relative 24 bit offset
+	template <typename TOperandType>
+	void StoreRel(SCommandContext&);// Store operand into memory with relative 24 bit offset
 
 	// Stack instructions
 	void PushA(SCommandContext&);	// Push address register

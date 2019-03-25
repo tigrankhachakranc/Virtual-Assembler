@@ -986,8 +986,9 @@ void CCommander::PrintCurrentState() const
 	os << std::endl;
 	os << std::hex << std::uppercase << std::setfill('0') << std::setw(8);
 	os << "Address registers (0x): ---------------------------------------" << std::endl;
-	os << "IP = " << tState.anARPool[core::SCPUStateBase::eIPIndex] << "  ";
-	os << "IP = " << tState.anARPool[core::SCPUStateBase::eCurrentIPIndex] << "(previous)";
+	os << "IP (current)  = " << tState.nIP << "  ";
+	os << "IP (previous) = " << tState.nCIP << "  ";
+	os << "Return IP = " << tState.nRIP << "  ";
 	os << std::endl;
 	os << "SP = " << tState.anARPool[core::SCPUStateBase::eSPIndex] << "  ";
 	os << "SF = " << tState.anARPool[core::SCPUStateBase::eSFIndex] << "  ";
@@ -1054,7 +1055,8 @@ void CCommander::PrintCurrentState() const
 				<< std::setfill('0') << std::setw(8) << tCLInfo.nRelOffset << std::endl;
 
 		std::string sBinaryCommand;
-		std::string sCommand = std::move(m_pDebugger->GetDisassembledCommand(tState.nIP, &sBinaryCommand));
+		t_address nCmdAddress = tState.nIP;
+		std::string sCommand = std::move(m_pDebugger->GetDisassembledCommand(nCmdAddress, &sBinaryCommand));
 		os << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nIP << ": "
 		   << sCommand << "  #" << sBinaryCommand << std::endl;
 	}

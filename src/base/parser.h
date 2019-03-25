@@ -208,7 +208,7 @@ inline bool CParser::IsAlphaNum(t_char const ch)
 	return ((ch >= 'a' && ch <= 'z') ||
 			(ch >= 'A' && ch <= 'Z') ||
 			(ch >= '0' && ch <= '9') ||
-			(ch == '_'));
+			(ch == '_') || (ch == '+') || (ch == '-'));
 }
 
 inline bool CParser::IsAlpha(t_char const ch)
@@ -220,7 +220,7 @@ inline bool CParser::IsAlpha(t_char const ch)
 
 inline bool CParser::IsNum(t_char const ch)
 {
-	return (ch >= '0' && ch <= '9');
+	return ((ch >= '0' && ch <= '9') || (ch == '+') || (ch == '-'));
 }
 
 inline bool CParser::IsHexNum(t_char const ch)

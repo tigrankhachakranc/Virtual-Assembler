@@ -139,12 +139,12 @@ struct SCPUStateBase
 	// Constants
 	enum
 	{	
-		eIPIndex = 0,
-		eCurrentIPIndex = 1,
+		eA0Index = 0,
+		eRIPIndex = 1,
 		eSPIndex = 2,
 		eSFIndex = 3,
 
-		eARBaseIndex = 2,
+		eARBaseIndex = 4,
 		
 		eAddressRegistersPoolSize = 8,
 		eGeneralPurposeRegisterPoolSize = 64
@@ -154,13 +154,20 @@ struct SCPUStateBase
 	CFlags	oFlags;
 	
 	// Instruction pointer of the next command 
-	t_address&			nIP;	// Reference to AR0
+	t_address	nIP;
 	// Current IP, IP value of the current command at the moment of the fetch
-	t_address const&	nCIP;	// Reference to AR1
+	t_address	nCIP;
+	// Return address, points to the next instruction after Call instraction
+	t_address&	nRIP;	// Reference to AR1
 	// Current stack pointer
-	t_address&			nSP;	// Reference to AR2
+	t_address&	nSP;	// Reference to AR2
 	// Current stack frame 
-	t_address&			nSF;	// Reference to AR3
+	t_address&	nSF;	// Reference to AR3
+
+	// Addressing registers pool
+	t_address	anARPool[eAddressRegistersPoolSize];
+	// General purpose registers pool
+	uint8		aui8GPRPool[eGeneralPurposeRegisterPoolSize];
 
 	// Code size (Code always should start from the 0 address)
 	t_uoffset const	cnCodeSize;
@@ -174,10 +181,9 @@ struct SCPUStateBase
 	volatile bool	bRun;
 
 	//
-	inline SCPUStateBase(t_address& ip, t_address const& cip, t_address& sp, t_address& sf,
-						 t_uoffset cs, t_uoffset slb, t_uoffset sub);
+	SCPUStateBase(t_uoffset cs, t_uoffset slb, t_uoffset sub);
 	
-	inline SCPUStateBase& operator=(SCPUStateBase const&);
+	SCPUStateBase& operator=(SCPUStateBase const&);
 
 	SCPUStateBase(SCPUStateBase const&) = delete;
 };
@@ -444,32 +450,6 @@ inline SCommandInfo::SCommandInfo(SCommandMetaInfo const& mi) :
 	nRegIdx[EOprIdx::First] = 0;
 	nRegIdx[EOprIdx::Second] = 0;
 	nRegIdx[EOprIdx::Third] = 0;
-}
-
-//
-//	SCPUStateBase
-//
-inline SCPUStateBase::SCPUStateBase(
-	t_address& ip, t_address const& cip, t_address& sp, t_address& sf,
-	t_uoffset cs, t_uoffset slb, t_uoffset sub) :
-	nIP(ip), nCIP(cip), nSP(sp), nSF(sf),
-	cnCodeSize(cs), cnStackLBound(slb), cnStackUBound(sub),
-	bRun(false)
-{
-}
-
-inline SCPUStateBase& SCPUStateBase::operator=(SCPUStateBase const& o)
-{
-	if (&o != this)
-	{
-		oFlags = o.oFlags;
-		bRun = o.bRun;
-
-		const_cast<t_uoffset&>(cnCodeSize) = o.cnCodeSize;
-		const_cast<t_uoffset&>(cnStackLBound) = o.cnStackLBound;
-		const_cast<t_uoffset&>(cnStackUBound) = o.cnStackUBound;
-	}
-	return *this;
 }
 
 //

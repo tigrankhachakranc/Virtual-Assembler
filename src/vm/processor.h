@@ -82,11 +82,6 @@ public:
 	//
 	struct SState : core::SCPUStateBase
 	{
-		// Addressing registers pool
-		t_address	anARPool[eAddressRegistersPoolSize];
-		// General purpose registers pool
-		uint8		aui8GPRPool[eGeneralPurposeRegisterPoolSize];
-
 		//
 		SState(t_uoffset nCodeSize = 0, t_uoffset nStackLBound = 0, t_uoffset nStackUBound = 0);
 		SState& operator=(SState const&);

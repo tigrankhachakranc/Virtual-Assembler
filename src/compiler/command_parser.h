@@ -47,7 +47,7 @@ protected:
 	//
 	//	Implementation
 	//
-	SArgument ParseArgument(t_string sToken);
+	SArgument ParseArgument(t_string sToken, bool bAcceptNull);
 
 protected:
 	//

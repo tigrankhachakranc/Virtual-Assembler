@@ -71,10 +71,10 @@ enum class EOpCode : uchar
 	SFLR,	// IL(2) SFLR GR(n)						Sets 2 byte packed status flags from specified general purpose register
 
 	// Memory access instructions
-	LOAD,	// IL(4) LOAD  [opsz] AR(n)|GR(n) <- *AR(n)		Reads from memory into the target register
-	STORE,	// IL(4) STORE [opsz] AR(n)|GR(n) -> *AR(n)		Writes into memory from the target register
-	LEA,	// IL(6) LEA AR(n) <- *AR(n)+Index24			Loads effective address, Index is signed 24 bit numeric value
-			//												Reads from in memory address table by 24 bit index into the address register
+	LOAD,	// IL(4) LOAD  [opsz] AR(n)|GR(n) <- *AR(n)				Reads from memory into the target register
+	STORE,	// IL(4) STORE [opsz] AR(n)|GR(n) -> *AR(n)				Writes into memory from the target register
+	LDREL,	// IL(8) LDREL [opsz] AR(n)|GR(n) <- *AR(n)+Offset32	Loads relative to address, Offset is signed 24 bit numeric value
+	STREL,	// IL(8) STREL [opsz] AR(n)|GR(n) -> *AR(n)+Offset32	Store relative to address, Offset is signed 24 bit numeric value
 
 	// Stack instructions
 	PUSHSF,	// IL(2) PUSHSF							Pushes stack frame
@@ -84,12 +84,8 @@ enum class EOpCode : uchar
 	PUSHR,	// IL(4) PUSH [opsz] GR(n), [Count]		Pushes specifed general purpose register(s) into the Stack
 	POPR,	// IL(4) POP [opsz] GR(n), [Count]		Pops from the Stack into specifed genersal pupose register(s)
 			//										If Count is specified then OPSZ is multipled with it and resulted number of bytes copied
-	//PUSHF,// IL(2) PUSHF							Pushes 2 byte packed status flags into the stack
-	//POPF,	// IL(2) POPF							Pops 2 byte packed status flags from the stack
-
-	Reserved27,
-	Reserved28,
-	Reserved29,
+	Reserved28, //PUSHF, IL(2) PUSHF				Pushes 2 byte packed status flags into the stack
+	Reserved29, //POPF,	 IL(2) POPF					Pops 2 byte packed status flags from the stack
 
 	// Input from/Output to port instructions
 	IN,		// IL(4) IN  [opsz] GR(n) <- GR(n)|Port (Number12)
@@ -125,7 +121,7 @@ enum class EOpCode : uchar
 	// Comparison instructions
 	TEST,	// IL(4) TEST [opsz] AR(n)|GR(n), AR(n)|GR(n)	ANDs operands and sets flags
 	CMP,	// IL(4) CMP  [opsz] AR(n)|GR(n), AR(n)|GR(n)	SUBs operands and sets flags
-	SET,	// IL(4) Set(cc) [opsz] GR(n)			Sets specifed register to 1 if CC takes place, 0 otherwise
+	SET,	// IL(4) St(cc) [opsz] GR(n)			Sets specifed register to 1 if CC takes place, 0 otherwise
 
 	// Logical Instructions
 	AND,	// IL(4) AND [opsz] GR(n) <- GR(n)
@@ -271,8 +267,7 @@ enum class EImvType : uchar
 	SNum64,	// 64 bit signed numeric value
 	
 	Count,	// 8 bit unsigned numeric value that serves as Count of something (shift bits, registers & etc...)
-	Port,	// 12 bit unsigned numeric value that serves as I/O Port number, (4 highest bits packed in the lowest bits of the extension)
-	Index	// 24 bit signed numeric value that serves as index, (lower 24 bits of SNum32 value)
+	Port	// 12 bit unsigned numeric value that serves as I/O Port number, (4 highest bits packed in the lowest bits of the extension)
 };
 ////////////////////////////////////////////////////////////////////////////////
 
