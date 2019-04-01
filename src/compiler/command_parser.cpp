@@ -95,6 +95,7 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands {
 	// Stack instructions
 	//
 	{t_csz("PUSHSF"), {EOpCode::PUSHSF}},
+	{t_csz("PUSHSF"), {EOpCode::PUSHSF, EOprType::IMV, EImvType::Count}},
 	{t_csz("POPSF"),  {EOpCode::POPSF}},
 	{t_csz("PUSH"),	  {EOpCode::PUSHA,	EOprType::AR}},
 	{t_csz("POP"),	  {EOpCode::POPA,	EOprType::AR}},
@@ -308,7 +309,7 @@ void CCommandParser::Parse(SCommand& tCommand)
 		if (!bOprSizeParsed || itOprSz == ms_cmapOprSizeKeywords.end())
 			throw CError(t_csz("CAST command requires  source and target operand sizes"), GetCurrentPos(), sName);
 
-		// Source perand size already kept in tis regular place
+		// Source operand size already kept in its regular place
 		// Keep target operasnd size in the place of third arg and you have to remember that it is in the third arg
 		tCommand.aArguments[EOprIdx::Third].u8Val = (uint8) itOprSz->second;
 
@@ -487,16 +488,24 @@ void CCommandParser::Parse(SCommand& tCommand)
 			ReadjustInMemoryNumber(tArg.i64Val, tCommand.eImvType);
 			break;
 		}}
+	}
 
-		// Special handling for the PUSH/POP Rx command
-		if ((tCommand.eOpCode == EOpCode::PUSHR || tCommand.eOpCode == EOpCode::POPR) && tCommand.nArgCount == 1)
-		{
-			// Push Rx command has default second argument Count =0 , complete it
-			tCommand.nArgCount = 2;
-			tCommand.aArguments[1].eType = EArgType::NUM;
-			tCommand.aArguments[1].u8Val = 0;
-			tCommand.eImvType = EImvType::Count;
-		}
+	// Special handling for the PUSH/POP commands
+	if ((tCommand.eOpCode == EOpCode::PUSHR || tCommand.eOpCode == EOpCode::POPR) && tCommand.nArgCount == 1)
+	{
+		// Push Rx command has default second argument Count = 0, complete it
+		tCommand.nArgCount = 2;
+		tCommand.aArguments[EOprIdx::Second].eType = EArgType::NUM;
+		tCommand.aArguments[EOprIdx::Second].u8Val = 0;
+		tCommand.eImvType = EImvType::Count;
+	}
+	else if (tCommand.eOpCode == EOpCode::PUSHSF && tCommand.nArgCount == 0)
+	{
+		// PushSF command has default argument Count = 0, complete it
+		tCommand.nArgCount = 1;
+		tCommand.aArguments[EOprIdx::First].eType = EArgType::NUM;
+		tCommand.aArguments[EOprIdx::First].u8Val = 0;
+		tCommand.eImvType = EImvType::Count;
 	}
 }
 

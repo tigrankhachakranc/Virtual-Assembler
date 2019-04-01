@@ -23,7 +23,7 @@ namespace vm {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 using t_byte = core::t_byte;
-using CMemoryPtr = core::CMemoryPtr;
+using CMemory = core::CMemory;
 using CAddressRecoveryPtr = core::CAddressRecoveryPtr;
 using CCommandLibraryPtr  = core::CCommandLibraryPtr;
 using CCommandLibrary	  = core::CCommandLibrary;
@@ -61,11 +61,11 @@ public:
 	//
 	//	Methods
 	//
+	void Reset();
 
 	// Initializers
-	void Init(CCommandLibraryPtr pCmdLib, CMemoryPtr pMemory,
-			  CProcessorPtr pCPU, CIOControllerPtr pIOController,
-			  SPackageInfo tPackageInfo);
+	void Init(CCommandLibraryPtr pCmdLib, CProcessorPtr pCPU,
+			  CIOControllerPtr pIOController, SPackageInfo tPackageInfo);
 
 	// Runs till Breakpoint hit or program finishes
 	void Run(bool bNoDebug = false);
@@ -165,6 +165,7 @@ protected:
 	//
 	//	Internal routines
 	//
+	inline CMemory& RWMemory();
 
 	// Turns all breakpoints On/Off
 	void TurnBreakPoints(bool bOn);
@@ -199,7 +200,6 @@ private:
 	//	Contents
 	//
 	CCommandLibraryPtr		m_pCmdLib;
-	CMemoryPtr				m_pMemory;
 	CProcessorPtr			m_pCPU;
 	CIOControllerPtr		m_pIOController;
 
@@ -232,20 +232,26 @@ inline t_VariableTable const& CDebugger::Variables() const
 
 inline CProcessor::SStatus const& CDebugger::CPUStatus() const
 {
-	VASM_ASSERT(m_pCPU != nullptr);
+	VASM_CHECK_PTR(m_pCPU);
 	return m_pCPU->Status();
 }
 
 inline CProcessor::SState const& CDebugger::CPUState() const
 {
-	VASM_ASSERT(m_pCPU != nullptr);
+	VASM_CHECK_PTR(m_pCPU);
 	return m_pCPU->State();
 }
 
 inline CMemory const& CDebugger::Memory() const
 {
-	VASM_ASSERT(m_pMemory != nullptr);
-	return *m_pMemory;
+	VASM_ASSERT_PTR(m_pCPU);
+	return m_pCPU->Memory();
+}
+
+inline CMemory& CDebugger::RWMemory()
+{
+	VASM_ASSERT_PTR(m_pCPU);
+	return m_pCPU->Memory();
 }
 ////////////////////////////////////////////////////////////////////////////////
 

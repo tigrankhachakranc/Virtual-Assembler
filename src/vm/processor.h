@@ -116,6 +116,8 @@ public:
 			  t_uoffset nCodeSize,
 			  t_uoffset nStackSize,
 			  t_address nProgramStart);
+	// Reinitializes the CPU
+	void Reinit(t_address nProgramStart);
 
 	EStatus Run(bool bOnce = false);
 	void Stop();
@@ -128,8 +130,10 @@ public:
 	inline SState& ChangeableState();
 	inline bool CanRun() const;
 
-protected:
+	inline CMemory& Memory();
+	inline CMemory const& Memory() const;
 
+protected:
 	////////////////////////////////////////////////////////////////////////////
 	//
 	//	Extended command context 
@@ -223,6 +227,18 @@ inline bool CProcessor::CanRun() const
 	return (m_tStatus.eStatus == EStatus::Ready ||
 			m_tStatus.eStatus == EStatus::Break ||
 			m_tStatus.eStatus == EStatus::Stopped);
+}
+
+inline CMemory& CProcessor::Memory()
+{
+	VASM_CHECK_PTR(m_pMemory);
+	return *m_pMemory;
+}
+
+inline CMemory const& CProcessor::Memory() const
+{
+	VASM_CHECK_PTR(m_pMemory);
+	return *m_pMemory;
 }
 ////////////////////////////////////////////////////////////////////////////////
 

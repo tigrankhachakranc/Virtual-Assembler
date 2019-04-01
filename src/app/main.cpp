@@ -142,7 +142,7 @@ int main(int argc, char* argv[])
 
 				// Instantiate command handler
 				dev::CCommanderUPtr pCommander(new dev::CCommander(oTestInput, oTestOutput));
-				pCommander->Init(vm::CMachinePtr(new vm::CMachine(oTestInput, oTestOutput)));
+				pCommander->Init(std::make_shared<vm::CMachine>(oTestInput, oTestOutput));
 				pCommander->Start();
 
 				// Finished!
@@ -154,7 +154,7 @@ int main(int argc, char* argv[])
 
 		// Instantiate command handler
 		dev::CCommanderUPtr pCommander(new dev::CCommander(std::cin, std::cout));
-		pCommander->Init(vm::CMachinePtr(new vm::CMachine(std::cin, std::cout)));
+		pCommander->Init(std::make_shared<vm::CMachine>(std::cin, std::cout));
 
 		// Handle command line arguments
 		if (argc == 2)

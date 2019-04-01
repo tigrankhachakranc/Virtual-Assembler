@@ -77,7 +77,7 @@ enum class EOpCode : uchar
 	STREL,	// IL(8) STREL [opsz] AR(n)|GR(n) -> *AR(n)+Offset32	Store relative to address, Offset is signed 24 bit numeric value
 
 	// Stack instructions
-	PUSHSF,	// IL(2) PUSHSF							Pushes stack frame
+	PUSHSF,	// IL(2) PUSHSF [Count]					Pushes stack frame and optionally allocates space on the stack
 	POPSF,	// IL(2) POPSF							Pops stack frame
 	PUSHA,	// IL(2) PUSH AR(n)						Pushes specifed address register into the Stack
 	POPA,	// IL(2) POP AR(n)						Pops from the Stack into specifed address register 

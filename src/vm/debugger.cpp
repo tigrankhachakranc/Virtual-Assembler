@@ -31,28 +31,35 @@ CDebugger::~CDebugger() = default;
 //
 //	Methods
 //
+void CDebugger::Reset()
+{
+	m_pCmdLib = nullptr;
+	m_pCPU = nullptr;
+	m_pIOController = nullptr;
+	m_pAddressRecovery = nullptr;
+
+	m_mapVariables.clear();
+	m_mapFunctions.clear();
+	m_mapBreakPoints.clear();
+
+	m_tPackage = SPackageInfo();
+}
 
 void CDebugger::Init(
-	CCommandLibraryPtr pCmdLib, CMemoryPtr pMemory,
-	CProcessorPtr pCPU, CIOControllerPtr pIOController,
-	SPackageInfo tPackageInfo)
+	CCommandLibraryPtr pCmdLib, CProcessorPtr pCPU,
+	CIOControllerPtr pIOController, SPackageInfo tPackageInfo)
 {
 	if (pCmdLib == nullptr)
 		VASM_THROW_ERROR("Failed to initialize debugger: Invalid Command Library pointer.");
 	if (pCPU == nullptr)
 		VASM_THROW_ERROR("Failed to initialize debugger: Invalid CPU pointer.");
-	if (pMemory == nullptr)
-		VASM_THROW_ERROR("Failed to initialize debugger: Invalid Memory pointer.");
+
+	Reset();
 
 	m_pCmdLib = pCmdLib;
-	m_pMemory = pMemory;
 	m_pCPU = pCPU;
 	m_pIOController = pIOController;
 	m_tPackage = std::move(tPackageInfo);
-
-	m_mapVariables.clear();
-	m_mapFunctions.clear();
-	m_mapBreakPoints.clear();
 
 	// Also collect symbols to intialize adress recovery
 	t_AddrssToSymbolMap mapSymbols;
@@ -170,7 +177,6 @@ void CDebugger::StepIn(t_size nCount)
 void CDebugger::StepOver(t_size nCount)
 {
 	VASM_CHECK_PTR(m_pCPU);
-	VASM_CHECK_PTR(m_pMemory);
 
 	// Enable break points
 	TurnBreakPoints(true);
@@ -183,7 +189,7 @@ void CDebugger::StepOver(t_size nCount)
 		bool bCurrBP = TurnBreakPointAt(m_pCPU->State().nIP, false);
 
 		// Need to analyze target instruction to skip over CALL instruction
-		EOpCode eOpCode = m_pMemory->operator[]<EOpCode>(m_pCPU->State().nIP);
+		EOpCode eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nIP);
 
 		if (eOpCode != EOpCode::CALL)
 		{	// Behave like regular Step
@@ -215,7 +221,7 @@ void CDebugger::StepOver(t_size nCount)
 
 				// Analyze just executed instruction to find out corresponding CALLs & RETs
 				// IP already shows next instruction, but CIP yet keeps reference on the previous one
-				eOpCode = m_pMemory->operator[]<EOpCode>(m_pCPU->State().nCIP);
+				eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nCIP);
 				if (eOpCode == EOpCode::CALL)
 					++nCallLevel;
 				else if (eOpCode == EOpCode::RET || eOpCode == EOpCode::RET2)
@@ -235,7 +241,6 @@ void CDebugger::StepOver(t_size nCount)
 void CDebugger::StepOut()
 {
 	VASM_CHECK_PTR(m_pCPU);
-	VASM_CHECK_PTR(m_pMemory);
 
 	// Enable break points
 	TurnBreakPoints(true);
@@ -259,7 +264,7 @@ void CDebugger::StepOut()
 
 		// Analyze just executed instruction to find out corresponding CALLs & RETs
 		// IP already shows next instruction, but CIP yet keeps reference on the previous one
-		EOpCode eOpCode = m_pMemory->operator[]<EOpCode>(m_pCPU->State().nCIP);
+		EOpCode eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nCIP);
 		if (eOpCode == EOpCode::CALL)
 			++nCallLevel;
 		else if (eOpCode == EOpCode::RET || eOpCode == EOpCode::RET2)
@@ -288,9 +293,7 @@ void CDebugger::ResetProgram()
 	else if (m_pCPU->Status().eStatus == CProcessor::EStatus::NotInitialized)
 		VASM_THROW_ERROR(t_csz("Debugger: Can't reset uninitialized CPU."));
 
-	m_pCPU->Init(m_pCmdLib, m_pMemory, m_pCPU->State().cnCodeSize,
-				 m_pCPU->State().cnStackLBound - m_pCPU->State().cnStackUBound,
-				 m_tPackage.nProgramStart); 
+	m_pCPU->Reinit(m_tPackage.nProgramStart); 
 }
 
 bool CDebugger::ChangeIP(t_address nNewIP)
@@ -361,8 +364,6 @@ void CDebugger::ChangeRegister(ERegType eRegType, uint nRegIdx, CValue const& oV
 
 void CDebugger::ChangeVariable(t_string const& sName, CValue const& oValue)
 {
-	VASM_CHECK_PTR(m_pMemory);
-
 	// Lookup variable address
 	auto it = m_mapVariables.find(&sName);
 	if (it == m_mapVariables.end())
@@ -375,12 +376,12 @@ void CDebugger::ChangeVariable(t_string const& sName, CValue const& oValue)
 	if (oValue.GetType() != tInfo.eType || oValue.GetCount() > tInfo.nSize)
 		VASM_THROW_ERROR(base::toStr("Debugger: Invalid value for the variable '%1'", sName));
 
-	m_pMemory->WriteValue(tInfo.nAddress, oValue);
+	RWMemory().WriteValue(tInfo.nAddress, oValue);
 }
 
 SVariableInfo CDebugger::GetVariableInfo(t_string const& sName) const
 {
-	VASM_CHECK_PTR(m_pMemory);
+	VASM_CHECK_PTR(m_pCPU);
 
 	// Lookup variable address
 	auto it = m_mapVariables.find(&sName);
@@ -547,21 +548,21 @@ CDebugger::SCodeLineInfo CDebugger::GetCodeLineInfo(t_address nAddress) const
 t_string CDebugger::GetDisassembledCommand(t_address& nAddress, t_string* pBinaryRepresentation) const
 {
 	VASM_CHECK_PTR(m_pCmdLib);
-	VASM_CHECK_PTR(m_pMemory);
+	VASM_CHECK_PTR(m_pCPU);
 
 	t_string sCommand;
 
 	if (nAddress < (m_tPackage.nCodeBase + m_tPackage.nCodeSize))
 	{
-		EOpCode const& eOpCode = m_pMemory->operator[]<EOpCode>(nAddress);
+		EOpCode const& eOpCode = Memory().operator[]<EOpCode>(nAddress);
 		CCommandLibrary::SInstructionInfo const& tInfo = (*m_pCmdLib)[eOpCode];
 		uint8 const* pCmd = reinterpret_cast<uint8 const*>(&eOpCode);
 
 		if (pBinaryRepresentation)
 		{
 			std::stringstream os;
-			for (uchar i = 0; i < tInfo.tMetaInfo.nLength; ++i)
-				os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << *(pCmd + i) << ' ';
+			for (uchar i = tInfo.tMetaInfo.nLength - 1; i < tInfo.tMetaInfo.nLength; --i)
+				os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +(*(pCmd + i));
 			*pBinaryRepresentation = os.str();
 		}
 
@@ -642,36 +643,36 @@ void CDebugger::Dump(std::ostream& os, bool bText) const
 
 void CDebugger::DumpMemory(std::ostream& os, t_address nBaseAddress, t_size nSizeBytes, bool bText) const
 {
-	VASM_CHECK_PTR(m_pMemory);
-	if (nBaseAddress >= m_pMemory->GetSize())
+	VASM_CHECK_PTR(m_pCPU);
+	if (nBaseAddress >= Memory().GetSize())
 		VASM_THROW_ERROR(t_csz("Debugger: memory dump failed due to invalid address"));
 
 	// Adjust number of bytes 
 	if (nSizeBytes == 0)
-		nSizeBytes = m_pMemory->GetSize() - nBaseAddress;
+		nSizeBytes = Memory().GetSize() - nBaseAddress;
 	else
-		nSizeBytes = std::min(nSizeBytes, m_pMemory->GetSize() - nBaseAddress);
+		nSizeBytes = std::min(nSizeBytes, Memory().GetSize() - nBaseAddress);
 
 	if (bText)
-		DumpHelper(os, nBaseAddress, nSizeBytes, &(*m_pMemory)[0]);
+		DumpHelper(os, nBaseAddress, nSizeBytes, &(Memory()[0]));
 	else
-		os.write(&m_pMemory->operator[]<char>(nBaseAddress), nSizeBytes);
+		os.write(&Memory().operator[]<char>(nBaseAddress), nSizeBytes);
 }
 
 void CDebugger::DumpCode(std::ostream& os, t_address nBaseAddress, t_size nSizeBytes, bool bText) const
 {
-	VASM_CHECK_PTR(m_pMemory);
+	VASM_CHECK_PTR(m_pCPU);
 
 	// Adjust base address
 	t_size nCodeEnd = m_tPackage.nCodeBase + m_tPackage.nCodeSize;
 	if (nBaseAddress == 0)
 		nBaseAddress = m_tPackage.nCodeBase;
 
-	if (nBaseAddress >= m_pMemory->GetSize() || nBaseAddress < m_tPackage.nCodeBase || nBaseAddress >= nCodeEnd)
+	if (nBaseAddress >= Memory().GetSize() || nBaseAddress < m_tPackage.nCodeBase || nBaseAddress >= nCodeEnd)
 		VASM_THROW_ERROR(t_csz("Debugger: memory dump for the code failed due to invalid address"));
 
 	// Adjust size
-	nCodeEnd = std::min(nCodeEnd, m_pMemory->GetSize());
+	nCodeEnd = std::min(nCodeEnd, Memory().GetSize());
 	if (nSizeBytes == 0)
 		nSizeBytes = nCodeEnd - nBaseAddress;
 	else
@@ -686,30 +687,30 @@ void CDebugger::DumpCode(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 				continue;
 			
 			os << "# " << tFunc.sName << " : " << tFunc.sSrcUnit << std::endl;
-			DumpHelper(os, tFunc.nAddress, tFunc.nSize, &(*m_pMemory)[0]);
+			DumpHelper(os, tFunc.nAddress, tFunc.nSize, &(Memory()[0]));
 			os << std::endl;
 		}
 	}
 	else
 	{
-		os.write(&m_pMemory->operator[]<char>(nBaseAddress), nSizeBytes);
+		os.write(&Memory().operator[]<char>(nBaseAddress), nSizeBytes);
 	}
 }
 
 void CDebugger::DumpData(std::ostream& os, t_address nBaseAddress, t_size nSizeBytes, bool bText) const
 {
-	VASM_CHECK_PTR(m_pMemory);
+	VASM_CHECK_PTR(m_pCPU);
 
 	// Adjust base address
 	t_size nDataEnd = m_tPackage.nDataBase + m_tPackage.nDataSize;
 	if (nBaseAddress == 0)
 		nBaseAddress = m_tPackage.nDataBase;
 
-	if (nBaseAddress >= m_pMemory->GetSize() || nBaseAddress < m_tPackage.nDataBase || nBaseAddress >= nDataEnd)
+	if (nBaseAddress >= Memory().GetSize() || nBaseAddress < m_tPackage.nDataBase || nBaseAddress >= nDataEnd)
 		VASM_THROW_ERROR(t_csz("Debugger: memory dump for the code failed due to invalid address"));
 
 	// Adjust size
-	nDataEnd = std::min(nDataEnd, m_pMemory->GetSize());
+	nDataEnd = std::min(nDataEnd, Memory().GetSize());
 	if (nSizeBytes == 0)
 		nSizeBytes = nDataEnd - nBaseAddress;
 	else
@@ -725,20 +726,19 @@ void CDebugger::DumpData(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 				continue;
 
 			os << "# " << tVar.sName << " : " << CValue::TypeToCStr(tVar.eType) << std::endl;
-			DumpHelper(os, tVar.nAddress, nVarSize, &(*m_pMemory)[0]);
+			DumpHelper(os, tVar.nAddress, nVarSize, &(Memory()[0]));
 			os << std::endl;
 		}
 	}
 	else
 	{
-		os.write(&m_pMemory->operator[]<char>(nBaseAddress), nSizeBytes);
+		os.write(&Memory().operator[]<char>(nBaseAddress), nSizeBytes);
 	}
 }
 
 void CDebugger::DumpStack(std::ostream& os, t_size nDepth, bool bText) const
 {
 	VASM_CHECK_PTR(m_pCPU);
-	VASM_CHECK_PTR(m_pMemory);
 
 	t_address nStackTop = m_pCPU->State().nSP;
 	t_address nStackBase = m_pCPU->State().nSF;
@@ -760,13 +760,13 @@ void CDebugger::DumpStack(std::ostream& os, t_size nDepth, bool bText) const
 			{
 				auto const& tFunc = m_tPackage.aFunctionTable.at(nCounter);
 				os << "# " << tFunc.sName << " : " << tFunc.sSrcUnit << std::endl;
-				DumpHelper(os, nStackTop, nStackTop - nStackBase, &(*m_pMemory)[0]);
+				DumpHelper(os, nStackTop, nStackTop - nStackBase, &(Memory()[0]));
 				os << std::endl;
 
 				// Next frame 
 				nStackTop = nStackBase;
 				if (nStackBase <= cnStackBottom)
-					m_pMemory->ReadAt<t_address>(nStackBase, nStackBase);
+					Memory().ReadAt<t_address>(nStackBase, nStackBase);
 				--nDepth;
 				++nCounter;
 
@@ -778,10 +778,10 @@ void CDebugger::DumpStack(std::ostream& os, t_size nDepth, bool bText) const
 			while (nStackBase <= cnStackBottom && --nDepth > 0)
 			{
 				// Next frame 
-				m_pMemory->ReadAt<t_address>(nStackBase, nStackBase);
+				Memory().ReadAt<t_address>(nStackBase, nStackBase);
 			}
 
-			os.write(&m_pMemory->operator[]<char>(nStackTop), nStackTop - nStackBase);
+			os.write(&Memory().operator[]<char>(nStackTop), nStackTop - nStackBase);
 		}
 	}
 }
@@ -826,20 +826,20 @@ void CDebugger::DumpHelper(
 //
 void CDebugger::TurnBreakPoints(bool bOn)
 {
-	VASM_CHECK_PTR(m_pMemory);
+	VASM_CHECK_PTR(m_pCPU);
 	for (auto const& tItem : m_mapBreakPoints)
 	{
-		m_pMemory->WriteAt<EOpCode>(tItem.first, bOn ? EOpCode::BREAK : tItem.second);
+		RWMemory().WriteAt<EOpCode>(tItem.first, bOn ? EOpCode::BREAK : tItem.second);
 	}
 }
 
 bool CDebugger::TurnBreakPointAt(t_address nAddress, bool bOn)
 {
-	VASM_CHECK_PTR(m_pMemory);
+	VASM_CHECK_PTR(m_pCPU);
 	auto it = m_mapBreakPoints.find(nAddress);
 	if (it != m_mapBreakPoints.end())
 	{
-		m_pMemory->WriteAt<EOpCode>(it->first, bOn ? EOpCode::BREAK : it->second);
+		RWMemory().WriteAt<EOpCode>(it->first, bOn ? EOpCode::BREAK : it->second);
 		return true;
 	}
 	return false;
@@ -847,14 +847,14 @@ bool CDebugger::TurnBreakPointAt(t_address nAddress, bool bOn)
 
 void CDebugger::SetBreakPointAt(t_address nAddress, bool bOn)
 {
-	VASM_CHECK_PTR(m_pMemory);
+	VASM_CHECK_PTR(m_pCPU);
 
 	// Check for BP already set, otherwise BREAK instruction could be saved over the original one
 	auto it = m_mapBreakPoints.find(nAddress);
 	if (it == m_mapBreakPoints.end())
 	{
 		EOpCode eOpCodeBackup;
-		m_pMemory->ReadAt<EOpCode>(nAddress, eOpCodeBackup);
+		Memory().ReadAt<EOpCode>(nAddress, eOpCodeBackup);
 		m_mapBreakPoints.insert({nAddress, eOpCodeBackup});
 	}
 
@@ -954,7 +954,6 @@ bool CDebugger::LookupSource(
 CDebugger::t_CallStack CDebugger::ExtractFunctionCallStack() const
 {
 	VASM_CHECK_PTR(m_pCPU);
-	VASM_CHECK_PTR(m_pMemory);
 
 	t_CallStack aCallStack;
 	CProcessor::EStatus eStatus = m_pCPU->Status().eStatus;
@@ -972,8 +971,8 @@ CDebugger::t_CallStack CDebugger::ExtractFunctionCallStack() const
 			aCallStack.push_back({nFuncIdx, nLineNumber});
 
 			// Extract next IP & SF
-			m_pMemory->ReadAt<t_address>(nCurrSF + sizeof(t_address), nCurrIP);
-			m_pMemory->ReadAt<t_address>(nCurrSF, nCurrSF);
+			Memory().ReadAt<t_address>(nCurrSF + sizeof(t_address), nCurrIP);
+			Memory().ReadAt<t_address>(nCurrSF, nCurrSF);
 		}
 	}
 	return aCallStack;

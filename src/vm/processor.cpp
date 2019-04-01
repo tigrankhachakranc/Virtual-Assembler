@@ -101,6 +101,14 @@ void CProcessor::Init(
 	m_tStatus.oErrorInfo = base::CException();
 }
 
+void CProcessor::Reinit(t_address nProgramStart)
+{
+	Init(m_pCmdLib, m_pMemory, State().cnCodeSize,
+		 State().cnStackLBound - State().cnStackUBound,
+		 nProgramStart);
+}
+
+
 CProcessor::EStatus CProcessor::Run(bool bOnce)
 {
 	if (m_tStatus.eStatus == EStatus::NotInitialized)
@@ -187,7 +195,7 @@ uchar const* CProcessor::Fetch() const
 {
 	if (m_tState.nIP >= m_tState.cnCodeSize)
 		VASM_THROW_ERROR(t_csz("CPU: Out of code bounds execute."));
-	return &m_pMemory->operator[]<uchar>(m_tState.nIP);
+	return &Memory().operator[]<uchar>(m_tState.nIP);
 }
 
 void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)

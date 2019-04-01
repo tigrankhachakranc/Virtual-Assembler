@@ -844,14 +844,14 @@ extern "C" uint16_t __stdcall fnDIV16(uint16_t* pLeft, uint16_t* pRight, uint16_
 	{
 		mov EBX, DWORD PTR[pLeft]	// Read sddress of the first operand
 		mov ECX, DWORD PTR[pRight]	// Read sddress of the second operand
-		xor DX, DX					// Reset AX to 0
+		xor DX, DX					// Reset DX to 0
 		mov AX, WORD PTR[EBX]		// Load first operand into the AX register (dividend)
 		mov BX, WORD PTR[ECX]		// Load second operand into the BX register (divisor)
 		div BX						// DX (reminder) : AX (quotient) <- AX / BX
 		pushf						// Save flags
 		mov EBX, DWORD PTR[pTarget]	// Read address of the destination 
-		mov WORD PTR[EDX], AX		// Store the result into the destination (Quotient)
-		mov WORD PTR[EDX+2], DX		// Store the result into the destination (Reminder)
+		mov WORD PTR[EBX], AX		// Store the result into the destination (Quotient)
+		mov WORD PTR[EBX+2], DX		// Store the result into the destination (Reminder)
 		pop AX						// Return flags in AX
 		call ConvertFlags
 	}
@@ -863,14 +863,14 @@ extern "C" uint16_t __stdcall fnDIV32(uint32_t* pLeft, uint32_t* pRight, uint32_
 	{
 		mov EBX, DWORD PTR[pLeft]	// Read sddress of the first operand
 		mov ECX, DWORD PTR[pRight]	// Read sddress of the second operand
-		xor EDX, EDX				// Reset AX to 0
+		xor EDX, EDX				// Reset EDX to 0
 		mov EAX, DWORD PTR[EBX]		// Load first operand into the AX register (dividend)
 		mov EBX, DWORD PTR[ECX]		// Load second operand into the BX register (divisor)
 		div BX						// EDX (reminder) : EAX (quotient) <- EAX / EBX
 		pushf						// Save flags
 		mov EBX, DWORD PTR[pTarget]	// Read address of the destination 
-		mov DWORD PTR[EDX], EAX		// Store the result into the destination (Quotient)
-		mov DWORD PTR[EDX + 4], EDX	// Store the result into the destination (Reminder)
+		mov DWORD PTR[EBX], EAX		// Store the result into the destination (Quotient)
+		mov DWORD PTR[EBX + 4], EDX	// Store the result into the destination (Reminder)
 		pop AX						// Return flags in AX
 		call ConvertFlags
 	}
@@ -1330,14 +1330,14 @@ extern "C" uint16_t __stdcall fnIDIV16(uint16_t* pLeft, uint16_t* pRight, uint16
 	{
 		mov EBX, DWORD PTR[pLeft]	// Read sddress of the first operand
 		mov ECX, DWORD PTR[pRight]	// Read sddress of the second operand
-		xor DX, DX					// Reset AX to 0
+		xor DX, DX					// Reset DX to 0
 		mov AX, WORD PTR[EBX]		// Load first operand into the AX register (dividend)
 		mov BX, WORD PTR[ECX]		// Load second operand into the BX register (divisor)
 		idiv BX						// DX (reminder) : AX (quotient) <- AX / BX
 		pushf						// Save flags
 		mov EBX, DWORD PTR[pTarget]	// Read address of the destination 
-		mov WORD PTR[EDX], AX		// Store the result into the destination (Quotient)
-		mov WORD PTR[EDX + 2], DX		// Store the result into the destination (Reminder)
+		mov WORD PTR[EBX], AX		// Store the result into the destination (Quotient)
+		mov WORD PTR[EBX + 2], DX	// Store the result into the destination (Reminder)
 		pop AX						// Return flags in AX
 		call ConvertFlags
 	}
@@ -1349,14 +1349,14 @@ extern "C" uint16_t __stdcall fnIDIV32(uint32_t* pLeft, uint32_t* pRight, uint32
 	{
 		mov EBX, DWORD PTR[pLeft]	// Read sddress of the first operand
 		mov ECX, DWORD PTR[pRight]	// Read sddress of the second operand
-		xor EDX, EDX				// Reset AX to 0
+		xor EDX, EDX				// Reset EDX to 0
 		mov EAX, DWORD PTR[EBX]		// Load first operand into the AX register (dividend)
 		mov EBX, DWORD PTR[ECX]		// Load second operand into the BX register (divisor)
 		idiv BX						// EDX (reminder) : EAX (quotient) <- EAX / EBX
 		pushf						// Save flags
 		mov EBX, DWORD PTR[pTarget]	// Read address of the destination 
-		mov DWORD PTR[EDX], EAX		// Store the result into the destination (Quotient)
-		mov DWORD PTR[EDX + 4], EDX	// Store the result into the destination (Reminder)
+		mov DWORD PTR[EBX], EAX		// Store the result into the destination (Quotient)
+		mov DWORD PTR[EBX + 4], EDX	// Store the result into the destination (Reminder)
 		pop AX						// Return flags in AX
 		call ConvertFlags
 	}

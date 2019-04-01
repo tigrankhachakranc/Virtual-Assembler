@@ -27,14 +27,14 @@ using CCommandPtr = core::CCommandPtr;
 //
 CMachine::CMachine(std::istream& cin, std::ostream& cout)
 {
-	m_pProcessor = CProcessorPtr(new CProcessor);
-	m_pIOController = CIOControllerPtr(new core::CIOController);
+	m_pProcessor = std::make_shared<CProcessor>();
+	m_pIOController = std::make_shared<core::CIOController>();
 
 	// Prepare commnad library
 	m_pCmdLib = CreateAndInitCommandLibrary(m_pIOController);
 
 	// Register IO devices
-	IDevicePtr pDevice(new CConsoleDevice(cin, cout));
+	IDevicePtr pDevice = std::make_shared<CConsoleDevice>(cin, cout);
 	m_pIOController->Register(pDevice);
 }
 
@@ -86,6 +86,11 @@ void CMachine::Init(std::istream& oInput)
 	// No exceptions, save the state
 	m_tPackageInfo = std::move(tPackage);
 	m_pMemory = pMemory;
+
+	// Also initialize debugger if available
+	CDebuggerPtr pDebugger = m_pDebugger.lock();
+	if (pDebugger != nullptr)
+		pDebugger->Init(m_pCmdLib, m_pProcessor, m_pIOController, m_tPackageInfo);
 }
 
 bool CMachine::IsValid() const
@@ -99,15 +104,18 @@ bool CMachine::IsValid() const
 
 void CMachine::SetDebugger(CDebuggerPtr pDebugger)
 {
-	VASM_CHECK_PTR(m_pProcessor);
-	if (pDebugger != nullptr && IsValid() &&
-		m_pProcessor->Status().eStatus != CProcessor::EStatus::Running)
+	if (IsValid())
 	{
-		pDebugger->Init(m_pCmdLib, m_pMemory, m_pProcessor, m_pIOController, m_tPackageInfo);
-		m_pDebugger = pDebugger;
+		if (m_pProcessor->Status().eStatus == CProcessor::EStatus::Running)
+			VASM_THROW_ERROR(t_csz("Machine: CPU currently is running"));
+
+		if (pDebugger != nullptr)
+			pDebugger->Init(m_pCmdLib, m_pProcessor, m_pIOController, m_tPackageInfo);
 	}
-	else
-		VASM_THROW_ERROR(t_csz("Machine: CPU currently is running"));
+	else if (pDebugger != nullptr)
+		pDebugger->Reset();
+
+	m_pDebugger = pDebugger;
 }
 
 void CMachine::Run(bool bAssynch)
@@ -211,6 +219,10 @@ void CMachine::Reset()
 	m_tPackageInfo = SPackageInfo();
 	m_oWorkerThread = std::thread();
 	m_oLastError.Clear();
+
+	CDebuggerPtr pDebugger = m_pDebugger.lock();
+	if (pDebugger != nullptr)
+		pDebugger->Reset();
 }
 
 void CMachine::Finished()

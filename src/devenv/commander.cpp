@@ -83,10 +83,10 @@ CCommander::~CCommander() = default;
 void CCommander::Init(CMachinePtr pMachine)
 {
 	VASM_CHECK_X(!m_bProcessing, t_csz("Can't initialize commander while processing commands!"))
-	VASM_CHECK_PTR(m_pMachine);
 	m_pMachine = pMachine;
+	VASM_CHECK_PTR(m_pMachine);
 
-	m_pDebugger = CDebuggerPtr(new CDebugger);
+	m_pDebugger = std::make_shared<CDebugger>();
 	m_pMachine->SetDebugger(m_pDebugger);
 }
 
@@ -140,7 +140,7 @@ void CCommander::Load(t_string sExecPath)
 	if (m_pMachine == nullptr)
 		VASM_THROW_ERROR(t_csz("Failed to load binary executable, commander is not initialized"));
 
-	std::ifstream oBinFile(sExecPath);
+	std::ifstream oBinFile(sExecPath, std::ios::in | std::ios::binary);
 	if (oBinFile.fail())
 		VASM_THROW_ERROR(base::toStr("Failed to open binary file '%1'", sExecPath));
 
@@ -160,7 +160,6 @@ void CCommander::Open(std::vector<t_string> aSourceCodeNames)
 	if (m_pMachine == nullptr)
 		VASM_THROW_ERROR(t_csz("Failed to open sources, commander is not initialized"));
 
-	// Compilation passed, now Link
 	std::stringstream oBinaryOutput;
 	cl::CCompiler::Build(aSourceCodeNames, t_string(), oBinaryOutput);
 
@@ -181,7 +180,7 @@ void CCommander::cmd_help(CCmdParser&)
 {
 	m_cout << std::endl;
 	m_cout << "?|h|help                                      Supported commands listing"										<< std::endl;
-	m_cout << "i|info										 Prints information about current state and program beeing debuged"	<< std::endl;
+	m_cout << "i|info                                        Prints information about current state and program being debuged"	<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "r|run         [-dbg yes|no]                   Runs program from current IP (either in debug or nondebug mode)"	<< std::endl;
 	m_cout << "              [-from line_num|label|0xAddress]"																	<< std::endl;
@@ -197,7 +196,7 @@ void CCommander::cmd_help(CCmdParser&)
 	m_cout << "rbp           [src:line_num|label|func_name]  Removes specifed breakpoint"										<< std::endl;
 	m_cout << "              [all]"																								<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "set	         [IP src:line|label|func_name]   Sets specified value to the specifed register"						<< std::endl;
+	m_cout << "set           [IP src:line|label|func_name]   Sets specified value to the specifed register"						<< std::endl;
 	m_cout << "              [A(idx) src:line|label|func_name|var_name|0xAddress]"												<< std::endl;
 	m_cout << "              [R(idx) [B|W|DW|QW|CH] +/-num|0xValue]"															<< std::endl;
 	m_cout << "              [CF|ZF|SF|OF 0|1]"																					<< std::endl;
@@ -223,7 +222,7 @@ void CCommander::cmd_help(CCmdParser&)
 	m_cout << "        sf                                    Prints current stack frame"										<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "w|watch       [var_name [...]]                Prints current value of the specified variables"					<< std::endl;
-	m_cout << "        add	 var_name                        Ads specified variable to the watch list"							<< std::endl;
+	m_cout << "        add   var_name                        Ads specified variable to the watch list"							<< std::endl;
 	m_cout << "        rem   var_name                        Removes specified variable from the watch list"					<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "l|load        exec_file_path                  Opens specified binary exectuavle file and loads into memory"		<< std::endl;
@@ -241,7 +240,7 @@ void CCommander::cmd_info(CCmdParser& oParser)
 		m_cout << std::endl << "Machine is not initialized, no binary executable." << std::endl;
 	else
 	{
-		m_cout << "Current program: " << m_sProgram;
+		m_cout << "Current program: " << m_sProgram << std::endl;
 		switch (m_pDebugger->CPUStatus().eStatus)
 		{
 		case vm::CProcessor::EStatus::NotInitialized:
@@ -984,46 +983,44 @@ void CCommander::PrintCurrentState() const
 	os << " OF(" << std::dec << tState.oFlags.getOverflow() << ")";
 
 	os << std::endl;
-	os << std::hex << std::uppercase << std::setfill('0') << std::setw(8);
-	os << "Address registers (0x): ---------------------------------------" << std::endl;
-	os << "IP (current)  = " << tState.nIP << "  ";
-	os << "IP (previous) = " << tState.nCIP << "  ";
-	os << "Return IP = " << tState.nRIP << "  ";
+	os << "Address registers (0x): ----------------------------------------------------------" << std::endl;
+	os << "IP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nIP  << "  ";
+	os << "CIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nCIP << "  ";
+	os << "RIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nRIP << "  ";
 	os << std::endl;
-	os << "SP = " << tState.anARPool[core::SCPUStateBase::eSPIndex] << "  ";
-	os << "SF = " << tState.anARPool[core::SCPUStateBase::eSFIndex] << "  ";
+	os << "SP = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eSPIndex] << "  ";
+	os << "SF = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eSFIndex] << "  ";
 	os << std::endl;
-	os << "A4 = " << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 0] << "  ";
-	os << "A5 = " << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 1] << "  ";
+	os << "A4 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 0] << "  ";
+	os << "A5 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 1] << "  ";
 	os << std::endl;
-	os << "A6 = " << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 2] << "  ";
-	os << "A7 = " << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 3] << "  ";
+	os << "A6 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 2] << "  ";
+	os << "A7 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 3] << "  ";
 
 	os << std::endl;
-	os << "General purpose registers (0x): --------------------------------------------------------------" << std::endl;
+	os << "General purpose registers (0x): --------------------------------------------------" << std::endl;
 	for (uint nRIdx = 0; nRIdx < core::SCPUStateBase::eGeneralPurposeRegisterPoolSize; nRIdx += 16)
 	{
-		os << "R" << std::dec << std::setfill('0') << std::setw(2) << nRIdx << ":  ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2);
-		os << tState.aui8GPRPool[nRIdx + 0] << " ";
-		os << tState.aui8GPRPool[nRIdx + 1] << " ";
-		os << tState.aui8GPRPool[nRIdx + 2] << " ";
-		os << tState.aui8GPRPool[nRIdx + 3] << " ";
+		os << "R" << std::dec << std::setfill('0') << std::setw(2) << nRIdx << ": ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 0];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 1];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 2];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 3];
+		os << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 4];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 5];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 6];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 7];
 		os << "  ";
-		os << tState.aui8GPRPool[nRIdx + 4] << " ";
-		os << tState.aui8GPRPool[nRIdx + 5] << " ";
-		os << tState.aui8GPRPool[nRIdx + 6] << " ";
-		os << tState.aui8GPRPool[nRIdx + 7] << " ";
-		os << "    ";
-		os << tState.aui8GPRPool[nRIdx + 8] << " ";
-		os << tState.aui8GPRPool[nRIdx + 9] << " ";
-		os << tState.aui8GPRPool[nRIdx + 10] << " ";
-		os << tState.aui8GPRPool[nRIdx + 11] << " ";
-		os << "  ";
-		os << tState.aui8GPRPool[nRIdx + 12] << " ";
-		os << tState.aui8GPRPool[nRIdx + 13] << " ";
-		os << tState.aui8GPRPool[nRIdx + 14] << " ";
-		os << tState.aui8GPRPool[nRIdx + 15] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 8];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 9];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 10];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 11];
+		os << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 12];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 13];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 14];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 15];
 		os << std::endl;
 	}
 
@@ -1045,7 +1042,7 @@ void CCommander::PrintCurrentState() const
 	}
 	else
 	{
-		os << "Next command: --------------------------------------------------------------------------------" << std::endl;
+		os << "Next command: --------------------------------------------------------------------" << std::endl;
 
 		CDebugger::SCodeLineInfo tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nIP);
 		if (tCLInfo.sUnitName != nullptr)

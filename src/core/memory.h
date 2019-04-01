@@ -61,16 +61,16 @@ public:
 	inline Type const& operator[](t_address) const;
 
 	template <typename Type>
-	inline void ReadAt(t_address, Type& val) const;
+	inline void ReadAt(t_address, Type& val, bool bAlignmentCheck = true) const;
 
 	template <typename Type>
-	inline void WriteAt(t_address, Type const& val);
+	inline void WriteAt(t_address, Type const& val, bool bAlignmentCheck = true);
 
 	template <typename Type>
-	inline void Read(t_address, Type* pTrgt, t_uoffset nCount) const;
+	inline void Read(t_address, Type* pTrgt, t_uoffset nCount, bool bAlignmentCheck = true) const;
 
 	template <typename Type>
-	inline void Write(t_address, Type const* pSrc, t_uoffset nCount);
+	inline void Write(t_address, Type const* pSrc, t_uoffset nCount, bool bAlignmentCheck = true);
 
 	inline CValue ReadValue(t_address, EValueType eType, t_size nCount) const;
 	inline void WriteValue(t_address, CValue const&);
@@ -122,9 +122,9 @@ inline Type& CMemory::operator[](t_address addr)
 template <typename Type>
 inline Type const& CMemory::operator[](t_address addr) const
 {
-	if (addr == 0) // null is reserved
-		VASM_THROW_ERROR("Nullptr memory const access.");
-	else if (addr > m_aBuffer.size() - sizeof(Type))
+	//if (addr == 0) // null is reserved
+	//	VASM_THROW_ERROR("Nullptr memory const access.");
+	if (addr > m_aBuffer.size() - sizeof(Type))
 		VASM_THROW_ERROR("Out of memory bounds const access.");
 	else if (addr % sizeof(Type) != 0)
 		VASM_THROW_ERROR("Unaligned memory const access.");
@@ -132,31 +132,31 @@ inline Type const& CMemory::operator[](t_address addr) const
 }
 
 template <typename Type>
-inline void CMemory::ReadAt(t_address addr, Type& val) const
+inline void CMemory::ReadAt(t_address addr, Type& val, bool bAlignmentCheck) const
 {
 	if (addr == 0) // null is reserved
 		VASM_THROW_ERROR("Nullptr memory read.");
 	else if (addr > m_aBuffer.size() - sizeof(Type))
 		VASM_THROW_ERROR("Out of memory bounds read.");
-	else if (addr % sizeof(Type) != 0)
+	else if (bAlignmentCheck && addr % sizeof(Type) != 0)
 		VASM_THROW_ERROR("Unaligned memory read.");
 	val = reinterpret_cast<Type const&>(m_aBuffer[addr]);
 }
 
 template <typename Type>
-inline void CMemory::WriteAt(t_address addr, Type const& val)
+inline void CMemory::WriteAt(t_address addr, Type const& val, bool bAlignmentCheck)
 {
 	if (addr == 0) // null is reserved
 		VASM_THROW_ERROR("Nullptr memory write.");
 	else if (addr > m_aBuffer.size() - sizeof(Type))
 		VASM_THROW_ERROR("Out of memory bounds write.");
-	else if (addr % sizeof(Type) != 0)
+	else if (bAlignmentCheck && addr % sizeof(Type) != 0)
 		VASM_THROW_ERROR("Unaligned memory write.");
 	reinterpret_cast<Type&>(m_aBuffer[addr]) = val;
 }
 
 template <typename Type>
-inline void CMemory::Read(t_address addr, Type* pTrgt, t_uoffset nCount) const
+inline void CMemory::Read(t_address addr, Type* pTrgt, t_uoffset nCount, bool bAlignmentCheck) const
 {
 	size_t nCountBytes = size_t(nCount) * sizeof(Type);
 	if (nCount == 0)
@@ -165,13 +165,13 @@ inline void CMemory::Read(t_address addr, Type* pTrgt, t_uoffset nCount) const
 		VASM_THROW_ERROR("Nullptr memory read.");
 	else if (addr + nCountBytes > m_aBuffer.size())
 		VASM_THROW_ERROR("Out of memory bounds read.");
-	else if (addr % sizeof(Type) != 0)
+	else if (bAlignmentCheck && addr % sizeof(Type) != 0)
 		VASM_THROW_ERROR("Unaligned memory read.");
 	std::memcpy(pTrgt, &m_aBuffer[addr], nCountBytes);
 }
 
 template <typename Type>
-inline void CMemory::Write(t_address addr, Type const* pTrgt, t_uoffset nCount)
+inline void CMemory::Write(t_address addr, Type const* pTrgt, t_uoffset nCount, bool bAlignmentCheck)
 {
 	size_t nCountBytes = size_t(nCount) * sizeof(Type);
 	if (nCount == 0)
@@ -180,7 +180,7 @@ inline void CMemory::Write(t_address addr, Type const* pTrgt, t_uoffset nCount)
 		VASM_THROW_ERROR("Nullptr memory write.");
 	else if (addr + nCountBytes > m_aBuffer.size() )
 		VASM_THROW_ERROR("Out of memory bounds write.");
-	else if (addr % sizeof(Type) != 0)
+	else if (bAlignmentCheck && addr % sizeof(Type) != 0)
 		VASM_THROW_ERROR("Unaligned memory write.");
 	std::memcpy(&m_aBuffer[addr], pTrgt, nCountBytes);
 }

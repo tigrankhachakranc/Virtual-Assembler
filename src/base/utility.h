@@ -252,7 +252,9 @@ template <typename TString>
 class TStringRef
 {
 public:
-	inline TStringRef(TString const* pstr = nullptr);
+	inline TStringRef();
+	inline TStringRef(nullptr_t);
+	inline TStringRef(TString const* pstr);
 	inline TStringRef(TStringRef const&) = default;
 
 	inline TStringRef& operator=(nullptr_t);
@@ -319,6 +321,16 @@ struct TStringRefComparator : std::binary_function<TStringRef<TString>, TStringR
 //
 //	Inline Implementations
 //
+
+template <typename TString>
+inline TStringRef<TString>::TStringRef()
+{
+}
+
+template <typename TString>
+inline TStringRef<TString>::TStringRef(nullptr_t)
+{
+}
 
 template <typename TString>
 inline TStringRef<TString>::TStringRef(TString const* pstr) :

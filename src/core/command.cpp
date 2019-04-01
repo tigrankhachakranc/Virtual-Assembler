@@ -95,7 +95,7 @@ SCommandMetaInfo::SCommandMetaInfo(
 		nLength = 10;
 		break;
 	case EImvType::Count:
-		VASM_THROW_INVALID_CONDITION(); // bad case
+		nLength = bool(ext & MaskExtension) ? 4 : 2;
 		break;
 	case EImvType::Port:
 		VASM_THROW_INVALID_CONDITION(); // bad case
