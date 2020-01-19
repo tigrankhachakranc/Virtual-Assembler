@@ -39,9 +39,6 @@ CMainCommands::CMainCommands() : CCommandBase()
 			 FuncCmdExec(&CMainCommands::Call), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("RET"), EOpCode::RET},
 			 FuncCmdExec(&CMainCommands::Ret), FuncCmdDisasm(&CMainCommands::DisAsm));
-	Register({t_csz("RET"), EOpCode::RET2, EOprType::GRIMV, EImvType::Num16,
-			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeWord},
-			 FuncCmdExec(&CMainCommands::Ret2), FuncCmdDisasm(&CMainCommands::DisAsm));
 
 	Register({t_csz("GFLR"), EOpCode::GFLR, EOprType::GR, SCommandMetaInfo::FixedOprSizeWord},
 			 FuncCmdExec(&CMainCommands::GFLR), FuncCmdDisasm(&CMainCommands::DisAsm));
@@ -74,9 +71,15 @@ CMainCommands::CMainCommands() : CCommandBase()
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch, true},
 			 apfnStoreRel, FuncCmdDisasm(&CMainCommands::DisAsm));
 
-	Register({t_csz("PUSHSF"), EOpCode::PUSHSF, EOprType::IMV, EImvType::Count},
+	Register({t_csz("PUSHSF"), EOpCode::PUSHSF},
+			 FuncCmdExec(&CMainCommands::PushSF), FuncCmdDisasm(&CMainCommands::DisAsm));
+	Register({t_csz("PUSHSF"), EOpCode::PUSHSF2, EOprType::GRIMV, EImvType::Num16,
+			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeWord},
 			 FuncCmdExec(&CMainCommands::PushSF), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("POPSF"), EOpCode::POPSF},
+			 FuncCmdExec(&CMainCommands::PopSF), FuncCmdDisasm(&CMainCommands::DisAsm));
+	Register({t_csz("POPSF"), EOpCode::POPSF2, EOprType::GRIMV, EImvType::Num16,
+			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeWord},
 			 FuncCmdExec(&CMainCommands::PopSF), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("PUSH"), EOpCode::PUSHA, EOprType::AR},
 			 FuncCmdExec(&CMainCommands::PushA), FuncCmdDisasm(&CMainCommands::DisAsm));
@@ -157,16 +160,13 @@ void CMainCommands::Ret(SCommandContext& tCtxt)
 	//// Pop IP
 	//tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nIP);
 	//tCtxt.tCPUState.nSP += sizeof(t_address);
-}
-
-void CMainCommands::Ret2(SCommandContext& tCtxt)
-{
-	// Call regular Ret
-	Ret(tCtxt);
 	// Do stack cleanup
-	if (tCtxt.tCPUState.nSP + *tCtxt.tOpr[EOprIdx::First].pu16 > tCtxt.tCPUState.cnStackLBound)
-		VASM_THROW_ERROR(t_csz("CPU: Stack underflow on Ret (stack cleanup)"));
-	tCtxt.tCPUState.nSP += sizeof(t_address);
+	//if (tCtxt.tInfo.tMetaInfo.nOperandCount > 0)
+	//{
+	//	if (tCtxt.tCPUState.nSP + *tCtxt.tOpr[EOprIdx::First].pu16 > tCtxt.tCPUState.cnStackLBound)
+	//		VASM_THROW_ERROR(t_csz("CPU: Stack underflow on Ret (stack cleanup)"));
+	//	tCtxt.tCPUState.nSP += *tCtxt.tOpr[EOprIdx::First].pu16;
+	//}
 }
 
 
@@ -220,22 +220,6 @@ void CMainCommands::StoreRel(SCommandContext& tCtxt)
 //
 // Stack instructions
 //
-void CMainCommands::PushA(SCommandContext& tCtxt)
-{
-	if ((tCtxt.tCPUState.nSP - sizeof(t_address)) < tCtxt.tCPUState.cnStackUBound)
-		VASM_THROW_ERROR(t_csz("CPU: Stack overflow"));
-	tCtxt.tCPUState.nSP -= sizeof(t_address);
-	tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, *tCtxt.tOpr[EOprIdx::First].ptr<t_address>(), false);
-}
-
-void CMainCommands::PopA(SCommandContext& tCtxt)
-{
-	if ((tCtxt.tCPUState.nSP + sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
-		VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
-	tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, *tCtxt.tOpr[EOprIdx::First].ptr<t_address>(), false);
-	tCtxt.tCPUState.nSP += sizeof(t_address);
-}
-
 void CMainCommands::PushSF(SCommandContext& tCtxt)
 {
 	if ((tCtxt.tCPUState.nSP - 2 * sizeof(t_address)) < tCtxt.tCPUState.cnStackUBound)
@@ -249,16 +233,20 @@ void CMainCommands::PushSF(SCommandContext& tCtxt)
 	tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nSF, false);
 	// Change SF
 	tCtxt.tCPUState.nSF = tCtxt.tCPUState.nSP;
-	// Allocate space ont the stack if specified
-	if (*tCtxt.tOpr[EOprIdx::First].pu8 > 0)
-		tCtxt.tCPUState.nSP -= *tCtxt.tOpr[EOprIdx::First].pu8;
+	// Allocate space on the the stack if specified
+	if (tCtxt.tInfo.tMetaInfo.nOperandCount > 0)
+	{
+		if (tCtxt.tCPUState.nSP - *tCtxt.tOpr[EOprIdx::First].pu16 < tCtxt.tCPUState.cnStackUBound)
+			VASM_THROW_ERROR(t_csz("CPU: Stack overflow in stack frame creation"));
+		tCtxt.tCPUState.nSP -= *tCtxt.tOpr[EOprIdx::First].pu16;
+	}
 }
 
 void CMainCommands::PopSF(SCommandContext& tCtxt)
 {
 	if ((tCtxt.tCPUState.nSP + 2 * sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
 		VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
-	
+
 	// Change SP to point to SF
 	tCtxt.tCPUState.nSP = tCtxt.tCPUState.nSF;
 	// Pop stack frame
@@ -266,6 +254,29 @@ void CMainCommands::PopSF(SCommandContext& tCtxt)
 	tCtxt.tCPUState.nSP += sizeof(t_address);
 	// Pop RIP
 	tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nRIP, false);
+	tCtxt.tCPUState.nSP += sizeof(t_address);
+	// Do stack cleanup
+	if (tCtxt.tInfo.tMetaInfo.nOperandCount > 0)
+	{
+		if (tCtxt.tCPUState.nSP + *tCtxt.tOpr[EOprIdx::First].pu16 > tCtxt.tCPUState.cnStackLBound)
+			VASM_THROW_ERROR(t_csz("CPU: Stack underflow on stack frame cleanup"));
+		tCtxt.tCPUState.nSP += *tCtxt.tOpr[EOprIdx::First].pu16;
+	}
+}
+
+void CMainCommands::PushA(SCommandContext& tCtxt)
+{
+	if ((tCtxt.tCPUState.nSP - sizeof(t_address)) < tCtxt.tCPUState.cnStackUBound)
+		VASM_THROW_ERROR(t_csz("CPU: Stack overflow"));
+	tCtxt.tCPUState.nSP -= sizeof(t_address);
+	tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, *tCtxt.tOpr[EOprIdx::First].ptr<t_address>(), false);
+}
+
+void CMainCommands::PopA(SCommandContext& tCtxt)
+{
+	if ((tCtxt.tCPUState.nSP + sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
+		VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
+	tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, *tCtxt.tOpr[EOprIdx::First].ptr<t_address>(), false);
 	tCtxt.tCPUState.nSP += sizeof(t_address);
 }
 

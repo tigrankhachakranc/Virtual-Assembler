@@ -52,7 +52,6 @@ private:
 	void JumpR(SCommandContext&);	// Relative [conditional] jump
 	void Call(SCommandContext&);	// Absolute call
 	void Ret(SCommandContext&);		// Return
-	void Ret2(SCommandContext&);	// Return and clean the stack
 
 	// Flags manipulation instructions
 	void GFLR(SCommandContext&);	// Get Flags into GP register
@@ -69,10 +68,10 @@ private:
 	void StoreRel(SCommandContext&);// Store operand into memory with relative 24 bit offset
 
 	// Stack instructions
-	void PushA(SCommandContext&);	// Push address register
-	void PopA(SCommandContext&);	// Pop address register
 	void PushSF(SCommandContext&);	// Push stack frame
 	void PopSF(SCommandContext&);	// Pop stack frame
+	void PushA(SCommandContext&);	// Push address register
+	void PopA(SCommandContext&);	// Pop address register
 	template <typename TOperandType>
 	void PushR(SCommandContext&);	// Push GP register(s)
 	template <typename TOperandType>

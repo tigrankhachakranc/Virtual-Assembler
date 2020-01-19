@@ -65,6 +65,9 @@ private:
 	template <typename TOperandType>
 	void Swap(SCommandContext&);
 
+	template <typename TOperandType>
+	void Set(SCommandContext&);		// Set register to 1 based on CC
+
 	// Comparison instructions
 	void TestB(SCommandContext&);
 	void TestW(SCommandContext&);
@@ -75,9 +78,6 @@ private:
 	void CmpW(SCommandContext&);
 	void CmpDW(SCommandContext&);
 	void CmpQW(SCommandContext&);
-
-	template <typename TOperandType>
-	void Set(SCommandContext&);		// Set register to 1 based on CC
 
 	// Logical Instructions
 	void AndB(SCommandContext&);

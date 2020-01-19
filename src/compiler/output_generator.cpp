@@ -118,7 +118,7 @@ void COutputGenerator::ProduceExecutable(SPackage const& tPackage, std::ostream&
 		nBufferSize += sizeof(t_string::value_type) * (tEntry.sSrcUnitName.size() + 1); // One more for '\0'
 		VASM_CHECK(tEntry.aCodeTbl.empty() || tEntry.aCodeTbl.size() == tEntry.nSizeLine);
 		nBufferSize += sizeof(t_uoffset) * tEntry.aCodeTbl.size();
-		nBufferSize += sizeof(SDebugInfoSection::SLabelEntry) * tEntry.aLabelEntries.size();
+		nBufferSize += cnDbgTblSctnLblEntrySize * tEntry.aLabelEntries.size();
 		for (SDebugInfo::SLabelEntry const& tLblEntry : tEntry.aLabelEntries)
 			nBufferSize += sizeof(t_string::value_type) * (tLblEntry.sName.size() + 1); // One more for '\0'
 	}

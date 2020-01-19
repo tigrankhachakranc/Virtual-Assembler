@@ -40,7 +40,6 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands {
 	{t_csz("JUMP"), {EOpCode::JUMPR, EOprType::GRIMV, EImvType::SNum16}},
 	{t_csz("CALL"), {EOpCode::CALL,	 EOprType::AR}},
 	{t_csz("RET"),  {EOpCode::RET}},
-	{t_csz("RET"),  {EOpCode::RET2,  EOprType::GRIMV, EImvType::Num16}},
 	// Conditional branching
 	{t_csz("JEQ"),	{EOpCode::JUMPR, ECndtnCode::Equal, EOprType::GRIMV, EImvType::SNum16}},
 	{t_csz("JZ"),	{EOpCode::JUMPR, ECndtnCode::Equal, EOprType::GRIMV, EImvType::SNum16}},
@@ -95,8 +94,9 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands {
 	// Stack instructions
 	//
 	{t_csz("PUSHSF"), {EOpCode::PUSHSF}},
-	{t_csz("PUSHSF"), {EOpCode::PUSHSF, EOprType::IMV, EImvType::Count}},
+	{t_csz("PUSHSF"), {EOpCode::PUSHSF2,EOprType::GRIMV, EImvType::Num16}},
 	{t_csz("POPSF"),  {EOpCode::POPSF}},
+	{t_csz("POPSF"),  {EOpCode::POPSF2,	EOprType::GRIMV, EImvType::Num16}},
 	{t_csz("PUSH"),	  {EOpCode::PUSHA,	EOprType::AR}},
 	{t_csz("POP"),	  {EOpCode::POPA,	EOprType::AR}},
 	{t_csz("PUSH"),	  {EOpCode::PUSHR,	EOprType::GR, true}},
@@ -497,14 +497,6 @@ void CCommandParser::Parse(SCommand& tCommand)
 		tCommand.nArgCount = 2;
 		tCommand.aArguments[EOprIdx::Second].eType = EArgType::NUM;
 		tCommand.aArguments[EOprIdx::Second].u8Val = 0;
-		tCommand.eImvType = EImvType::Count;
-	}
-	else if (tCommand.eOpCode == EOpCode::PUSHSF && tCommand.nArgCount == 0)
-	{
-		// PushSF command has default argument Count = 0, complete it
-		tCommand.nArgCount = 1;
-		tCommand.aArguments[EOprIdx::First].eType = EArgType::NUM;
-		tCommand.aArguments[EOprIdx::First].u8Val = 0;
 		tCommand.eImvType = EImvType::Count;
 	}
 }

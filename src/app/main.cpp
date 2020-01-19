@@ -16,25 +16,6 @@ using namespace vasm;
 
 CStringComparator<EComparisonType::Equal_CI> compare;
 
-class X
-{
-public:
-
-	void f();
-};
-
-void X::f()
-{
-	class XX
-	{
-	public:
-		inline XX() {}
-	};
-
-	XX o;
-}
-
-
 //
 //	Main
 //

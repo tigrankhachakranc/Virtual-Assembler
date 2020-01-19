@@ -180,23 +180,23 @@ void CCommander::cmd_help(CCmdParser&)
 {
 	m_cout << std::endl;
 	m_cout << "?|h|help                                      Supported commands listing"										<< std::endl;
-	m_cout << "i|info                                        Prints information about current state and program being debuged"	<< std::endl;
+	m_cout << "i|info                                        Prints information about curent state and program being debugged"	<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "r|run         [-dbg yes|no]                   Runs program from current IP (either in debug or nondebug mode)"	<< std::endl;
+	m_cout << "r|run         [-dbg yes|no]                   Runs program from curent IP (either in debug or nondebug mode)"	<< std::endl;
 	m_cout << "              [-from line_num|label|0xAddress]"																	<< std::endl;
 	m_cout << "              [-to line_num|label|0xAddress]"																	<< std::endl;
 	m_cout << "              [async]"																							<< std::endl;
 	m_cout << "t|trace       [Num=1]                         Step In, executes Num instructions"								<< std::endl;
 	m_cout << "n|next        [Num=1]                         Step Over, executes Num instructions by overcoming function calls"	<< std::endl;
 	m_cout << "so|stepout                                    Step Out, Executes until current function will return"				<< std::endl;
-	m_cout << "pause                                         Pauses current execution"											<< std::endl;
+	m_cout << "pause                                         Pauses curent execution"											<< std::endl;
 	m_cout << "reset                                         Resets CPU to initial state"										<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "bp            [src:line_num|label|func_name]  Sets debug break point at specified position."						<< std::endl;
-	m_cout << "rbp           [src:line_num|label|func_name]  Removes specifed breakpoint"										<< std::endl;
+	m_cout << "bp            [src:line_num|label|func_name]  Sets debug break point at specified position"						<< std::endl;
+	m_cout << "rbp           [src:line_num|label|func_name]  Removes specified breakpoint"										<< std::endl;
 	m_cout << "              [all]"																								<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "set           [IP src:line|label|func_name]   Sets specified value to the specifed register"						<< std::endl;
+	m_cout << "set           [IP src:line|label|func_name]   Sets specified value to the specified register"					<< std::endl;
 	m_cout << "              [A(idx) src:line|label|func_name|var_name|0xAddress]"												<< std::endl;
 	m_cout << "              [R(idx) [B|W|DW|QW|CH] +/-num|0xValue]"															<< std::endl;
 	m_cout << "              [CF|ZF|SF|OF 0|1]"																					<< std::endl;
@@ -208,7 +208,7 @@ void CCommander::cmd_help(CCmdParser&)
 	m_cout << "              -format text|bin"																					<< std::endl;
 	m_cout << "       memory [-at 0xAddress]"																					<< std::endl;
 	m_cout << "              [-sz|size byte_count]"																				<< std::endl;
-	m_cout << "       code   [-at src:line|label|func_name]  Dumps only code started from current IP or specified address"		<< std::endl;
+	m_cout << "       code   [-at src:line|label|func_name]  Dumps only code started from beginning or specified address"		<< std::endl;
 	m_cout << "              [-sz|size byte_count]"																				<< std::endl;
 	m_cout << "       data                                   Dumps data content only"											<< std::endl;
 	m_cout << "       stack  [-depth Num=MAX]                Dumps the content of the stack with specified call depth"			<< std::endl;
@@ -216,7 +216,7 @@ void CCommander::cmd_help(CCmdParser&)
 	m_cout << "p|print [state]                               Prints CPU current state"											<< std::endl;
 	m_cout << "        callstack                             Prints function call stack (same as backtrace)"					<< std::endl;
 	m_cout << "        ports                                 Prints I/O Devices and Port ranges occupied by them"				<< std::endl;
-	m_cout << "        code  [-sz|size instruction_count]    Prints code started from the current IP or specifeid address"		<< std::endl;
+	m_cout << "        code  [-sz|size instruction_count]    Prints code started from the current IP or specifieid address"		<< std::endl;
 	m_cout << "              [-at srs:line|label|func_name|0xAddress]"															<< std::endl;
 	m_cout << "        bp                                    Prints Break points list"											<< std::endl;
 	m_cout << "        sf                                    Prints current stack frame"										<< std::endl;
@@ -976,6 +976,7 @@ void CCommander::PrintCurrentState() const
 
 	os << std::resetiosflags(0);
 	os << std::endl;
+	os << "----------------------------------------------------------------------------------" << std::endl;
 	os << "Processor status flags: ";
 	os << " CF(" << std::dec << tState.oFlags.getCarry() << ")";
 	os << " ZF(" << std::dec << tState.oFlags.getZero() << ")";
@@ -985,42 +986,42 @@ void CCommander::PrintCurrentState() const
 	os << std::endl;
 	os << "Address registers (0x): ----------------------------------------------------------" << std::endl;
 	os << "IP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nIP  << "  ";
-	os << "CIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nCIP << "  ";
+	//os << "CIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nCIP << "  ";
 	os << "RIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nRIP << "  ";
 	os << std::endl;
 	os << "SP = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eSPIndex] << "  ";
-	os << "SF = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eSFIndex] << "  ";
+	os << " SF = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eSFIndex] << "  ";
 	os << std::endl;
 	os << "A4 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 0] << "  ";
-	os << "A5 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 1] << "  ";
+	os << " A5 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 1] << "  ";
 	os << std::endl;
 	os << "A6 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 2] << "  ";
-	os << "A7 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 3] << "  ";
+	os << " A7 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.anARPool[core::SCPUStateBase::eARBaseIndex + 3] << "  ";
 
 	os << std::endl;
 	os << "General purpose registers (0x): --------------------------------------------------" << std::endl;
 	for (uint nRIdx = 0; nRIdx < core::SCPUStateBase::eGeneralPurposeRegisterPoolSize; nRIdx += 16)
 	{
 		os << "R" << std::dec << std::setfill('0') << std::setw(2) << nRIdx << ": ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 0];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 1];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 2];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 3];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 0] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 1] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 2] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 3] << " ";
 		os << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 4];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 5];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 6];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 7];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 4] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 5] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 6] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 7] << " ";
 		os << "  ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 8];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 9];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 10];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 11];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 8] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 9] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 10] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 11] << " ";
 		os << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 12];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 13];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 14];
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(3) << tState.aui8GPRPool[nRIdx + 15];
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 12] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 13] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 14] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8GPRPool[nRIdx + 15] << " ";
 		os << std::endl;
 	}
 
@@ -1030,7 +1031,26 @@ void CCommander::PrintCurrentState() const
 	}
 	else if (eStatus == vm::CProcessor::EStatus::Failed)
 	{
-		os << m_pDebugger->CPUStatus().oErrorInfo.GetErrorMsg(true) << std::endl;
+		os << "Command: -------------------------------------------------------------------------" << std::endl;
+
+		CDebugger::SCodeLineInfo tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nCIP);
+		if (tCLInfo.sFuncName != nullptr)
+		{
+			os	<< "Func: " << tCLInfo.sFuncName.str() << "  +0x" << std::hex << std::uppercase
+				<< std::setfill('0') << std::setw(8) << tCLInfo.nRelOffset;
+			if (tCLInfo.sUnitName != nullptr)
+				os << ",  Unit: " << tCLInfo.sUnitName.str() << ",  Line: " << std::setw(0) << std::dec << tCLInfo.nLineNum;
+			os << std::endl;
+		}
+
+		std::string sBinaryCommand;
+		t_address nCmdAddress = tState.nCIP;
+		std::string sCommand = std::move(m_pDebugger->GetDisassembledCommand(nCmdAddress, &sBinaryCommand));
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nCIP << ": "
+			<< sCommand << "  #" << sBinaryCommand << std::endl;
+
+		os << "----------------------------------------------------------------------------------" << std::endl;
+		os << m_pDebugger->CPUStatus().oErrorInfo.GetErrorMsg(true);
 	}
 	else if (!bool(uint(eStatus) & uint(vm::CProcessor::EStatus::Ready)))
 	{
@@ -1042,18 +1062,45 @@ void CCommander::PrintCurrentState() const
 	}
 	else
 	{
+		std::string sBinaryCommand;
+		t_address nCmdAddress;
+		std::string sCommand;
+		CDebugger::SCodeLineInfo tCLInfo;
+
+		if (tState.nCIP != tState.nIP)
+		{
+			os << "Prev command: --------------------------------------------------------------------" << std::endl;
+
+			tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nCIP);
+			if (tCLInfo.sFuncName != nullptr)
+			{
+				os	<< "Func: " << tCLInfo.sFuncName.str() << "  +0x" << std::hex << std::uppercase
+					<< std::setfill('0') << std::setw(8) << tCLInfo.nRelOffset;
+				if (tCLInfo.sUnitName != nullptr)
+					os << ",  Unit: " << tCLInfo.sUnitName.str() << ",  Line: " << std::setw(0) << std::dec << tCLInfo.nLineNum;
+				os << std::endl;
+			}
+
+			nCmdAddress = tState.nCIP;
+			sCommand = std::move(m_pDebugger->GetDisassembledCommand(nCmdAddress, &sBinaryCommand));
+			os	<< std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nCIP << ": "
+				<< sCommand << "  #" << sBinaryCommand << std::endl;
+		}
+
 		os << "Next command: --------------------------------------------------------------------" << std::endl;
 
-		CDebugger::SCodeLineInfo tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nIP);
-		if (tCLInfo.sUnitName != nullptr)
-			os	<< "Unit: " << tCLInfo.sUnitName.str() << "  Line: " << tCLInfo.nLineNum << std::endl;
+		tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nIP);
 		if (tCLInfo.sFuncName != nullptr)
-			os	<< "Func: " << tCLInfo.sFuncName.str() << "  +0x: " << std::hex << std::uppercase
-				<< std::setfill('0') << std::setw(8) << tCLInfo.nRelOffset << std::endl;
+		{
+			os	<< "Func: " << tCLInfo.sFuncName.str() << "  +0x" << std::hex << std::uppercase
+				<< std::setfill('0') << std::setw(8) << tCLInfo.nRelOffset;
+			if (tCLInfo.sUnitName != nullptr)
+				os << ",  Unit: " << tCLInfo.sUnitName.str() << ",  Line: " << std::setw(0) << std::dec << tCLInfo.nLineNum;
+			os << std::endl;
+		}
 
-		std::string sBinaryCommand;
-		t_address nCmdAddress = tState.nIP;
-		std::string sCommand = std::move(m_pDebugger->GetDisassembledCommand(nCmdAddress, &sBinaryCommand));
+		nCmdAddress = tState.nIP;
+		sCommand = std::move(m_pDebugger->GetDisassembledCommand(nCmdAddress, &sBinaryCommand));
 		os << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nIP << ": "
 		   << sCommand << "  #" << sBinaryCommand << std::endl;
 	}

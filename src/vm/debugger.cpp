@@ -224,7 +224,7 @@ void CDebugger::StepOver(t_size nCount)
 				eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nCIP);
 				if (eOpCode == EOpCode::CALL)
 					++nCallLevel;
-				else if (eOpCode == EOpCode::RET || eOpCode == EOpCode::RET2)
+				else if (eOpCode == EOpCode::RET)
 					--nCallLevel;
 
 			} while (eStatus == CProcessor::EStatus::Ready && nCallLevel != 0);
@@ -267,7 +267,7 @@ void CDebugger::StepOut()
 		EOpCode eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nCIP);
 		if (eOpCode == EOpCode::CALL)
 			++nCallLevel;
-		else if (eOpCode == EOpCode::RET || eOpCode == EOpCode::RET2)
+		else if (eOpCode == EOpCode::RET)
 			--nCallLevel;
 
 	} while (eStatus == CProcessor::EStatus::Ready && nCallLevel != 0);
@@ -920,9 +920,12 @@ bool CDebugger::LookupSource(t_address nCodeAddr, t_index& nFuncIdx, t_index& nL
 		auto const& tInfo = m_tPackage.aFunctionTable.at(nFuncIdx);
 		for (t_index iLine = 0; iLine < tInfo.aCodeTbl.size(); ++iLine)
 		{
-			if ((tInfo.aCodeTbl.at(iLine) == nCodeAddr))
+			if (tInfo.aCodeTbl.at(iLine) == nCodeAddr)
 			{
-				nLineNumber = tInfo.nBaseLine + iLine;
+				do
+				{
+					nLineNumber = tInfo.nBaseLine + iLine; // Convert function relative line number to unit level
+				} while (tInfo.aCodeTbl.at(++iLine) == nCodeAddr);
 				break;
 			}
 		}
@@ -946,7 +949,6 @@ bool CDebugger::LookupSource(
 		sSrcUnit = &tInfo.sSrcUnit;
 		sFuncName = &tInfo.sName;
 		nFuncOffset = nCodeAddr - tInfo.nAddress;
-		nLineNumber += tInfo.nBaseLine; // Convert function relative line number to unti
 	}
 	return bFound;
 }

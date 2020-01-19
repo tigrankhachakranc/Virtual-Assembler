@@ -96,8 +96,10 @@ CIOController::SSlotInfo const& CIOController::Lookup(
 		VASM_THROW_ERROR(base::toStr(t_csz("IO Controller: Port #%1 not found"), nPort));
 
 	SSlotInfo const& tSlot = it->second;
-	if (nPort != tSlot.nBase || eType != tSlot.eType)
+	if (nPort != tSlot.nBase)
 		VASM_THROW_ERROR(base::toStr(t_csz("IO Controller: Port #%1 doesn't matches to the target"), nPort));
+	if (SizeOfValueType(eType) > SizeOfValueType(tSlot.eType))
+		VASM_THROW_ERROR(base::toStr(t_csz("IO Controller: Port #%1 data type doesn't matches to the target data type"), nPort));
 
 	return tSlot;
 }

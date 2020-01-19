@@ -56,15 +56,11 @@ enum class EOpCode : uchar
 	JUMPR,	// IL(4) Jump[cc] GR(n)|Offset16		Relative jump (conditional or unconditional), offset may be negative
 	CALL,	// IL(2) Call AR(n)						Absolute call
 	RET,	// IL(2) RET 							Returns to the caller
-	RET2,	// IL(4) RET GR(n)|Offset16				Returns to the caller and cleans the stack
-	
-	Reserved09,	// Reserved for INT
-	Reserved10,	// Reserved for IRET
-	Reserved11,	// Reserved for HALT
-	Reserved12,
-	Reserved13,
-	Reserved14,
-	Reserved15,
+
+	Reserved08,	// Reserved for INT
+	Reserved09,	// Reserved for IRET
+	Reserved10,	// Reserved for HALT
+	Reserved11,
 
 	// Flags manipulation instructions
 	GFLR,	// IL(2) GFLR GR(n)						Gets 2 byte packed status flags into specified general purpose register
@@ -73,37 +69,23 @@ enum class EOpCode : uchar
 	// Memory access instructions
 	LOAD,	// IL(4) LOAD  [opsz] AR(n)|GR(n) <- *AR(n)				Reads from memory into the target register
 	STORE,	// IL(4) STORE [opsz] AR(n)|GR(n) -> *AR(n)				Writes into memory from the target register
-	LDREL,	// IL(8) LDREL [opsz] AR(n)|GR(n) <- *AR(n)+Offset32	Loads relative to address, Offset is signed 24 bit numeric value
-	STREL,	// IL(8) STREL [opsz] AR(n)|GR(n) -> *AR(n)+Offset32	Store relative to address, Offset is signed 24 bit numeric value
+	LDREL,	// IL(8) LDREL [opsz] AR(n)|GR(n) <- *AR(n)±Offset32	Loads relative to address, Offset is signed 24 bit numeric value
+	STREL,	// IL(8) STREL [opsz] AR(n)|GR(n) -> *AR(n)±Offset32	Store relative to address, Offset is signed 24 bit numeric value
 
 	// Stack instructions
-	PUSHSF,	// IL(2) PUSHSF [Count]					Pushes stack frame and optionally allocates space on the stack
+	PUSHSF,	// IL(2) PUSHSF							Pushes stack frame
+	PUSHSF2,// IL(4) PUSHSF GR(n)|Offset16			Pushes stack frame and allocates space on the stack
 	POPSF,	// IL(2) POPSF							Pops stack frame
+	POPSF2,	// IL(4) POPSF	GR(n)|Offset16			Pops stack frame and clean the stack
 	PUSHA,	// IL(2) PUSH AR(n)						Pushes specifed address register into the Stack
 	POPA,	// IL(2) POP AR(n)						Pops from the Stack into specifed address register 
 	PUSHR,	// IL(4) PUSH [opsz] GR(n), [Count]		Pushes specifed general purpose register(s) into the Stack
 	POPR,	// IL(4) POP [opsz] GR(n), [Count]		Pops from the Stack into specifed genersal pupose register(s)
 			//										If Count is specified then OPSZ is multipled with it and resulted number of bytes copied
-	Reserved28, //PUSHF, IL(2) PUSHF				Pushes 2 byte packed status flags into the stack
-	Reserved29, //POPF,	 IL(2) POPF					Pops 2 byte packed status flags from the stack
 
 	// Input from/Output to port instructions
 	IN,		// IL(4) IN  [opsz] GR(n) <- GR(n)|Port (Number12)
 	OUT,	// IL(4) OUT [opsz] GR(n) <- GR(n)|Port (Number12)
-
-	// Address calculation instructions
-	INC,	// IL(4) INC AR(n) <- GR(n, DWord)		Increments specifed address register by DWord GR value
-	DEC,	// IL(4) DEC AR(n) <- GR(n, DWord)		Decrements specified address register by DWord GR value
-	INC2,	// IL(4) INC AR(n) <- Offset16			Increments specifed address register by the specified Offset
-	DEC2,	// IL(4) DEC AR(n) <- Offset16			Decrements specified address register by the specified Offset
-
-	// Assignemnt instuctions
-	ASSIGNA0,// IL(2)  ASSIGN AR(n) <- null
-	ASSIGNA4,// IL(6)  ASSIGN AR(n) <- Number32
-	ASSIGNR1,// IL(4)  ASSIGN GR(n) <- Number8
-	ASSIGNR2,// IL(4)  ASSIGN GR(n) <- Number16
-	ASSIGNR4,// IL(6)  ASSIGN GR(n) <- Number32
-	ASSIGNR8,// IL(10) ASSIGN GR(n) <- Number64
 
 	// Register manipulation instructions
 	MOVE,	// IL(4) Move  [cc] [opsz] AR|GR(n) <-  AR|GR(n)			Copies second (source) operand to the first (destination) operand
@@ -114,14 +96,29 @@ enum class EOpCode : uchar
 			//															and sign extends (casts) the value from opsz_src to opsz_trgt (checks CC and skips if so)
 	//MOVZX,// IL(4) MOvZX [cc] [opsz_src] [opsz_trgt] GR(n) <- GR(n)	Copies second (source) operand to the first (destination) operand
 			//															and zero extends the value from opsz_src to opsz_trgt (checks CC and skips if so)
-	Reserved44,
-	Reserved45,
-	Reserved46,
+	Reserved30,
+	Reserved31,
+
+	// Assignemnt instuctions
+	ASSIGNA0,// IL(2)  ASSIGN AR(n) <- null
+	ASSIGNA4,// IL(6)  ASSIGN AR(n) <- Number32
+	ASSIGNR1,// IL(4)  ASSIGN GR(n) <- Number8
+	ASSIGNR2,// IL(4)  ASSIGN GR(n) <- Number16
+	ASSIGNR4,// IL(6)  ASSIGN GR(n) <- Number32
+	ASSIGNR8,// IL(10) ASSIGN GR(n) <- Number64
+	
+	SET,	// IL(4) St(cc) [opsz] GR(n)					Sets specifed register to 1 if CC takes place, 0 otherwise
+	Reserved39,
 
 	// Comparison instructions
 	TEST,	// IL(4) TEST [opsz] AR(n)|GR(n), AR(n)|GR(n)	ANDs operands and sets flags
 	CMP,	// IL(4) CMP  [opsz] AR(n)|GR(n), AR(n)|GR(n)	SUBs operands and sets flags
-	SET,	// IL(4) St(cc) [opsz] GR(n)			Sets specifed register to 1 if CC takes place, 0 otherwise
+
+	// Address calculation instructions
+	INC,	// IL(4) INC AR(n) <- GR(n, DWord)		Increments specifed address register by DWord GR value
+	DEC,	// IL(4) DEC AR(n) <- GR(n, DWord)		Decrements specified address register by DWord GR value
+	INC2,	// IL(4) INC AR(n) <- Offset16			Increments specifed address register by the specified Offset
+	DEC2,	// IL(4) DEC AR(n) <- Offset16			Decrements specified address register by the specified Offset
 
 	// Logical Instructions
 	AND,	// IL(4) AND [opsz] GR(n) <- GR(n)
@@ -153,7 +150,7 @@ enum class EOpCode : uchar
 	IMUL,	// IL(4)
 	IDIV,	// IL(4)
 	NEG,	// IL(4) NEG [opsz] RG(n)						Sign negation 
-	CAST,	// IL(4) CAST [opsz_src] [opsz_trgt] GR(n)		Sing extends specifed general purpose register from SRC_OPRSZ to TRGT_OPRSZ
+	CAST,	// IL(4) CAST opsz_src opsz_trgt GR(n)			Sing extends specifed general purpose register from SRC_OPRSZ to TRGT_OPRSZ
 			//												in case of shrinking if number is truncated then OF & CF flags will set respectively
 
 	// TODO! FPU Instructions

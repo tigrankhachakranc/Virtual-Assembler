@@ -184,9 +184,7 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 			SDebugInfo::SEntry& tFinalEntry = tFinalPkg.oDebugInfo.aEntries.back();
 			// Adjust symbol index
 			tFinalEntry.nSymbolIndex = aSymbolIndexRemapping[tFinalEntry.nSymbolIndex];
-			// Adjust Code Table addresses (PDB)
-			for (t_uoffset& nOffset : tFinalEntry.aCodeTbl)
-				nOffset += nLastCodeSize;
+			// Do not adjust Code Table addresses (PDB) because they are relative to the function base
 		}
 
 		// Determine program entry point (main)

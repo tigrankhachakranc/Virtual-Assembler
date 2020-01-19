@@ -201,6 +201,13 @@ CBasicCommands::CBasicCommands() : CCommandBase()
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::HasCndtnCode},
 			 apfnSwap, FuncCmdDisasm(&CBasicCommands::DisAsm));
 
+	FuncCmdExec apfnSet[int(EOprSize::Count)] = {
+		FuncCmdExec(&CBasicCommands::Set<uint8>),  FuncCmdExec(&CBasicCommands::Set<uint16>),
+		FuncCmdExec(&CBasicCommands::Set<uint32>), FuncCmdExec(&CBasicCommands::Set<uint64>) };
+	Register({t_csz("SET"), t_csz("ST"), EOpCode::SET, EOprType::GR,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasCndtnCode | SCommandMetaInfo::SkipCdtnCheck},
+			 apfnSet, FuncCmdDisasm(&CBasicCommands::DisAsm));
+
 	FuncCmdExec apfnTest[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::TestB),  FuncCmdExec(&CBasicCommands::TestW),
 		FuncCmdExec(&CBasicCommands::TestDW), FuncCmdExec(&CBasicCommands::TestQW) };
@@ -213,13 +220,6 @@ CBasicCommands::CBasicCommands() : CCommandBase()
 		FuncCmdExec(&CBasicCommands::CmpDW), FuncCmdExec(&CBasicCommands::CmpQW) };
 	Register({t_csz("CMP"), EOpCode::CMP, EOprType::AGR, EOprType::AGR, SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
 			apfnTest, FuncCmdDisasm(&CBasicCommands::DisAsm));
-
-	FuncCmdExec apfnSet[int(EOprSize::Count)] = {
-		FuncCmdExec(&CBasicCommands::Set<uint8>),  FuncCmdExec(&CBasicCommands::Set<uint16>),
-		FuncCmdExec(&CBasicCommands::Set<uint32>), FuncCmdExec(&CBasicCommands::Set<uint64>) };
-	Register({t_csz("SET"), t_csz("ST"), EOpCode::SET, EOprType::GR,
-			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasCndtnCode | SCommandMetaInfo::SkipCdtnCheck},
-			 apfnSet, FuncCmdDisasm(&CBasicCommands::DisAsm));
 
 	FuncCmdExec apfnAnd[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::AndB),  FuncCmdExec(&CBasicCommands::AndW),
@@ -443,6 +443,13 @@ void CBasicCommands::Swap(SCommandContext& tCtxt)
 	*tCtxt.tOpr[EOprIdx::Second].ptr<TOperandType>() = nTmp;
 }
 
+template <typename TOperandType>
+void CBasicCommands::Set(SCommandContext& tCtxt)
+{
+	*tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>() =
+		static_cast<TOperandType>(tCtxt.tCPUState.oFlags.isCC(tCtxt.tInfo.eCdtnCode));
+}
+
 
 //
 // Comparison instructions
@@ -513,13 +520,6 @@ void CBasicCommands::CmpQW(SCommandContext& tCtxt)
 	uint64* pSrc2 = tCtxt.tOpr[EOprIdx::Second].pu64;
 	uint16  nFlags = fnCMP64(pSrc1, pSrc2);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-template <typename TOperandType>
-void CBasicCommands::Set(SCommandContext& tCtxt)
-{
-	*tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>() =
-		static_cast<TOperandType>(tCtxt.tCPUState.oFlags.isCC(tCtxt.tInfo.eCdtnCode));
 }
 
 

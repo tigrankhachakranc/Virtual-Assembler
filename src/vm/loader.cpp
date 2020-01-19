@@ -296,8 +296,8 @@ void CLoader::LoadDebuginfo(
 		{
 			tFuncInfo.aCodeTbl.resize(tEntry.nSizeLine, 0);
 
-			t_size nCodeSize = sizeof(t_uoffset) * (tFuncInfo.aCodeTbl.size());
-			std::memcpy(tFuncInfo.aCodeTbl.data(), &aDbgBuffer[tEntry.nCodeTblPos], nCodeSize);
+			t_size nCodeTblSize = sizeof(t_uoffset) * (tFuncInfo.aCodeTbl.size());
+			std::memcpy(tFuncInfo.aCodeTbl.data(), &aDbgBuffer[tEntry.nCodeTblPos], nCodeTblSize);
 
 			// Adjust addresses
 			for (auto& nVal : tFuncInfo.aCodeTbl)
