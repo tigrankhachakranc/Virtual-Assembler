@@ -45,27 +45,28 @@ struct SCommandMetaInfo
 		SkipCdtnCheck		= 0x10,
 		SingularOperandSize	= 0x20,
 
+		// Fixed operand sizes used for commands which do not have extension/oprsize field
 		FixedOprSizeByte	= 0x00,
 		FixedOprSizeWord	= 0x40,
 		FixedOprSizeDWord	= 0x80,
 		FixedOprSizeQWord	= 0xC0,
 		MaskFixedOprSize	= 0xC0,
 
-		// | OpSwitch1 | OpSwitch2 | OpSize | Cndtn Code | 
-		//       7           6        5  4    3  2  1  0
+		// Reserved | OprSwitch | OprSize | Cndtn Code | 
+		//    7           6        5   4    3  2  1  0
 		MaskCndtnCode	= 0x0F,
 		MaskOprSize		= 0x30,
-		MaskOprSwitch1	= 0x40,
-		MaskOprSwitch2	= 0x80,
+		MaskOprSwitch	= 0x40,	// Operand switch could be applied to only one operand, either First or Second
 		
-		OprSizeShift	= 4
+		OprSizeShift	= 4,
+		OprSwitchShift	= 6
 	};
 
 	t_csz		pcszName;
 	t_csz		pcszBaseName;
 
 	EOpCode		eOpCode;		// Operation code
-	uchar		eExtInfo;		// Externsion info
+	uchar		eExtInfo;		// Extension info
 	uchar		nOperandCount;	// Number of operands
 	EOprType	aeOprTypes[OC];	// Operands types (max op. count is 3)
 	EImvType	eImvType;		// Intermediate value type
@@ -101,8 +102,7 @@ struct SCommandInfo
 	// Decoded (expanded) extension
 	ECndtnCode	eCdtnCode;		// Condition code (when applicable)
 	EOprSize	eOprSize;		// Operands size
-	bool		bOprSwitch1;	// Switch bit for operand 1
-	bool		bOprSwitch2;	// Switch bit for operand 2
+	EOprSwitch	eOprSwitch;		// Operand switch
 
 	// Register idx for Operands (when applicable)
 	uchar		nRegIdx[EOprIdx::Count];
@@ -140,15 +140,14 @@ struct SCPUStateBase
 	// Constants
 	enum
 	{	
-		eA0Index = 0,
 		eRIPIndex = 1,
 		eSPIndex = 2,
 		eSFIndex = 3,
 
-		eARBaseIndex = 4,
+		eARBaseIndex = 4, // R16
 		
-		eAddressRegistersPoolSize = 8,
-		eGeneralPurposeRegisterPoolSize = 64
+		eAddressRegistersPoolSize = 8, // 4x8 = 32 Bytes
+		eRegisterPoolSize = 64 // Bytes
 	};
 
 	// CPU Flags
@@ -159,16 +158,13 @@ struct SCPUStateBase
 	// Current IP, IP value of the current command at the moment of the fetch
 	t_address	nCIP;
 	// Return address, points to the next instruction after Call instraction
-	t_address&	nRIP;	// Reference to AR1
+	t_address&	nRIP;	// Reference to R4
 	// Current stack pointer
-	t_address&	nSP;	// Reference to AR2
+	t_address&	nSP;	// Reference to R8
 	// Current stack frame 
-	t_address&	nSF;	// Reference to AR3
-
-	// Addressing registers pool
-	t_address	anARPool[eAddressRegistersPoolSize];
-	// General purpose registers pool
-	uint8		aui8GPRPool[eGeneralPurposeRegisterPoolSize];
+	t_address&	nSF;	// Reference to R12
+	// Registers pool
+	uint8		aui8RPool[eRegisterPoolSize];
 
 	// Code size (Code always should start from the 0 address)
 	t_uoffset const	cnCodeSize;
@@ -415,6 +411,8 @@ protected:
 
 	inline IAddressRecoveryPtr GetAddressRecovery() const;
 
+	static bool IsOperandAddressRegister(EOpCode eOpCode, t_index nArgIdx);
+
 private:
 	using t_InstructionInfo = std::tuple<SCommandMetaInfo, IInstructionUPtr, IDisassembleUPtr>;
 	using t_InstructionStore = std::vector<t_InstructionInfo>;
@@ -444,8 +442,7 @@ inline SCommandInfo::SCommandInfo(SCommandMetaInfo const& mi) :
 	nExtension(0),
 	eCdtnCode(ECndtnCode::None),
 	eOprSize(EOprSize::Default),
-	bOprSwitch1(false),
-	bOprSwitch2(false),
+	eOprSwitch(EOprSwitch::Default),
 	u64Imv(0)
 {
 	nRegIdx[EOprIdx::First] = 0;

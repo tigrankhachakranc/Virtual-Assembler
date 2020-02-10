@@ -216,93 +216,53 @@ void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)
 
 	for (int eOprIdx = EOprIdx::First; eOprIdx < tCmdInfo.tMetaInfo.nOperandCount; ++eOprIdx)
 	{
-		uint nRegIdx = static_cast<uint>(tCmdInfo.nRegIdx[eOprIdx]);
-		bool bOprSwitch;
-		if (eOprIdx == EOprIdx::First)
-			bOprSwitch = tCmdInfo.bOprSwitch1;
-		else if (eOprIdx == EOprIdx::Second)
-			bOprSwitch = tCmdInfo.bOprSwitch2;
-		else
-			bOprSwitch = false;
-
 		EOprType eOprType = tCmdInfo.tMetaInfo.aeOprTypes[eOprIdx];
-		switch (eOprType)
+		if (eOprType == EOprType::Reg || (eOprType == EOprType::RegImv && tCmdInfo.eOprSwitch == EOprSwitch::Reg))
 		{
-		case EOprType::AR:
-		{
-			if (nRegIdx >= SState::eAddressRegistersPoolSize)
-				VASM_THROW_ERROR(base::toStr("CPU: Invalid Address register index #%1", int(nRegIdx)));
-			//else if (nRegIdx < SState::eARBaseIndex)
-			//	VASM_THROW_ERROR(base::toStr("CPU: Address registers below #%1 are forbidden and may not be used", int(SState::eARBaseIndex)));
-			tCmdCtxt.tOpr[eOprIdx].p = &m_tState.anARPool[nRegIdx];
+			// Multiply Reg idx with OprSize to align with OpSize
+			uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCmdInfo.nRegIdx[eOprIdx]), tCmdInfo.eOprSize);
+			if (nRegIdx + OperandSize(tCmdInfo.eOprSize) > SState::eRegisterPoolSize)
+				VASM_THROW_ERROR(base::toStr("CPU: Invalid GP register index #%1", int(nRegIdx)));
+			tCmdCtxt.tOpr[eOprIdx].p = &m_tState.aui8RPool[nRegIdx];
 			break;
 		}
-		case EOprType::GR:
-		case EOprType::AGR:
+		else if (eOprType == EOprType::Imv || (eOprType == EOprType::RegImv && tCmdInfo.eOprSwitch == EOprSwitch::Imv))
 		{
-			if (eOprType == EOprType::GR || bOprSwitch)
-			{
-				// For GP registers multiply Reg idx with OprSize to align with OpSize
-				nRegIdx = AlignToOperandSize(nRegIdx, tCmdInfo.eOprSize);
-				if (nRegIdx + OperandSize(tCmdInfo.eOprSize) > SState::eGeneralPurposeRegisterPoolSize)
-					VASM_THROW_ERROR(base::toStr("CPU: Invalid GP register index #%1", int(nRegIdx)));
-				tCmdCtxt.tOpr[eOprIdx].p = &m_tState.aui8GPRPool[nRegIdx];
-			}
-			else
-			{
-				if (nRegIdx >= SState::eAddressRegistersPoolSize)
-					VASM_THROW_ERROR(base::toStr("CPU: Invalid Address register index #%1", int(nRegIdx)));
-				//else if (nRegIdx < SState::eARBaseIndex)
-				//	VASM_THROW_ERROR(base::toStr("CPU: Address registers below #%1 are forbidden and may not be used", int(SState::eARBaseIndex)));
-				tCmdCtxt.tOpr[eOprIdx].p = &m_tState.anARPool[nRegIdx];
-			}
-			break;
+			//switch (tCmdInfo.tMetaInfo.eImvType)
+			//{
+			//case EImvType::Num8:
+			//case EImvType::SNum8:
+			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u8Imv;
+			//	break;
+			//case EImvType::Num16:
+			//case EImvType::SNum16:
+			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u16Imv;
+			//	break;
+			//case EImvType::Num32:
+			//case EImvType::SNum32:
+			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u32Imv;
+			//	break;
+			//case EImvType::Num64:
+			//case EImvType::SNum64:
+			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u64Imv;
+			//	break;
+			//case EImvType::Count:
+			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u8Imv;
+			//	break;
+			//case EImvType::Port:
+			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u16Imv;
+			//	break;
+			//default:
+			//	VASM_THROW_ERROR(t_csz("CPU: Invalid IMV type"));
+			//	break;
+			//}
+
+			if (tCmdInfo.tMetaInfo.eImvType == EImvType::None)
+				VASM_THROW_ERROR(t_csz("CPU: Invalid IMV type"));
+			tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u64Imv;
 		}
-		case EOprType::IMV:
-		case EOprType::GRIMV:
+		else
 		{
-			if (eOprType == EOprType::IMV || bOprSwitch)
-			{
-				switch (tCmdInfo.tMetaInfo.eImvType)
-				{
-				case EImvType::Num8:
-				case EImvType::SNum8:
-					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u8Imv;
-					break;
-				case EImvType::Num16:
-				case EImvType::SNum16:
-					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u16Imv;
-					break;
-				case EImvType::Num32:
-				case EImvType::SNum32:
-					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u32Imv;
-					break;
-				case EImvType::Num64:
-				case EImvType::SNum64:
-					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u64Imv;
-					break;
-				case EImvType::Count:
-					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u8Imv;
-					break;
-				case EImvType::Port:
-					tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u16Imv;
-					break;
-				default:
-					VASM_THROW_ERROR(t_csz("CPU: Invalid IMV type"));
-					break;
-				}
-			}
-			else
-			{
-				// For GP registers multiply Reg idx with OprSize to align with OpSize
-				nRegIdx = AlignToOperandSize(nRegIdx, tCmdInfo.eOprSize);
-				if (nRegIdx + OperandSize(tCmdInfo.eOprSize) > SState::eGeneralPurposeRegisterPoolSize)
-					VASM_THROW_ERROR(base::toStr("CPU: Invalid GP register index #%1", int(nRegIdx)));
-				tCmdCtxt.tOpr[eOprIdx].p = &m_tState.aui8GPRPool[nRegIdx];
-			}
-			break;
-		}
-		default:
 			VASM_THROW_ERROR(t_csz("CPU: Invalid Operand type"));
 		}
 	}

@@ -30,70 +30,62 @@ CMainCommands::CMainCommands() : CCommandBase()
 	Register({t_csz("EXIT"), EOpCode::EXIT},
 			 FuncCmdExec(&CMainCommands::Exit), FuncCmdDisasm(&CMainCommands::DisAsm));
 
-	Register({t_csz("JUMP"), EOpCode::JUMPA, EOprType::AR},
+	Register({t_csz("JUMP"), EOpCode::JUMPA, EOprType::Reg},
 			 FuncCmdExec(&CMainCommands::JumpA), FuncCmdDisasm(&CMainCommands::DisAsm));
-	Register({t_csz("JUMP"), t_csz("J"), EOpCode::JUMPR, EOprType::GRIMV, EImvType::SNum16,
+	Register({t_csz("JUMP"), t_csz("J"), EOpCode::JUMPR, EOprType::RegImv, EImvType::SNum16,
 			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::HasCndtnCode | SCommandMetaInfo::FixedOprSizeWord},
 			 FuncCmdExec(&CMainCommands::JumpR), FuncCmdDisasm(&CMainCommands::dasmJumpR));
-	Register({t_csz("CALL"), EOpCode::CALL, EOprType::AR},
-			 FuncCmdExec(&CMainCommands::Call), FuncCmdDisasm(&CMainCommands::DisAsm));
+	Register({t_csz("CALL"), EOpCode::CALLA, EOprType::Reg},
+			 FuncCmdExec(&CMainCommands::CallA), FuncCmdDisasm(&CMainCommands::DisAsm));
+	Register({t_csz("CALL"), EOpCode::CALLR, EOprType::RegImv, EImvType::SNum16,
+			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeWord},
+			 FuncCmdExec(&CMainCommands::CallR), FuncCmdDisasm(&CMainCommands::dasmJumpR));
 	Register({t_csz("RET"), EOpCode::RET},
 			 FuncCmdExec(&CMainCommands::Ret), FuncCmdDisasm(&CMainCommands::DisAsm));
-
-	Register({t_csz("GFLR"), EOpCode::GFLR, EOprType::GR, SCommandMetaInfo::FixedOprSizeWord},
-			 FuncCmdExec(&CMainCommands::GFLR), FuncCmdDisasm(&CMainCommands::DisAsm));
-	Register({t_csz("SFLR"), EOpCode::SFLR, EOprType::GR, SCommandMetaInfo::FixedOprSizeWord},
-			 FuncCmdExec(&CMainCommands::SFLR), FuncCmdDisasm(&CMainCommands::DisAsm));
 
 	FuncCmdExec apfnLoad[int(EOprSize::Count)] = {
 		FuncCmdExec(&CMainCommands::Load<uint8>), FuncCmdExec(&CMainCommands::Load<uint16>),
 		FuncCmdExec(&CMainCommands::Load<uint32>), FuncCmdExec(&CMainCommands::Load<uint64>) };
-	Register({t_csz("LOAD"), EOpCode::LOAD, EOprType::AGR, EOprType::AR,
-			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
+	Register({t_csz("LOAD"), EOpCode::LOAD, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnLoad, FuncCmdDisasm(&CMainCommands::DisAsm));
 	FuncCmdExec apfnStore[int(EOprSize::Count)] = {
 		FuncCmdExec(&CMainCommands::Store<uint8>), FuncCmdExec(&CMainCommands::Store<uint16>),
 		FuncCmdExec(&CMainCommands::Store<uint32>), FuncCmdExec(&CMainCommands::Store<uint64>) };
-	Register({t_csz("STORE"), EOpCode::STORE, EOprType::AGR, EOprType::AR,
-			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
+	Register({t_csz("STORE"), EOpCode::STORE, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnStore, FuncCmdDisasm(&CMainCommands::DisAsm));
 
 	FuncCmdExec apfnLoadRel[int(EOprSize::Count)] = {
 		FuncCmdExec(&CMainCommands::LoadRel<uint8>), FuncCmdExec(&CMainCommands::LoadRel<uint16>),
 		FuncCmdExec(&CMainCommands::LoadRel<uint32>), FuncCmdExec(&CMainCommands::LoadRel<uint64>)};
-	Register({t_csz("LDREL"), EOpCode::LDREL, EOprType::AGR, EOprType::AR, EImvType::SNum32,
-			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch, true},
+	Register({t_csz("LDREL"), EOpCode::LDREL, EOprType::Reg, EOprType::Reg, EImvType::SNum32,
+			 SCommandMetaInfo::HasOprSize, true},
 			 apfnLoadRel, FuncCmdDisasm(&CMainCommands::DisAsm));
 	FuncCmdExec apfnStoreRel[int(EOprSize::Count)] = {
 		FuncCmdExec(&CMainCommands::StoreRel<uint8>), FuncCmdExec(&CMainCommands::StoreRel<uint16>),
 		FuncCmdExec(&CMainCommands::StoreRel<uint32>), FuncCmdExec(&CMainCommands::StoreRel<uint64>)};
-	Register({t_csz("STREL"), EOpCode::STREL, EOprType::AGR, EOprType::AR, EImvType::SNum32,
-			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch, true},
+	Register({t_csz("STREL"), EOpCode::STREL, EOprType::Reg, EOprType::Reg, EImvType::SNum32,
+			 SCommandMetaInfo::HasOprSize, true},
 			 apfnStoreRel, FuncCmdDisasm(&CMainCommands::DisAsm));
 
 	Register({t_csz("PUSHSF"), EOpCode::PUSHSF},
 			 FuncCmdExec(&CMainCommands::PushSF), FuncCmdDisasm(&CMainCommands::DisAsm));
-	Register({t_csz("PUSHSF"), EOpCode::PUSHSF2, EOprType::GRIMV, EImvType::Num16,
+	Register({t_csz("PUSHSF"), EOpCode::PUSHSF2, EOprType::RegImv, EImvType::Num16,
 			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeWord},
 			 FuncCmdExec(&CMainCommands::PushSF), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("POPSF"), EOpCode::POPSF},
 			 FuncCmdExec(&CMainCommands::PopSF), FuncCmdDisasm(&CMainCommands::DisAsm));
-	Register({t_csz("POPSF"), EOpCode::POPSF2, EOprType::GRIMV, EImvType::Num16,
+	Register({t_csz("POPSF"), EOpCode::POPSF2, EOprType::RegImv, EImvType::Num16,
 			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeWord},
 			 FuncCmdExec(&CMainCommands::PopSF), FuncCmdDisasm(&CMainCommands::DisAsm));
-	Register({t_csz("PUSH"), EOpCode::PUSHA, EOprType::AR},
-			 FuncCmdExec(&CMainCommands::PushA), FuncCmdDisasm(&CMainCommands::DisAsm));
-	Register({t_csz("POP"), EOpCode::POPA, EOprType::AR},
-			 FuncCmdExec(&CMainCommands::PopA), FuncCmdDisasm(&CMainCommands::DisAsm));
 	FuncCmdExec apfnPushR[int(EOprSize::Count)] = {
-		FuncCmdExec(&CMainCommands::PushR<uint8>), FuncCmdExec(&CMainCommands::PushR<uint16>), 
-		FuncCmdExec(&CMainCommands::PushR<uint32>), FuncCmdExec(&CMainCommands::PushR<uint64>) };
-	Register({t_csz("PUSH"), EOpCode::PUSHR, EOprType::GR, EOprType::IMV, EImvType::Count, SCommandMetaInfo::HasOprSize},
+		FuncCmdExec(&CMainCommands::Push<uint8>), FuncCmdExec(&CMainCommands::Push<uint16>), 
+		FuncCmdExec(&CMainCommands::Push<uint32>), FuncCmdExec(&CMainCommands::Push<uint64>) };
+	Register({t_csz("PUSH"), EOpCode::PUSH, EOprType::Reg, EOprType::Imv, EImvType::Count, SCommandMetaInfo::HasOprSize},
 			 apfnPushR, FuncCmdDisasm(&CMainCommands::DisAsm));
 	FuncCmdExec apfnPopR[int(EOprSize::Count)] = {
-		FuncCmdExec(&CMainCommands::PopR<uint8>), FuncCmdExec(&CMainCommands::PopR<uint16>), 
-		FuncCmdExec(&CMainCommands::PopR<uint32>), FuncCmdExec(&CMainCommands::PopR<uint64>) };
-	Register({t_csz("POP"), EOpCode::POPR, EOprType::GR, EOprType::IMV, EImvType::Count, SCommandMetaInfo::HasOprSize},
+		FuncCmdExec(&CMainCommands::Pop<uint8>), FuncCmdExec(&CMainCommands::Pop<uint16>), 
+		FuncCmdExec(&CMainCommands::Pop<uint32>), FuncCmdExec(&CMainCommands::Pop<uint64>) };
+	Register({t_csz("POP"), EOpCode::POP, EOprType::Reg, EOprType::Imv, EImvType::Count, SCommandMetaInfo::HasOprSize},
 			 apfnPopR, FuncCmdDisasm(&CMainCommands::DisAsm));
 }
 
@@ -124,64 +116,31 @@ void CMainCommands::JumpA(SCommandContext& tCtxt)
 
 void CMainCommands::JumpR(SCommandContext& tCtxt)
 {
-	tCtxt.tCPUState.nIP += static_cast<t_address>(*tCtxt.tOpr[EOprIdx::First].pu16);
+	tCtxt.tCPUState.nIP += static_cast<t_address>(*tCtxt.tOpr[EOprIdx::First].pi16);
 }
 
-void CMainCommands::Call(SCommandContext& tCtxt)
+void CMainCommands::CallA(SCommandContext& tCtxt)
 {
 	// Save return address into RIP
 	tCtxt.tCPUState.nRIP = tCtxt.tCPUState.nIP;
 	// Change IP
 	tCtxt.tCPUState.nIP = *tCtxt.tOpr[EOprIdx::First].ptr<t_address>();
+}
 
-	//if ((tCtxt.tCPUState.nSP - 2 * sizeof(t_address)) < tCtxt.tCPUState.cnStackUBound)
-	//	VASM_THROW_ERROR(t_csz("CPU: Stack overflow on Call"));
-	//// Push IP
-	//tCtxt.tCPUState.nSP -= sizeof(t_address);
-	//tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nIP);
-	//// Push stack frame
-	//tCtxt.tCPUState.nSP -= sizeof(t_address);
-	//tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nSF);
-	//// Change IP & SF
-	//tCtxt.tCPUState.nIP = *tCtxt.tOpr[EOprIdx::First].ptr<t_address>();
-	//tCtxt.tCPUState.nSF = tCtxt.tCPUState.nSP;
+void CMainCommands::CallR(SCommandContext& tCtxt)
+{
+	// Save return address into RIP
+	tCtxt.tCPUState.nRIP = tCtxt.tCPUState.nIP;
+	// Change IP
+	tCtxt.tCPUState.nIP += static_cast<t_address>(*tCtxt.tOpr[EOprIdx::First].pi16);
 }
 
 void CMainCommands::Ret(SCommandContext& tCtxt)
 {
 	// Restore IP from RIP
 	tCtxt.tCPUState.nIP = tCtxt.tCPUState.nRIP;
-
-	//if ((tCtxt.tCPUState.nSP + 2 * sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
-	//	VASM_THROW_ERROR(t_csz("CPU: Stack underflow on Ret"));
-	//// Pop stack frame
-	//tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nSF);
-	//tCtxt.tCPUState.nSP += sizeof(t_address);
-	//// Pop IP
-	//tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, tCtxt.tCPUState.nIP);
-	//tCtxt.tCPUState.nSP += sizeof(t_address);
-	// Do stack cleanup
-	//if (tCtxt.tInfo.tMetaInfo.nOperandCount > 0)
-	//{
-	//	if (tCtxt.tCPUState.nSP + *tCtxt.tOpr[EOprIdx::First].pu16 > tCtxt.tCPUState.cnStackLBound)
-	//		VASM_THROW_ERROR(t_csz("CPU: Stack underflow on Ret (stack cleanup)"));
-	//	tCtxt.tCPUState.nSP += *tCtxt.tOpr[EOprIdx::First].pu16;
-	//}
 }
 
-
-//
-//	Flags manipulation instructions
-//
-void CMainCommands::GFLR(SCommandContext& tCtxt)
-{
-	*tCtxt.tOpr[EOprIdx::First].pu16 = tCtxt.tCPUState.oFlags.getFlags();
-}
-
-void CMainCommands::SFLR(SCommandContext& tCtxt)
-{
-	tCtxt.tCPUState.oFlags.setFlags(*tCtxt.tOpr[EOprIdx::First].pu16);
-}
 
 
 //
@@ -264,24 +223,8 @@ void CMainCommands::PopSF(SCommandContext& tCtxt)
 	}
 }
 
-void CMainCommands::PushA(SCommandContext& tCtxt)
-{
-	if ((tCtxt.tCPUState.nSP - sizeof(t_address)) < tCtxt.tCPUState.cnStackUBound)
-		VASM_THROW_ERROR(t_csz("CPU: Stack overflow"));
-	tCtxt.tCPUState.nSP -= sizeof(t_address);
-	tCtxt.oMemory.WriteAt<t_address>(tCtxt.tCPUState.nSP, *tCtxt.tOpr[EOprIdx::First].ptr<t_address>(), false);
-}
-
-void CMainCommands::PopA(SCommandContext& tCtxt)
-{
-	if ((tCtxt.tCPUState.nSP + sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
-		VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
-	tCtxt.oMemory.ReadAt<t_address>(tCtxt.tCPUState.nSP, *tCtxt.tOpr[EOprIdx::First].ptr<t_address>(), false);
-	tCtxt.tCPUState.nSP += sizeof(t_address);
-}
-
 template <typename TOperandType>
-void CMainCommands::PushR(SCommandContext& tCtxt)
+void CMainCommands::Push(SCommandContext& tCtxt)
 {
 	uint nCount = uint(*tCtxt.tOpr[EOprIdx::Second].pu8);
 	if (nCount == 0)
@@ -296,7 +239,7 @@ void CMainCommands::PushR(SCommandContext& tCtxt)
 		// For GP registers multiply Reg idx to align with OpSize
 		uint nRegIdx = AlignToOperandSize(tCtxt.tInfo.nRegIdx[EOprIdx::First], tCtxt.tInfo.eOprSize);
 		uint nCountBuytes = nCount * OperandSize(tCtxt.tInfo.eOprSize);
-		if (nRegIdx + nCountBuytes > SCPUStateBase::eGeneralPurposeRegisterPoolSize)
+		if (nRegIdx + nCountBuytes > SCPUStateBase::eRegisterPoolSize)
 			VASM_THROW_ERROR(t_csz("CPU: GP Registers pool size excceded"));
 		if ((tCtxt.tCPUState.nSP - nCountBuytes) < tCtxt.tCPUState.cnStackUBound)
 			VASM_THROW_ERROR(t_csz("CPU: Stack overflow"));
@@ -307,7 +250,7 @@ void CMainCommands::PushR(SCommandContext& tCtxt)
 }
 
 template <typename TOperandType>
-void CMainCommands::PopR(SCommandContext& tCtxt)
+void CMainCommands::Pop(SCommandContext& tCtxt)
 {
 	uint nCount = uint(*tCtxt.tOpr[EOprIdx::Second].pu8);
 	if (nCount == 0)
@@ -322,7 +265,7 @@ void CMainCommands::PopR(SCommandContext& tCtxt)
 		// For GP registers multiply Reg idx to align with OpSize
 		uint nRegIdx = AlignToOperandSize(tCtxt.tInfo.nRegIdx[EOprIdx::First], tCtxt.tInfo.eOprSize);
 		uint nCountBuytes = nCount * OperandSize(tCtxt.tInfo.eOprSize);
-		if (nRegIdx + nCountBuytes > SCPUStateBase::eGeneralPurposeRegisterPoolSize)
+		if (nRegIdx + nCountBuytes > SCPUStateBase::eRegisterPoolSize)
 			VASM_THROW_ERROR(t_csz("CPU: GP Registers pool size excceded"));
 		if ((tCtxt.tCPUState.nSP + nCountBuytes) > tCtxt.tCPUState.cnStackLBound)
 			VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
@@ -346,7 +289,7 @@ t_string CMainCommands::dasmJumpR(SCommandInfo const& tCmd, bool bHexadecimal)
 		// Command name
 		sCmd = DisAsmCmd(tCmd);
 
-		if (tCmd.bOprSwitch1)
+		if (tCmd.eOprSwitch == EOprSwitch::Imv)
 		{
 			t_address nAddress = (t_address) (int64(tCmd.nAddress) + int64(tCmd.tMetaInfo.nLength) + int64(tCmd.i16Imv));
 			// Get symbol from address

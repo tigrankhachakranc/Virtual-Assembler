@@ -19,6 +19,7 @@ using EOpCode		= core::EOpCode;
 using EOprType		= core::EOprType;
 using EOprIdx		= core::EOprIdx;
 using EOprSize		= core::EOprSize;
+using EOprSwitch	= core::EOprSwitch;
 using EImvType		= core::EImvType;
 using ECndtnCode	= core::ECndtnCode;
 using SCPUStateBase = core::SCPUStateBase;
@@ -50,12 +51,9 @@ private:
 	// Execution control instructions
 	void JumpA(SCommandContext&);	// Absolute unconditionnal jump
 	void JumpR(SCommandContext&);	// Relative [conditional] jump
-	void Call(SCommandContext&);	// Absolute call
+	void CallA(SCommandContext&);	// Absolute call
+	void CallR(SCommandContext&);	// Relative call
 	void Ret(SCommandContext&);		// Return
-
-	// Flags manipulation instructions
-	void GFLR(SCommandContext&);	// Get Flags into GP register
-	void SFLR(SCommandContext&);	// Set Flags from GP register
 
 	// Memory access instructions
 	template <typename TOperandType>
@@ -63,19 +61,17 @@ private:
 	template <typename TOperandType>
 	void Store(SCommandContext&);	// Store operand into memory
 	template <typename TOperandType>
-	void LoadRel(SCommandContext&);	// Load operand from memory with relative 24 bit offset
+	void LoadRel(SCommandContext&);	// Load operand from memory with relative 32 bit offset
 	template <typename TOperandType>
-	void StoreRel(SCommandContext&);// Store operand into memory with relative 24 bit offset
+	void StoreRel(SCommandContext&);// Store operand into memory with relative 32 bit offset
 
 	// Stack instructions
 	void PushSF(SCommandContext&);	// Push stack frame
 	void PopSF(SCommandContext&);	// Pop stack frame
-	void PushA(SCommandContext&);	// Push address register
-	void PopA(SCommandContext&);	// Pop address register
 	template <typename TOperandType>
-	void PushR(SCommandContext&);	// Push GP register(s)
+	void Push(SCommandContext&);	// Push register(s) into the stack
 	template <typename TOperandType>
-	void PopR(SCommandContext&);	// Op GP register(s)
+	void Pop(SCommandContext&);		// Pop register(s) from the stack
 
 private:
 	//

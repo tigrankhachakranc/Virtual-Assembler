@@ -24,6 +24,7 @@ using EOpCode		= core::EOpCode;
 using EOprType		= core::EOprType;
 using EOprIdx		= core::EOprIdx;
 using EOprSize		= core::EOprSize;
+using EOprSwitch	= core::EOprSwitch;
 using EImvType		= core::EImvType;
 using ECndtnCode	= core::ECndtnCode;
 using SCPUStateBase = core::SCPUStateBase;

@@ -191,7 +191,7 @@ void CDebugger::StepOver(t_size nCount)
 		// Need to analyze target instruction to skip over CALL instruction
 		EOpCode eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nIP);
 
-		if (eOpCode != EOpCode::CALL)
+		if (eOpCode != EOpCode::CALLA || eOpCode != EOpCode::CALLR)
 		{	// Behave like regular Step
 			// Run single instruction (trace)
 			m_pCPU->Run(true);
@@ -222,7 +222,7 @@ void CDebugger::StepOver(t_size nCount)
 				// Analyze just executed instruction to find out corresponding CALLs & RETs
 				// IP already shows next instruction, but CIP yet keeps reference on the previous one
 				eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nCIP);
-				if (eOpCode == EOpCode::CALL)
+				if (eOpCode == EOpCode::CALLA || eOpCode == EOpCode::CALLR)
 					++nCallLevel;
 				else if (eOpCode == EOpCode::RET)
 					--nCallLevel;
@@ -265,7 +265,7 @@ void CDebugger::StepOut()
 		// Analyze just executed instruction to find out corresponding CALLs & RETs
 		// IP already shows next instruction, but CIP yet keeps reference on the previous one
 		EOpCode eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nCIP);
-		if (eOpCode == EOpCode::CALL)
+		if (eOpCode == EOpCode::CALLA || eOpCode == EOpCode::CALLR)
 			++nCallLevel;
 		else if (eOpCode == EOpCode::RET)
 			--nCallLevel;
@@ -324,38 +324,38 @@ void CDebugger::ChangeRegister(ERegType eRegType, uint nRegIdx, CValue const& oV
 	CProcessor::SState& tState = m_pCPU->ChangeableState();
 	if (eRegType == ERegType::ADR)
 	{
-		if (nRegIdx < core::SCPUStateBase::eARBaseIndex ||
-			nRegIdx >= core::SCPUStateBase::eAddressRegistersPoolSize)
+		nRegIdx += core::SCPUStateBase::eARBaseIndex;
+		if (nRegIdx >= core::SCPUStateBase::eAddressRegistersPoolSize)
 			VASM_THROW_ERROR(t_csz("Debugger: Invalid address register index"));
 		if (oValue.GetType() != core::ValueType<t_address>() || oValue.GetCount() != 1)
 			VASM_THROW_ERROR(t_csz("Debugger: Invalid address register value"));
-		tState.anARPool[nRegIdx] = static_cast<t_address>(oValue);
+		reinterpret_cast<t_address*>(tState.aui8RPool)[nRegIdx] = static_cast<t_address>(oValue);
 	}
 	else //(eRegType == ERegType::GP)
 	{
-		if (nRegIdx >= core::SCPUStateBase::eGeneralPurposeRegisterPoolSize ||
+		if (nRegIdx >= core::SCPUStateBase::eRegisterPoolSize ||
 			nRegIdx % oValue.GetElementSize() != 0)
 			VASM_THROW_ERROR(t_csz("Debugger: Invalid GP register index"));
 		if (!oValue.IsValid() || oValue.GetCount() != 1 ||
-			(oValue.GetSize() + nRegIdx) >= core::SCPUStateBase::eGeneralPurposeRegisterPoolSize)
+			(oValue.GetSize() + nRegIdx) >= core::SCPUStateBase::eRegisterPoolSize)
 			VASM_THROW_ERROR(t_csz("Debugger: Invalid GP register value"));
 
 		switch (oValue.GetType())
 		{
 		case EValueType::Byte:
-			tState.aui8GPRPool[nRegIdx] = static_cast<uint8>(oValue);
+			tState.aui8RPool[nRegIdx] = static_cast<uint8>(oValue);
 			break;
 		case EValueType::Word:
-			reinterpret_cast<uint16&>(tState.aui8GPRPool[nRegIdx]) = static_cast<uint16>(oValue);
+			reinterpret_cast<uint16&>(tState.aui8RPool[nRegIdx]) = static_cast<uint16>(oValue);
 			break;
 		case EValueType::DWord:
-			reinterpret_cast<uint32&>(tState.aui8GPRPool[nRegIdx]) = static_cast<uint32>(oValue);
+			reinterpret_cast<uint32&>(tState.aui8RPool[nRegIdx]) = static_cast<uint32>(oValue);
 			break;
 		case EValueType::QWord:
-			reinterpret_cast<uint64&>(tState.aui8GPRPool[nRegIdx]) = static_cast<uint64>(oValue);
+			reinterpret_cast<uint64&>(tState.aui8RPool[nRegIdx]) = static_cast<uint64>(oValue);
 			break;
 		case EValueType::Char:
-			tState.aui8GPRPool[nRegIdx] = static_cast<uint8>(oValue);
+			tState.aui8RPool[nRegIdx] = static_cast<uint8>(oValue);
 		default:
 			break;
 		}

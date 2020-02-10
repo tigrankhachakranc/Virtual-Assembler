@@ -21,9 +21,10 @@ using t_uoffset = uint32;	// Unsigned offset, same as address
 using t_soffset = int32;	// Signed offset
 using t_count   = uint32;
 
-static const t_address cnInvalidAddress = UINT32_MAX;
-static const uchar cnCmdMinLength = 2;  // Minimum length of the command
-static const uchar cnCmdMaxLength = 12; // Maximum possible length of the command
+constexpr static const t_address cnInvalidAddress = UINT32_MAX;
+constexpr static const uchar cnCmdMinLength = 2;	// Minimum length of the command (in bytes)
+constexpr static const uchar cnCmdMaxLength = 8;	// Maximum possible length of the command (in bytes)
+constexpr static const uchar cnCmdAvrgLength = 4;	// Average length of the command (in bytes)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -35,9 +36,9 @@ static const uchar cnCmdMaxLength = 12; // Maximum possible length of the comman
 //	Number - Unsigned numeric intermediate value which higer 4 bits are in CC field (12 bit)
 //	Offset - Signed|unsigned numeric intermediate value (16|32 bit)
 //	Count - Unsigned numeric intermediate value (8 bit)
-//	AR(n) - Stands for the Nth Address Register
-//	GR(n) - Stands for the Nth OpSize aligned General Purpose Register
-//			It means GR(3) with OpSize=uint16 actually is the 3*sizeof(uint16)=GP(6-7) registers
+//	An - Stands for the Nth Address Register
+//	Rn - Stands for the Nth OpSize aligned General Purpose Register
+//		 It means R3 with OpSize=uint16 actually is the 3*sizeof(uint16)=GP(6-7) registers
 //	opsz - Operand size (Byte, Word, DWord, QWord)
 //	cc - condition code
 //	IL - stands for the instruction length in bytes
@@ -52,111 +53,120 @@ enum class EOpCode : uchar
 	EXIT,	// IL(2)								End of program (stops CPU execution)
 
 	// Execution control instructions
-	JUMPA,	// IL(2) Jump AR(n)						Absolute unconditionnal jump
-	JUMPR,	// IL(4) Jump[cc] GR(n)|Offset16		Relative jump (conditional or unconditional), offset may be negative
-	CALL,	// IL(2) Call AR(n)						Absolute call
+	JUMPA,	// IL(2) Jump An						Absolute unconditionnal jump
+	JUMPR,	// IL(4) Jump[cc] Rn|Offset16			Relative jump (conditional or unconditional), offset may be negative
+	CALLA,	// IL(2) Call An						Absolute call
+	CALLR,	// IL(4) Call Rn|Offset16				Relative call, offset may be negative
 	RET,	// IL(2) RET 							Returns to the caller
 
-	Reserved08,	// Reserved for INT
-	Reserved09,	// Reserved for IRET
-	Reserved10,	// Reserved for HALT
-	Reserved11,
-
-	// Flags manipulation instructions
-	GFLR,	// IL(2) GFLR GR(n)						Gets 2 byte packed status flags into specified general purpose register
-	SFLR,	// IL(2) SFLR GR(n)						Sets 2 byte packed status flags from specified general purpose register
+	Reserved09,	// Reserved for INT
+	Reserved10,	// Reserved for IRET
+	Reserved11,	// Reserved for HALT
 
 	// Memory access instructions
-	LOAD,	// IL(4) LOAD  [opsz] AR(n)|GR(n) <- *AR(n)				Reads from memory into the target register
-	STORE,	// IL(4) STORE [opsz] AR(n)|GR(n) -> *AR(n)				Writes into memory from the target register
-	LDREL,	// IL(8) LDREL [opsz] AR(n)|GR(n) <- *AR(n)켖ffset32	Loads relative to address, Offset is signed 24 bit numeric value
-	STREL,	// IL(8) STREL [opsz] AR(n)|GR(n) -> *AR(n)켖ffset32	Store relative to address, Offset is signed 24 bit numeric value
+	LOAD,	// IL(4) LOAD  [opsz] Rn <- *An				Reads specified number of bytes from memory at source address into the target register
+	STORE,	// IL(4) STORE [opsz] *An <- Rn				Writes into memory at target address from the source register
+	LDREL,	// IL(8) LDREL [opsz] Rn <- *An켖ffset32	Load relative from source address, Offset is signed 32 bit numeric value
+	STREL,	// IL(8) STREL [opsz] *An켖ffset32 <- Rn	Store relative to target address, Offset is signed 32 bit numeric value
 
 	// Stack instructions
-	PUSHSF,	// IL(2) PUSHSF							Pushes stack frame
-	PUSHSF2,// IL(4) PUSHSF GR(n)|Offset16			Pushes stack frame and allocates space on the stack
-	POPSF,	// IL(2) POPSF							Pops stack frame
-	POPSF2,	// IL(4) POPSF	GR(n)|Offset16			Pops stack frame and clean the stack
-	PUSHA,	// IL(2) PUSH AR(n)						Pushes specifed address register into the Stack
-	POPA,	// IL(2) POP AR(n)						Pops from the Stack into specifed address register 
-	PUSHR,	// IL(4) PUSH [opsz] GR(n), [Count]		Pushes specifed general purpose register(s) into the Stack
-	POPR,	// IL(4) POP [opsz] GR(n), [Count]		Pops from the Stack into specifed genersal pupose register(s)
+	PUSHSF,	// IL(2) PUSHSF	[Rn]					Pushes stack frame
+	PUSHSF2,// IL(4) PUSHSF Offset24				Pushes stack frame and allocates space on the stack
+	POPSF,	// IL(2) POPSF [Rn]						Pops stack frame
+	POPSF2,	// IL(4) POPSF	Offset24				Pops stack frame and clean the stack
+	PUSH,	// IL(4) PUSH [opsz] Rn, [Count]		Pushes specifed register(s) into the Stack
+	POP,	// IL(4) POP  [opsz] Rn, [Count]		Pops from the Stack into specifed register(s)
 			//										If Count is specified then OPSZ is multipled with it and resulted number of bytes copied
 
-	// Input from/Output to port instructions
-	IN,		// IL(4) IN  [opsz] GR(n) <- GR(n)|Port (Number12)
-	OUT,	// IL(4) OUT [opsz] GR(n) <- GR(n)|Port (Number12)
+	// Assignemnt instuctions (move immediate)
+	MOVIA,	// IL(4)  MOVI An <- Address32
+	Reserved23,	// Reserved for 64 bit affresses
+	MOVI1,	// IL(4)  MOVI Rn <- Number8
+	MOVI2,	// IL(4)  MOVI Rn <- Number16
+	MOVI4,	// IL(6)  MOVI Rn <- Number32
+	Reserved27,	// Reserved for MOVI8
+
 
 	// Register manipulation instructions
-	MOVE,	// IL(4) Move  [cc] [opsz] AR|GR(n) <-  AR|GR(n)			Copies second (source) operand to the first (destination) operand
-			//															when CC code is specified then skips operation if CC is not met 
-	SWAP,	// IL(4) Swap  [cc] [opsz] AR|GR(n) <-> AR|GR(n)			Swaps first and second operands 
-			//															when CC code is specified then skips operation if CC is not met 
-	//MOVSX,// IL(4) MovSX [cc] [opsz_src] [opsz_trgt] GR(n) <- GR(n)	Copies second (source) operand to the first (destination) operand
-			//															and sign extends (casts) the value from opsz_src to opsz_trgt (checks CC and skips if so)
-	//MOVZX,// IL(4) MOvZX [cc] [opsz_src] [opsz_trgt] GR(n) <- GR(n)	Copies second (source) operand to the first (destination) operand
-			//															and zero extends the value from opsz_src to opsz_trgt (checks CC and skips if so)
-	Reserved30,
-	Reserved31,
-
-	// Assignemnt instuctions
-	ASSIGNA0,// IL(2)  ASSIGN AR(n) <- null
-	ASSIGNA4,// IL(6)  ASSIGN AR(n) <- Number32
-	ASSIGNR1,// IL(4)  ASSIGN GR(n) <- Number8
-	ASSIGNR2,// IL(4)  ASSIGN GR(n) <- Number16
-	ASSIGNR4,// IL(6)  ASSIGN GR(n) <- Number32
-	ASSIGNR8,// IL(10) ASSIGN GR(n) <- Number64
+	MOVE,	// IL(4) Move  [cc] [opsz] Rn <- Rn						Copies second (source) operand to the first (destination) operand
+			//														when CC code is specified then skips operation if CC is not met 
+	SWAP,	// IL(4) Swap  [cc] [opsz] Rn <-> Rn					Swaps first and second operands 
+			//														when CC code is specified then skips operation if CC is not met 
+	//MOVSX,// IL(4) MovSX [cc] [opsz_src] [opsz_trgt] Rn <- Rn		Copies second (source) operand to the first (destination) operand
+			//														and sign extends (casts) the value from opsz_src to opsz_trgt (checks CC and skips if so)
+	//MOVZX,// IL(4) MovZX [cc] [opsz_src] [opsz_trgt] Rn <- Rn		Copies second (source) operand to the first (destination) operand
+			//														and zero extends the value from opsz_src to opsz_trgt (checks CC and skips if so)
+	Reserved30,	// Reserved for MOVSX
+	Reserved31,	// Reserved for MOVZX
 	
-	SET,	// IL(4) St(cc) [opsz] GR(n)					Sets specifed register to 1 if CC takes place, 0 otherwise
-	Reserved39,
+
+	// Flags manipulation instructions
+	GETF,	// IL(2) GETF Rn				Gets lower half 2 byte packed status flags into specified register
+	SETF,	// IL(2) SETF Rn				Sets 2 byte packed status flags from specified register into lower half of status register
+	CLC,	// IL(2) CLC					Clears Carry flag
+	STC,	// IL(2) STC 					Sets Carry flag
+	CMC,	// IL(2) CMC					Complements (toggles) Carry flag
+	SET,	// IL(4) St(cc) [opsz] Rn		Sets specifed register to 1 if CC takes place, 0 otherwise
+
+	Reserved38,	// Reserved for 4 byte flags get
+	Reserved39, // Reserved for 4 byte flags set
 
 	// Comparison instructions
-	TEST,	// IL(4) TEST [opsz] AR(n)|GR(n), AR(n)|GR(n)	ANDs operands and sets flags
-	CMP,	// IL(4) CMP  [opsz] AR(n)|GR(n), AR(n)|GR(n)	SUBs operands and sets flags
-
-	// Address calculation instructions
-	INC,	// IL(4) INC AR(n) <- GR(n, DWord)		Increments specifed address register by DWord GR value
-	DEC,	// IL(4) DEC AR(n) <- GR(n, DWord)		Decrements specified address register by DWord GR value
-	INC2,	// IL(4) INC AR(n) <- Offset16			Increments specifed address register by the specified Offset
-	DEC2,	// IL(4) DEC AR(n) <- Offset16			Decrements specified address register by the specified Offset
+	TEST,	// IL(4) TEST [opsz] Rn, Rn		ANDs operands and discards result to set only flags
+	CMP,	// IL(4) CMP  [opsz] Rn, Rn		SUBs operands and discards result to set only flags
 
 	// Logical Instructions
-	AND,	// IL(4) AND [opsz] GR(n) <- GR(n)
-	OR,		// IL(4) 
-	XOR,	// IL(4) 
-	NAND,	// IL(4) 										Not AND
-	NOR,	// IL(4) 										Not OR
-	NOT,	// IL(4) NOT [opsz] GR(n)						Bitwise negation
+	AND,	// IL(4) AND  [opsz] Rn <- Rn	Does logical AND
+	OR,		// IL(4) OR	  [opsz] Rn <- Rn	Does logical OR
+	XOR,	// IL(4) XOR  [opsz] Rn <= Rn	Does logical XOR
+	NAND,	// IL(4) NAND [opsz] Rn <- Rn	Not AND
+	NOR,	// IL(4) NOR  [opsz] Rn <- Rn	Not OR
+	NOT,	// IL(4) NOT  [opsz] Rn			Bitwise negation
 
-	// Shift instructions
-	SHL,	// IL(4) SHL [opsz] GR(n) <- GR(n)|Count		Shift left
-	SHR,	// IL(4) SHR [opsz] GR(n) <- GR(n)|Count		Shift right
-	ROL,	// IL(4) ROL [opsz] GR(n) <- GR(n)|Count		Rotate left
-	ROR,	// IL(4) ROR [opsz] GR(n) <- GR(n)|Count		Rotate right
-	SAL,	// IL(4) SAL [opsz] GR(n) <- GR(n)|Count		Shift arithmetic left
-	SAR,	// IL(4) SHR [opsz] GR(n) <- GR(n)|Count		Shift arithmetic right
-	RCL,	// IL(4) RCL [opsz] GR(n) <- GR(n)|Count		Rotate with carry left
-	RCR,	// IL(4) RCR [opsz] GR(n) <- GR(n)|Count		Rotate with carry right
+	// Shift & rotate instructions
+	SHL,	// IL(4) SHL [opsz] Rn <- Rn|Count		Shift left
+	SHR,	// IL(4) SHR [opsz] Rn <- Rn|Count		Shift right
+	SAL,	// IL(4) SAL [opsz] Rn <- Rn|Count		Shift arithmetic left
+	SAR,	// IL(4) SHR [opsz] Rn <- Rn|Count		Shift arithmetic right
+	ROL,	// IL(4) ROL [opsz] Rn <- Rn|Count		Rotate left
+	ROR,	// IL(4) ROR [opsz] Rn <- Rn|Count		Rotate right
+	RCL,	// IL(4) RCL [opsz] Rn <- Rn|Count		Rotate with carry left
+	RCR,	// IL(4) RCR [opsz] Rn <- Rn|Count		Rotate with carry right
 
-	// Unsigned integral arithmetic instructions
-	ADD,	// IL(4) ADD [opsz] GR(n) <- GR(n)
-	SUB,	// IL(4) 
-	MUL,	// IL(4)
-	DIV,	// IL(4)
+	// Signed & Unsigned integral arithmetic instructions
+	ADD,	// IL(4) ADD [cc] [opsz] Rn <- Rn	Add, Op1 = Op1 + Op2
+	ADC,	// IL(4) ADC [cc] [opsz] Rn <- Rn	Add with carry, Op1 = Op1 + Op2 OpCF
+	SUB,	// IL(4) SUB [cc] [opsz] Rn <- Rn	Sub, Op1 = Op1 - Op2
+	SBB,	// IL(4) SBB [cc] [opsz] Rn <- Rn	Sub with borrow, Op1 = Op1 - Op2 - CF
+	NEG,	// IL(4) NEG [cc] [opsz] Rn			Sign negation , Op = -Op
+	
+	// Address calculation instructions
+	INC,	// IL(4) INC An <- Offset16		Increments specifed address register by DWord value
+	DEC,	// IL(4) DEC An <- Offset16		Decrements specified address register by DWord value
 
-	// Signed integral arithmetic instructions
-	ADC,	// IL(4) ADC [opsz] GR(n) <- GR(n)				Add with carry
-	SBB,	// IL(4)										Sub with borrow
-	IMUL,	// IL(4)
-	IDIV,	// IL(4)
-	NEG,	// IL(4) NEG [opsz] RG(n)						Sign negation 
+	// Signed & unsigned multiplication & division instructions
+	MUL,	// IL(4) MUL  [opsz] Rn <- Rn	2xOp1 = Op1 * Op2
+	DIV,	// IL(4) DIV  [opsz] Rn <- Rn	Op1 = 2xOp1 / Op2, 2xOp1 mod Op2
+	IMUL,	// IL(4) IMUL [opsz] Rn <- Rn
+	IDIV,	// IL(4) IDIV [opsz] Rn <- Rn
+
 	CAST,	// IL(4) CAST opsz_src opsz_trgt GR(n)			Sing extends specifed general purpose register from SRC_OPRSZ to TRGT_OPRSZ
 			//												in case of shrinking if number is truncated then OF & CF flags will set respectively
 
-	// TODO! FPU Instructions
+	// Reserved for atomic operations
+	Reserved68,
+	Reserved69,
+	Reserved70,
+	Reserved71,
+
+	// Input from/Output to port instructions
+	IN,		// IL(4) IN  [opsz] Rn <- Rn|Port (Number12)	Reads corresponding number of bytes from the source port int the target register
+	OUT,	// IL(4) OUT [opsz] Rn|Port <- Rn (Number12)	Writes corresponding number of bytes from source register into target port
+
+	// TODO! FPU & Future Instructions
+	Reserved
 
 	// End of instruction set
-	Reserved
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -166,7 +176,7 @@ enum class EOpCode : uchar
 //
 enum class ECndtnCode : uchar
 {
-	None,
+	None = 0,
 	
 	Equal,			// zf=1				xE|xZ
 	NotEqual,		// zf=0				xNE|xNZ
@@ -181,7 +191,9 @@ enum class ECndtnCode : uchar
 	Overflow,		// of=1				xO
 	NotOverflow,	// of=0				xNO
 	Signed,			// sf=1				xS
-	NotSigned		// sf=0				xNS
+	NotSigned,		// sf=0				xNS
+
+	Invalid
 };
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -196,19 +208,33 @@ enum class EOprSize : uchar
 	DWord = 2,
 	QWord = 3,
 
-	Count,
+	// Auxiliary meta-values
+	Count,	// Number of supported operand sizes
 	Default = DWord
 };
 
-inline uchar OperandSize(EOprSize eOprSz)
+inline uchar OperandSize(EOprSize const eOprSz)
 {
 	return (uchar(1) << uchar(eOprSz));
 }
 
-inline uint AlignToOperandSize(uint uIdxByte, EOprSize eOprSz)
+inline uint AlignToOperandSize(uint const uIdxByte, EOprSize const eOprSz)
 {
 	return uint(uIdxByte) << uchar(eOprSz);
 }
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//	Operand switch
+//
+enum class EOprSwitch : uchar
+{
+	Reg = 0,
+	Imv = 1,
+
+	Default = Reg,
+};
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -219,11 +245,9 @@ inline uint AlignToOperandSize(uint uIdxByte, EOprSize eOprSz)
 enum class EOprType : uchar
 {
 	None	= 0,	// No operand
-	AR		= 0x01,	// Address register index
-	GR		= 0x02,	// General purpose register index
-	AGR		= 0x03,	// Address or general purpose register index
-	IMV		= 0x04,	// Intermediate value
-	GRIMV	= 0x06,	// General purpose register index or intermediate value
+	Reg		= 0x01,	// Register index (address or general purpose) 
+	Imv		= 0x02,	// Immediate value
+	RegImv	= 0x03,	// Register index or immediate value
 };
 ////////////////////////////////////////////////////////////////////////////////
 

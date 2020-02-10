@@ -92,13 +92,14 @@ SCommandMetaInfo::SCommandMetaInfo(
 		break;
 	case EImvType::Num64:
 	case EImvType::SNum64:
-		nLength = 10;
+		nLength = 10; // Invalid case
+		VASM_THROW_INVALID_CONDITION(); // Invalid case
 		break;
 	case EImvType::Count:
 		nLength = bool(ext & MaskExtension) ? 4 : 2;
 		break;
 	case EImvType::Port:
-		VASM_THROW_INVALID_CONDITION(); // bad case
+		VASM_THROW_INVALID_CONDITION(); // Invalid case
 		break;
 	default:
 		VASM_THROW_INVALID_CONDITION();
@@ -130,7 +131,7 @@ SCommandMetaInfo::SCommandMetaInfo(
 	nOperandCount = opr3 ? 3 : 2;
 	aeOprTypes[0] = op1;
 	aeOprTypes[1] = op2;
-	aeOprTypes[2] = opr3 ? EOprType::IMV : EOprType::None;
+	aeOprTypes[2] = opr3 ? EOprType::Imv : EOprType::None;
 	eImvType = imv;
 
 	switch (imv)
@@ -153,6 +154,7 @@ SCommandMetaInfo::SCommandMetaInfo(
 	case EImvType::Num64:
 	case EImvType::SNum64:
 		nLength = (bool(ext & MaskExtension) || opr3) ? 12 : 10;
+		VASM_THROW_INVALID_CONDITION(); // Invalid case
 		break;
 	case EImvType::Count:
 		nLength = 4;
@@ -161,7 +163,7 @@ SCommandMetaInfo::SCommandMetaInfo(
 		nLength = 4;
 		break;
 	default:
-		VASM_THROW_INVALID_CONDITION(); // bad case
+		VASM_THROW_INVALID_CONDITION(); // Invalid case
 		break;
 	}
 }
@@ -196,13 +198,14 @@ SCommandMetaInfo::SCommandMetaInfo(
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 SCPUStateBase::SCPUStateBase(
 	t_uoffset cs, t_uoffset slb, t_uoffset sub) :
-	nIP(0), nCIP(0), nRIP(anARPool[eRIPIndex]),
-	nSP(anARPool[eSPIndex]), nSF(anARPool[eSFIndex]),
+	nIP(0), nCIP(0),
+	nRIP(reinterpret_cast<t_address*>(aui8RPool)[eRIPIndex]),
+	nSP(reinterpret_cast<t_address*>(aui8RPool)[eSPIndex]),
+	nSF(reinterpret_cast<t_address*>(aui8RPool)[eSFIndex]),
 	cnCodeSize(cs), cnStackLBound(slb), cnStackUBound(sub),
 	bRun(false)
 {
-	std::memset(anARPool, 0, size_t(eAddressRegistersPoolSize * sizeof(t_address)));
-	std::memset(aui8GPRPool, 0, size_t(eGeneralPurposeRegisterPoolSize));
+	std::memset(aui8RPool, 0, size_t(eRegisterPoolSize));
 }
 
 SCPUStateBase& SCPUStateBase::operator=(SCPUStateBase const& o)
@@ -215,8 +218,7 @@ SCPUStateBase& SCPUStateBase::operator=(SCPUStateBase const& o)
 		nIP = o.nIP;
 		nCIP = o.nCIP;
 
-		std::memcpy(anARPool, o.anARPool, size_t(eAddressRegistersPoolSize * sizeof(t_address)));
-		std::memcpy(aui8GPRPool, o.aui8GPRPool, size_t(eGeneralPurposeRegisterPoolSize));
+		std::memcpy(aui8RPool, o.aui8RPool, size_t(eRegisterPoolSize));
 
 		const_cast<t_uoffset&>(cnCodeSize) = o.cnCodeSize;
 		const_cast<t_uoffset&>(cnStackLBound) = o.cnStackLBound;
@@ -444,28 +446,22 @@ t_string CCommandBase::DisAsmArg(SCommandInfo const& tCmd, bool bHexadecimal, t_
 	t_string sCmd;
 	switch (tCmd.tMetaInfo.aeOprTypes[nArg])
 	{
-	case EOprType::AR:
-		sCmd = base::toStr(t_csz("A%1"), (uint) tCmd.nRegIdx[nArg]);
-		break;
-	case EOprType::GR:
-		sCmd = base::toStr(t_csz("R%1"), (uint) tCmd.nRegIdx[nArg] * OperandSize(tCmd.eOprSize));
-		break;
-	case EOprType::AGR:
+	case EOprType::Reg:
 	{
-		VASM_CHECK(nArg != EOprIdx::Third);
-		if ((nArg == EOprIdx::First && tCmd.bOprSwitch1) || (nArg == EOprIdx::Second && tCmd.bOprSwitch2))
-			sCmd = base::toStr(t_csz("R%1"), (uint) tCmd.nRegIdx[nArg] * OperandSize(tCmd.eOprSize));
-		else
+		if (IsOperandAddressRegister(tCmd.tMetaInfo.eOpCode, nArg))
 			sCmd = base::toStr(t_csz("A%1"), (uint) tCmd.nRegIdx[nArg]);
+		else
+			sCmd = base::toStr(t_csz("R%1"), (uint) tCmd.nRegIdx[nArg] * OperandSize(tCmd.eOprSize));
 		break;
 	}
-	case EOprType::IMV:
-	case EOprType::GRIMV:
+	case EOprType::Imv:
 	{
-		bool isGR = (tCmd.tMetaInfo.aeOprTypes[nArg] == EOprType::GRIMV &&
-					 ((nArg == EOprIdx::First && !tCmd.bOprSwitch1) ||
-					  (nArg == EOprIdx::Second && !tCmd.bOprSwitch2)));
-		if (isGR)
+		sCmd = DisAsmImv(tCmd, bHexadecimal);
+		break;
+	}
+	case EOprType::RegImv:
+	{
+		if (tCmd.eOprSwitch == EOprSwitch::Reg)
 			sCmd = base::toStr(t_csz("R%1"), (uint) tCmd.nRegIdx[nArg] * OperandSize(tCmd.eOprSize));
 		else
 			sCmd = DisAsmImv(tCmd, bHexadecimal);
@@ -515,6 +511,32 @@ t_string CCommandBase::DisAsmImv(SCommandInfo const& tCmd, bool bHexadecimal)
 		break;
 	}
 	return std::move(sCmd);
+}
+
+bool CCommandBase::IsOperandAddressRegister(EOpCode eOpCode, t_index nArgIdx)
+{
+	bool bVal = false;
+	switch (eOpCode)
+	{
+	case EOpCode::JUMPA:
+	case EOpCode::CALLA:
+		bVal = true;
+		break;
+	case EOpCode::LOAD:
+	case EOpCode::LDREL:
+		bVal = (nArgIdx == 1);
+		break;
+	case EOpCode::STORE:
+	case EOpCode::STREL:
+	case EOpCode::MOVIA:
+	case EOpCode::INC:
+	case EOpCode::DEC:
+		bVal = (nArgIdx == 0);
+		break;
+	default:
+		break;
+	}
+	return bVal;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

@@ -34,9 +34,8 @@ void CDecoder::Decode(uchar const* pCmd, SCommandInfo& tCmdInfo)
 	if (0 == (tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::MaskExtension))
 	{	// No OpCode extension
 		tCmdInfo.nExtension = 0;
-		tCmdInfo.eOprSize = EOprSize::Default;
-		tCmdInfo.bOprSwitch1 = false;
-		tCmdInfo.bOprSwitch2 = false;
+		tCmdInfo.eOprSize = (EOprSize) (uchar(tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::MaskFixedOprSize) >> 6);
+		tCmdInfo.eOprSwitch = EOprSwitch::Default;
 		tCmdInfo.eCdtnCode = ECndtnCode::None;
 	}
 	else
@@ -47,18 +46,11 @@ void CDecoder::Decode(uchar const* pCmd, SCommandInfo& tCmdInfo)
 			(ECndtnCode) (nExtension & SCommandMetaInfo::MaskCndtnCode) : ECndtnCode::None;
 
 		tCmdInfo.eOprSize = bool(tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::HasOprSize) ?
-			(EOprSize) ((nExtension & SCommandMetaInfo::MaskOprSize) >> SCommandMetaInfo::OprSizeShift) : EOprSize::Default;
+			(EOprSize) ((nExtension & SCommandMetaInfo::MaskOprSize) >> SCommandMetaInfo::OprSizeShift) : 
+			(EOprSize) (uchar(tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::MaskFixedOprSize) >> 6);
 
-		if (bool(tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::HasOprSwitch))
-		{
-			tCmdInfo.bOprSwitch1 = bool(nExtension & SCommandMetaInfo::MaskOprSwitch1);
-			tCmdInfo.bOprSwitch2 = bool(nExtension & SCommandMetaInfo::MaskOprSwitch2); 
-		}
-		else
-		{
-			tCmdInfo.bOprSwitch1 = false;
-			tCmdInfo.bOprSwitch2 = false;
-		}
+		tCmdInfo.eOprSwitch =  bool(tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::HasOprSwitch) ?
+			(EOprSwitch) ((nExtension & SCommandMetaInfo::MaskOprSwitch) >> SCommandMetaInfo::OprSwitchShift) : EOprSwitch::Default;
 
 		tCmdInfo.nExtension = bool(tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::CustomExtension) ? nExtension : 0;
 
@@ -86,58 +78,36 @@ void CDecoder::Decode(uchar const* pCmd, SCommandInfo& tCmdInfo)
 
 void CDecoder::DecodeArg(uchar const*& pCmd, SCommandInfo& tCmdInfo, EOprIdx eOprIdx)
 {
-	bool bOprSwitch;
-	if (eOprIdx == EOprIdx::First)
-		bOprSwitch = tCmdInfo.bOprSwitch1;
-	else if (eOprIdx == EOprIdx::Second)
-		bOprSwitch = tCmdInfo.bOprSwitch2;
-	else
-		bOprSwitch = false;
-
 	EOprType eOprType = tCmdInfo.tMetaInfo.aeOprTypes[(int) eOprIdx];
 	switch (eOprType)
 	{
-	case EOprType::AR:
-	case EOprType::GR:
-	case EOprType::AGR:
+	case EOprType::Reg:
 	{
 		tCmdInfo.nRegIdx[eOprIdx] = *pCmd;
 		++pCmd; // Skip Operand and move to next byte
+		// Reg. idx should be OprSize aligned
 		break;
 	}
-	case EOprType::IMV:
+	case EOprType::Imv:
 	{
 		ReadIMV(pCmd, tCmdInfo);
 		break;
 	}
-	case EOprType::GRIMV:
+	case EOprType::RegImv:
 	{
-		if (bOprSwitch)
-		{
-			ReadIMV(pCmd, tCmdInfo);
-		}
-		else
+		if (tCmdInfo.eOprSwitch == EOprSwitch::Reg)
 		{
 			tCmdInfo.nRegIdx[eOprIdx] = *pCmd;
 			++pCmd; // Skip Operand and move to next byte
+		}
+		else
+		{
+			ReadIMV(pCmd, tCmdInfo);
 		}
 		break;
 	}
 	default:
 		VASM_THROW_INVALID_CONDITION();
-	}
-
-	if (bool(tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::HasOprSize))
-	{
-		// When GP register mixed with Address register specified OprSize must be DWord (size of address)
-		if (eOprType == EOprType::AGR && !bOprSwitch && tCmdInfo.eOprSize != EOprSize::DWord)
-			VASM_THROW_ERROR(t_csz("Address register operand size must be DWORD"));
-	}
-	else //(!bool(tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::HasOprSize))
-	{
-		// For GP registers read OpSize from MetaInfo if explicityly not specified
-		if (eOprType == EOprType::GR || (eOprType == EOprType::AGR && bOprSwitch) || (eOprType == EOprType::GRIMV && !bOprSwitch))
-			tCmdInfo.eOprSize = EOprSize(uchar(tCmdInfo.tMetaInfo.eExtInfo & SCommandMetaInfo::MaskFixedOprSize) >> 6);
 	}
 }
 

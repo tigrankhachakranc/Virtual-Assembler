@@ -47,7 +47,7 @@ protected:
 	//
 	//	Implementation
 	//
-	SArgument ParseArgument(t_string sToken, bool bAcceptNull);
+	SArgument ParseArgument(t_string sToken, bool bAcceptNull = false);
 
 protected:
 	//
@@ -61,25 +61,41 @@ protected:
 	//
 	//	Static contents
 	//
+	enum
+	{
+		// Hints for the operand size 
+		eOprSizeApplicable = 0x10,
+		eOprSizeVital = 0x20,
+		eHasOprSize = eOprSizeApplicable | uchar(EOprSize::Default),
+		eDefaultOprSize = uchar(EOprSize::Default),
+		// Fixed operand sizes used to fill in OprSize field of the extension 
+		eFixedOprSizeByte = uchar(EOprSize::Byte),
+		eFixedOprSizeWord = uchar(EOprSize::Word),
+		eFixedOprSizeDWord = uchar(EOprSize::DWord),
+	};
+
 	struct SCommandDefinition
 	{
 		EOpCode		eOpCode;
 		ECndtnCode	eCndtnCode;
 		EImvType	eImvType;
+		uchar		eOprSizeHint;
 		uchar		nArgCount;
-		EOprType	eOperands[EOprIdx::Count];
-		bool		hasOprSize;
-
+		EOprTypeEx	eOperands[EOprIdx::Count];
 
 		inline SCommandDefinition(EOpCode);
-		inline SCommandDefinition(EOpCode, ECndtnCode, EOprType, bool hasOprSize = false);
-		inline SCommandDefinition(EOpCode, ECndtnCode, EOprType, EImvType, bool hasOprSize = false);
-		inline SCommandDefinition(EOpCode, ECndtnCode, EOprType, EOprType, bool hasOprSize = false);
-		inline SCommandDefinition(EOpCode, EOprType, bool hasOprSize = false);
-		inline SCommandDefinition(EOpCode, EOprType, EImvType, bool hasOprSize = false);
-		inline SCommandDefinition(EOpCode, EOprType, EOprType, bool hasOprSize = false);
-		inline SCommandDefinition(EOpCode, EOprType, EOprType, EImvType, bool hasOprSize = false);
-		inline SCommandDefinition(EOpCode, EOprType, EOprType, EOprType, EImvType, bool hasOprSize = false);
+		inline SCommandDefinition(EOpCode, ECndtnCode, EOprTypeEx, uchar eOprSizeHint = eDefaultOprSize);
+		inline SCommandDefinition(EOpCode, ECndtnCode, EOprTypeEx, EImvType, uchar eOprSizeHint = eDefaultOprSize);
+		inline SCommandDefinition(EOpCode, ECndtnCode, EOprTypeEx, EOprTypeEx, uchar eOprSizeHint = eDefaultOprSize);
+		inline SCommandDefinition(EOpCode, EOprTypeEx, uchar eOprSizeHint = eDefaultOprSize);
+		inline SCommandDefinition(EOpCode, EOprTypeEx, EImvType, uchar eOprSizeHint = eDefaultOprSize);
+		inline SCommandDefinition(EOpCode, EOprTypeEx, EOprTypeEx, uchar eOprSizeHint = eDefaultOprSize);
+		inline SCommandDefinition(EOpCode, EOprTypeEx, EOprTypeEx, EImvType, uchar eOprSizeHint = eDefaultOprSize);
+		inline SCommandDefinition(EOpCode, EOprTypeEx, EOprTypeEx, EOprTypeEx, EImvType, uchar eOprSizeHint = eDefaultOprSize);
+
+		inline bool HasOprSize() const;
+		inline bool IsOprSizeVital() const;
+		inline EOprSize DefaultOprSize() const;
 	};
 
 
@@ -126,64 +142,79 @@ inline CCommandParser::CCommandParser(
 //
 inline CCommandParser::SCommandDefinition::SCommandDefinition(EOpCode opc) :
 	eOpCode(opc), eCndtnCode(ECndtnCode::None), eImvType(EImvType::None), nArgCount(0),
-	eOperands{EOprType::None, EOprType::None, EOprType::None}, hasOprSize(false)
+	eOperands{EOprTypeEx::None, EOprTypeEx::None, EOprTypeEx::None}, eOprSizeHint((uchar)EOprSize::Default)
 {
 }
 
 inline CCommandParser::SCommandDefinition::SCommandDefinition(
-	EOpCode opc, ECndtnCode cndtn, EOprType oprt1, bool oprsz) :
+	EOpCode opc, ECndtnCode cndtn, EOprTypeEx oprt1, uchar oprszhint) :
 	eOpCode(opc), eCndtnCode(cndtn), eImvType(EImvType::None), nArgCount(1),
-	eOperands{oprt1, EOprType::None, EOprType::None}, hasOprSize(oprsz)
+	eOperands{oprt1, EOprTypeEx::None, EOprTypeEx::None}, eOprSizeHint(oprszhint)
 {
 }
 
 inline CCommandParser::SCommandDefinition::SCommandDefinition(
-	EOpCode opc, ECndtnCode cndtn, EOprType oprt1, EImvType imv, bool oprsz) :
+	EOpCode opc, ECndtnCode cndtn, EOprTypeEx oprt1, EImvType imv, uchar oprszhint) :
 	eOpCode(opc), eCndtnCode(cndtn), eImvType(imv), nArgCount(1),
-	eOperands{oprt1, EOprType::None, EOprType::None}, hasOprSize(oprsz)
+	eOperands{oprt1, EOprTypeEx::None, EOprTypeEx::None}, eOprSizeHint(oprszhint)
 {
 }
 
 inline CCommandParser::SCommandDefinition::SCommandDefinition(
-	EOpCode opc, ECndtnCode cndtn, EOprType oprt1, EOprType oprt2, bool oprsz) :
+	EOpCode opc, ECndtnCode cndtn, EOprTypeEx oprt1, EOprTypeEx oprt2, uchar oprszhint) :
 	eOpCode(opc), eCndtnCode(cndtn), eImvType(EImvType::None), nArgCount(2),
-	eOperands{oprt1, oprt2, EOprType::None}, hasOprSize(oprsz)
+	eOperands{oprt1, oprt2, EOprTypeEx::None}, eOprSizeHint(oprszhint)
 {
 }
 
 inline CCommandParser::SCommandDefinition::SCommandDefinition(
-	EOpCode opc, EOprType oprt1, bool oprsz) :
+	EOpCode opc, EOprTypeEx oprt1, uchar oprszhint) :
 	eOpCode(opc), eCndtnCode(ECndtnCode::None), eImvType(EImvType::None), nArgCount(1),
-	eOperands{oprt1, EOprType::None, EOprType::None}, hasOprSize(oprsz)
+	eOperands{oprt1, EOprTypeEx::None, EOprTypeEx::None}, eOprSizeHint(oprszhint)
 {
 }
 
 inline CCommandParser::SCommandDefinition::SCommandDefinition(
-	EOpCode opc, EOprType oprt1, EImvType imv, bool oprsz) :
+	EOpCode opc, EOprTypeEx oprt1, EImvType imv, uchar oprszhint) :
 	eOpCode(opc), eCndtnCode(ECndtnCode::None), eImvType(imv), nArgCount(1),
-	eOperands{oprt1, EOprType::None, EOprType::None}, hasOprSize(oprsz)
+	eOperands{oprt1, EOprTypeEx::None, EOprTypeEx::None}, eOprSizeHint(oprszhint)
 {
 }
 
 inline CCommandParser::SCommandDefinition::SCommandDefinition(
-	EOpCode opc, EOprType oprt1, EOprType oprt2, bool oprsz) :
+	EOpCode opc, EOprTypeEx oprt1, EOprTypeEx oprt2, uchar oprszhint) :
 	eOpCode(opc), eCndtnCode(ECndtnCode::None), eImvType(EImvType::None), nArgCount(2),
-	eOperands{oprt1, oprt2, EOprType::None}, hasOprSize(oprsz)
+	eOperands{oprt1, oprt2, EOprTypeEx::None}, eOprSizeHint(oprszhint)
 {
 }
 
 inline CCommandParser::SCommandDefinition::SCommandDefinition(
-	EOpCode opc, EOprType oprt1, EOprType oprt2, EImvType imv, bool oprsz) :
+	EOpCode opc, EOprTypeEx oprt1, EOprTypeEx oprt2, EImvType imv, uchar oprszhint) :
 	eOpCode(opc), eCndtnCode(ECndtnCode::None), eImvType(imv), nArgCount(2),
-	eOperands{oprt1, oprt2, EOprType::None}, hasOprSize(oprsz)
+	eOperands{oprt1, oprt2, EOprTypeEx::None}, eOprSizeHint(oprszhint)
 {
 }
 
 inline CCommandParser::SCommandDefinition::SCommandDefinition(
-	EOpCode opc, EOprType oprt1, EOprType oprt2, EOprType oprt3, EImvType imv, bool oprsz) :
+	EOpCode opc, EOprTypeEx oprt1, EOprTypeEx oprt2, EOprTypeEx oprt3, EImvType imv, uchar oprszhint) :
 	eOpCode(opc), eCndtnCode(ECndtnCode::None), eImvType(imv), nArgCount(3),
-	eOperands{oprt1, oprt2, oprt3}, hasOprSize(oprsz)
+	eOperands{oprt1, oprt2, oprt3}, eOprSizeHint(oprszhint)
 {
+}
+
+inline bool CCommandParser::SCommandDefinition::HasOprSize() const
+{
+	return bool(eOprSizeHint & eOprSizeApplicable);
+}
+
+inline bool CCommandParser::SCommandDefinition::IsOprSizeVital() const
+{
+	return bool(eOprSizeHint & eOprSizeVital);
+}
+
+inline EOprSize CCommandParser::SCommandDefinition::DefaultOprSize() const
+{
+	return EOprSize(eOprSizeHint & 0x03);
 }
 ////////////////////////////////////////////////////////////////////////////////
 

@@ -166,265 +166,232 @@ namespace vm {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CBasicCommands::CBasicCommands() : CCommandBase()
 {
-	Register({t_csz("INC"), EOpCode::INC, EOprType::AR, EOprType::GR, SCommandMetaInfo::FixedOprSizeDWord},
-			 FuncCmdExec(&CBasicCommands::Inc), FuncCmdDisasm(&CBasicCommands::DisAsm));
-	Register({t_csz("DEC"), EOpCode::DEC, EOprType::AR, EOprType::GR, SCommandMetaInfo::FixedOprSizeDWord},
-			 FuncCmdExec(&CBasicCommands::Dec), FuncCmdDisasm(&CBasicCommands::DisAsm));
-	Register({t_csz("INC"), EOpCode::INC2, EOprType::AR, EOprType::IMV, EImvType::Num16},
-			 FuncCmdExec(&CBasicCommands::Inc2), FuncCmdDisasm(&CBasicCommands::DisAsm));
-	Register({t_csz("DEC"), EOpCode::DEC2, EOprType::AR, EOprType::IMV, EImvType::Num16},
-			 FuncCmdExec(&CBasicCommands::Dec2), FuncCmdDisasm(&CBasicCommands::DisAsm));
-
-	Register({t_csz("ASSIGN"), EOpCode::ASSIGNA0, EOprType::AR},
-			 FuncCmdExec(&CBasicCommands::AssignA0), FuncCmdDisasm(&CBasicCommands::dasmAssignA0));
-	Register({t_csz("ASSIGN"), EOpCode::ASSIGNA4, EOprType::AR, EOprType::IMV, EImvType::Num32},
-			 FuncCmdExec(&CBasicCommands::AssignA4), FuncCmdDisasm(&CBasicCommands::dasmAssignA4));
-	Register({t_csz("ASSIGN"), EOpCode::ASSIGNR1, EOprType::GR, EOprType::IMV, EImvType::SNum8, SCommandMetaInfo::FixedOprSizeByte},
-			 FuncCmdExec(&CBasicCommands::AssignR1), FuncCmdDisasm(&CBasicCommands::dasmAssignRn));
-	Register({t_csz("ASSIGN"), EOpCode::ASSIGNR2, EOprType::GR, EOprType::IMV, EImvType::SNum16, SCommandMetaInfo::FixedOprSizeWord},
-			 FuncCmdExec(&CBasicCommands::AssignR2), FuncCmdDisasm(&CBasicCommands::dasmAssignRn));
-	Register({t_csz("ASSIGN"), EOpCode::ASSIGNR4, EOprType::GR, EOprType::IMV, EImvType::SNum32, SCommandMetaInfo::FixedOprSizeDWord},
-			 FuncCmdExec(&CBasicCommands::AssignR4), FuncCmdDisasm(&CBasicCommands::dasmAssignRn));
-	Register({t_csz("ASSIGN"), EOpCode::ASSIGNR8, EOprType::GR, EOprType::IMV, EImvType::SNum64, SCommandMetaInfo::FixedOprSizeQWord},
-			 FuncCmdExec(&CBasicCommands::AssignR8), FuncCmdDisasm(&CBasicCommands::dasmAssignRn));
+	Register({t_csz("MOVI"), EOpCode::MOVIA, EOprType::Reg, EOprType::Imv, EImvType::Num32},
+			 FuncCmdExec(&CBasicCommands::MovIA), FuncCmdDisasm(&CBasicCommands::dasmMovIA));
+	Register({t_csz("MOVI"), EOpCode::MOVI1, EOprType::Reg, EOprType::Imv, EImvType::SNum8, SCommandMetaInfo::FixedOprSizeByte},
+			 FuncCmdExec(&CBasicCommands::MovI1), FuncCmdDisasm(&CBasicCommands::dasmMovIR));
+	Register({t_csz("MOVI"), EOpCode::MOVI2, EOprType::Reg, EOprType::Imv, EImvType::SNum16, SCommandMetaInfo::FixedOprSizeWord},
+			 FuncCmdExec(&CBasicCommands::MovI2), FuncCmdDisasm(&CBasicCommands::dasmMovIR));
+	Register({t_csz("MOVI"), EOpCode::MOVI4, EOprType::Reg, EOprType::Imv, EImvType::SNum32, SCommandMetaInfo::FixedOprSizeDWord},
+			 FuncCmdExec(&CBasicCommands::MovI4), FuncCmdDisasm(&CBasicCommands::dasmMovIR));
+	//Register({t_csz("MOVI"), EOpCode::MOVI8, EOprType::Reg, EOprType::Imv, EImvType::SNum64, SCommandMetaInfo::FixedOprSizeQWord},
+	//		 FuncCmdExec(&CBasicCommands::MovI8), FuncCmdDisasm(&CBasicCommands::dasmMovIR));
 
 	FuncCmdExec apfnMove[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::Move<uint8>),  FuncCmdExec(&CBasicCommands::Move<uint16>), 
 		FuncCmdExec(&CBasicCommands::Move<uint32>), FuncCmdExec(&CBasicCommands::Move<uint64>) };
-	Register({t_csz("MOVE"), t_csz("MOV"), EOpCode::MOVE, EOprType::AGR, EOprType::AGR,
-			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::HasCndtnCode},
+	Register({t_csz("MOVE"), t_csz("MOV"), EOpCode::MOVE, EOprType::Reg, EOprType::Reg,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasCndtnCode},
 			 apfnMove, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnSwap[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::Swap<uint8>),  FuncCmdExec(&CBasicCommands::Swap<uint16>),
 		FuncCmdExec(&CBasicCommands::Swap<uint32>), FuncCmdExec(&CBasicCommands::Swap<uint64>) };
-	Register({t_csz("SWAP"), t_csz("SWP"), EOpCode::SWAP, EOprType::AGR, EOprType::AGR,
-			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::HasCndtnCode},
+	Register({t_csz("SWAP"), t_csz("SWP"), EOpCode::SWAP, EOprType::Reg, EOprType::Reg,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasCndtnCode},
 			 apfnSwap, FuncCmdDisasm(&CBasicCommands::DisAsm));
 
+	Register({t_csz("GETF"), EOpCode::GETF, EOprType::Reg, SCommandMetaInfo::FixedOprSizeWord},
+			 FuncCmdExec(&CBasicCommands::GetF), FuncCmdDisasm(&CBasicCommands::DisAsm));
+	Register({t_csz("SETF"), EOpCode::SETF, EOprType::Reg, SCommandMetaInfo::FixedOprSizeWord},
+			 FuncCmdExec(&CBasicCommands::SetF), FuncCmdDisasm(&CBasicCommands::DisAsm));
+	Register({t_csz("CLC"), EOpCode::CLC},
+			 FuncCmdExec(&CBasicCommands::CLC), FuncCmdDisasm(&CBasicCommands::DisAsm));
+	Register({t_csz("STC"), EOpCode::STC},
+			 FuncCmdExec(&CBasicCommands::STC), FuncCmdDisasm(&CBasicCommands::DisAsm));
+	Register({t_csz("CMC"), EOpCode::CMC},
+			 FuncCmdExec(&CBasicCommands::CMC), FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnSet[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::Set<uint8>),  FuncCmdExec(&CBasicCommands::Set<uint16>),
 		FuncCmdExec(&CBasicCommands::Set<uint32>), FuncCmdExec(&CBasicCommands::Set<uint64>) };
-	Register({t_csz("SET"), t_csz("ST"), EOpCode::SET, EOprType::GR,
+	Register({t_csz("SET"), t_csz("ST"), EOpCode::SET, EOprType::Reg,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasCndtnCode | SCommandMetaInfo::SkipCdtnCheck},
 			 apfnSet, FuncCmdDisasm(&CBasicCommands::DisAsm));
 
 	FuncCmdExec apfnTest[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::TestB),  FuncCmdExec(&CBasicCommands::TestW),
 		FuncCmdExec(&CBasicCommands::TestDW), FuncCmdExec(&CBasicCommands::TestQW) };
-	Register({t_csz("TEST"), EOpCode::TEST, EOprType::AGR, EOprType::AGR,
-			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
+	Register({t_csz("TEST"), EOpCode::TEST, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnTest, FuncCmdDisasm(&CBasicCommands::DisAsm));
 
 	FuncCmdExec apfnCmp[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::CmpB),  FuncCmdExec(&CBasicCommands::CmpW),
 		FuncCmdExec(&CBasicCommands::CmpDW), FuncCmdExec(&CBasicCommands::CmpQW) };
-	Register({t_csz("CMP"), EOpCode::CMP, EOprType::AGR, EOprType::AGR, SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch},
+	Register({t_csz("CMP"), EOpCode::CMP, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			apfnTest, FuncCmdDisasm(&CBasicCommands::DisAsm));
 
 	FuncCmdExec apfnAnd[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::AndB),  FuncCmdExec(&CBasicCommands::AndW),
 		FuncCmdExec(&CBasicCommands::AndDW), FuncCmdExec(&CBasicCommands::AndQW) };
-	Register({t_csz("AND"), EOpCode::AND, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("AND"), EOpCode::AND, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnAnd, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnOr[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::OrB),  FuncCmdExec(&CBasicCommands::OrW),
 		FuncCmdExec(&CBasicCommands::OrDW), FuncCmdExec(&CBasicCommands::OrQW) };
-	Register({t_csz("OR"), EOpCode::OR, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("OR"), EOpCode::OR, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnOr, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnXor[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::XorB),  FuncCmdExec(&CBasicCommands::XorW),
 		FuncCmdExec(&CBasicCommands::XorDW), FuncCmdExec(&CBasicCommands::XorQW) };
-	Register({t_csz("XOR"), EOpCode::XOR, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("XOR"), EOpCode::XOR, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnXor, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnNand[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::NandB),  FuncCmdExec(&CBasicCommands::NandW),
 		FuncCmdExec(&CBasicCommands::NandDW), FuncCmdExec(&CBasicCommands::NandQW) };
-	Register({t_csz("NAND"), EOpCode::NAND, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("NAND"), EOpCode::NAND, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnNand, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnNor[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::NorB),  FuncCmdExec(&CBasicCommands::NorW),
 		FuncCmdExec(&CBasicCommands::NorDW), FuncCmdExec(&CBasicCommands::NorQW) };
-	Register({t_csz("NOR"), EOpCode::NOR, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("NOR"), EOpCode::NOR, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnNor, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnNot[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::NotB),  FuncCmdExec(&CBasicCommands::NotW),
 		FuncCmdExec(&CBasicCommands::NotDW), FuncCmdExec(&CBasicCommands::NotQW) };
-	Register({t_csz("NOT"), EOpCode::NOT, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("NOT"), EOpCode::NOT, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnNot, FuncCmdDisasm(&CBasicCommands::DisAsm));
 
 	FuncCmdExec apfnShl[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::ShlB),  FuncCmdExec(&CBasicCommands::ShlW),
 		FuncCmdExec(&CBasicCommands::ShlDW), FuncCmdExec(&CBasicCommands::ShlQW) };
-	Register({t_csz("SHL"), EOpCode::SHL, EOprType::GR, EOprType::GRIMV, EImvType::Count,
+	Register({t_csz("SHL"), EOpCode::SHL, EOprType::Reg, EOprType::RegImv, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::SingularOperandSize},
 			 apfnShl, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnShr[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::ShrB),  FuncCmdExec(&CBasicCommands::ShrW),
 		FuncCmdExec(&CBasicCommands::ShrDW), FuncCmdExec(&CBasicCommands::ShrQW) };
-	Register({t_csz("SHR"), EOpCode::SHR, EOprType::GR, EOprType::GRIMV, EImvType::Count,
+	Register({t_csz("SHR"), EOpCode::SHR, EOprType::Reg, EOprType::RegImv, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::SingularOperandSize},
 			 apfnShr, FuncCmdDisasm(&CBasicCommands::DisAsm));
-	FuncCmdExec apfnRol[int(EOprSize::Count)] = {
-		FuncCmdExec(&CBasicCommands::RolB),  FuncCmdExec(&CBasicCommands::RolW),
-		FuncCmdExec(&CBasicCommands::RolDW), FuncCmdExec(&CBasicCommands::RolQW) };
-	Register({t_csz("ROL"), EOpCode::ROL, EOprType::GR, EOprType::GRIMV, EImvType::Count,
-			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::SingularOperandSize},
-			 apfnRol, FuncCmdDisasm(&CBasicCommands::DisAsm));
-	FuncCmdExec apfnRor[int(EOprSize::Count)] = {
-		FuncCmdExec(&CBasicCommands::RorB),  FuncCmdExec(&CBasicCommands::RorW),
-		FuncCmdExec(&CBasicCommands::RorDW), FuncCmdExec(&CBasicCommands::RorQW) };
-	Register({t_csz("ROR"), EOpCode::ROR, EOprType::GR, EOprType::GRIMV, EImvType::Count,
-			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::SingularOperandSize},
-			 apfnRor, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnSal[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::SalB),  FuncCmdExec(&CBasicCommands::SalW),
 		FuncCmdExec(&CBasicCommands::SalDW), FuncCmdExec(&CBasicCommands::SalQW) };
-	Register({t_csz("SAL"), EOpCode::SAL, EOprType::GR, EOprType::GRIMV, EImvType::Count,
+	Register({t_csz("SAL"), EOpCode::SAL, EOprType::Reg, EOprType::RegImv, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::SingularOperandSize},
 			 apfnSal, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnSar[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::SarB),  FuncCmdExec(&CBasicCommands::SarW),
 		FuncCmdExec(&CBasicCommands::SarDW), FuncCmdExec(&CBasicCommands::SarQW) };
-	Register({t_csz("SAR"), EOpCode::SAR, EOprType::GR, EOprType::GRIMV, EImvType::Count,
+	Register({t_csz("SAR"), EOpCode::SAR, EOprType::Reg, EOprType::RegImv, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::SingularOperandSize},
 			 apfnSar, FuncCmdDisasm(&CBasicCommands::DisAsm));
+	FuncCmdExec apfnRol[int(EOprSize::Count)] = {
+		FuncCmdExec(&CBasicCommands::RolB),  FuncCmdExec(&CBasicCommands::RolW),
+		FuncCmdExec(&CBasicCommands::RolDW), FuncCmdExec(&CBasicCommands::RolQW) };
+	Register({t_csz("ROL"), EOpCode::ROL, EOprType::Reg, EOprType::RegImv, EImvType::Count,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::SingularOperandSize},
+			 apfnRol, FuncCmdDisasm(&CBasicCommands::DisAsm));
+	FuncCmdExec apfnRor[int(EOprSize::Count)] = {
+		FuncCmdExec(&CBasicCommands::RorB),  FuncCmdExec(&CBasicCommands::RorW),
+		FuncCmdExec(&CBasicCommands::RorDW), FuncCmdExec(&CBasicCommands::RorQW) };
+	Register({t_csz("ROR"), EOpCode::ROR, EOprType::Reg, EOprType::RegImv, EImvType::Count,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::SingularOperandSize},
+			 apfnRor, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnRcl[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::RclB),  FuncCmdExec(&CBasicCommands::RclW),
 		FuncCmdExec(&CBasicCommands::RclDW), FuncCmdExec(&CBasicCommands::RclQW) };
-	Register({t_csz("RCL"), EOpCode::RCL, EOprType::GR, EOprType::GRIMV, EImvType::Count,
+	Register({t_csz("RCL"), EOpCode::RCL, EOprType::Reg, EOprType::RegImv, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::SingularOperandSize},
 			 apfnRcl, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnRcr[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::RcrB),  FuncCmdExec(&CBasicCommands::RcrW),
 		FuncCmdExec(&CBasicCommands::RcrDW), FuncCmdExec(&CBasicCommands::RcrQW) };
-	Register({t_csz("RCR"), EOpCode::RCR, EOprType::GR, EOprType::GRIMV, EImvType::Count,
+	Register({t_csz("RCR"), EOpCode::RCR, EOprType::Reg, EOprType::RegImv, EImvType::Count,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::SingularOperandSize},
 			 apfnRcr, FuncCmdDisasm(&CBasicCommands::DisAsm));
 
 	FuncCmdExec apfnAdd[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::AddB),  FuncCmdExec(&CBasicCommands::AddW),
 		FuncCmdExec(&CBasicCommands::AddDW), FuncCmdExec(&CBasicCommands::AddQW) };
-	Register({t_csz("ADD"), EOpCode::ADD, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("ADD"), EOpCode::ADD, EOprType::Reg, EOprType::Reg,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasCndtnCode},
 			 apfnAdd, FuncCmdDisasm(&CBasicCommands::DisAsm));
+	FuncCmdExec apfnAdc[int(EOprSize::Count)] = {
+		FuncCmdExec(&CBasicCommands::AdcB),  FuncCmdExec(&CBasicCommands::AdcW),
+		FuncCmdExec(&CBasicCommands::AdcDW), FuncCmdExec(&CBasicCommands::AdcQW) };
+	Register({t_csz("ADC"), EOpCode::ADC, EOprType::Reg, EOprType::Reg, 
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasCndtnCode},
+			 apfnAdc, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnSub[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::SubB),  FuncCmdExec(&CBasicCommands::SubW),
 		FuncCmdExec(&CBasicCommands::SubDW), FuncCmdExec(&CBasicCommands::SubQW) };
-	Register({t_csz("SUB"), EOpCode::SUB, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("SUB"), EOpCode::SUB, EOprType::Reg, EOprType::Reg,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasCndtnCode},
 			 apfnSub, FuncCmdDisasm(&CBasicCommands::DisAsm));
+	FuncCmdExec apfnSbb[int(EOprSize::Count)] = {
+		FuncCmdExec(&CBasicCommands::SbbB),  FuncCmdExec(&CBasicCommands::SbbW),
+		FuncCmdExec(&CBasicCommands::SbbDW), FuncCmdExec(&CBasicCommands::SbbQW) };
+	Register({t_csz("SBB"), EOpCode::SBB, EOprType::Reg, EOprType::Reg,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasCndtnCode},
+			 apfnSbb, FuncCmdDisasm(&CBasicCommands::DisAsm));
+	FuncCmdExec apfnNeg[int(EOprSize::Count)] = {
+		FuncCmdExec(&CBasicCommands::NegB),  FuncCmdExec(&CBasicCommands::NegW),
+		FuncCmdExec(&CBasicCommands::NegDW), FuncCmdExec(&CBasicCommands::NegQW) };
+	Register({t_csz("NEG"), EOpCode::NEG, EOprType::Reg,
+			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasCndtnCode},
+			 apfnNeg, FuncCmdDisasm(&CBasicCommands::DisAsm));
+
+	Register({t_csz("INC"), EOpCode::INC, EOprType::Reg, EOprType::Imv, EImvType::Num16, SCommandMetaInfo::FixedOprSizeDWord},
+			 FuncCmdExec(&CBasicCommands::Inc), FuncCmdDisasm(&CBasicCommands::DisAsm));
+	Register({t_csz("DEC"), EOpCode::DEC, EOprType::Reg, EOprType::Imv, EImvType::Num16, SCommandMetaInfo::FixedOprSizeDWord},
+			 FuncCmdExec(&CBasicCommands::Dec), FuncCmdDisasm(&CBasicCommands::DisAsm));
+
 	FuncCmdExec apfnMul[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::MulB),  FuncCmdExec(&CBasicCommands::MulW),
 		FuncCmdExec(&CBasicCommands::MulDW), FuncCmdExec(&CBasicCommands::MulQW) };
-	Register({t_csz("MUL"), EOpCode::MUL, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("MUL"), EOpCode::MUL, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnMul, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnDiv[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::DivB),  FuncCmdExec(&CBasicCommands::DivW),
 		FuncCmdExec(&CBasicCommands::DivDW), FuncCmdExec(&CBasicCommands::DivQW) };
-	Register({t_csz("DIV"), EOpCode::DIV, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("DIV"), EOpCode::DIV, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnDiv, FuncCmdDisasm(&CBasicCommands::DisAsm));
-
-	FuncCmdExec apfnAdc[int(EOprSize::Count)] = {
-		FuncCmdExec(&CBasicCommands::AdcB),  FuncCmdExec(&CBasicCommands::AdcW),
-		FuncCmdExec(&CBasicCommands::AdcDW), FuncCmdExec(&CBasicCommands::AdcQW) };
-	Register({t_csz("ADC"), EOpCode::ADC, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
-			 apfnAdc, FuncCmdDisasm(&CBasicCommands::DisAsm));
-	FuncCmdExec apfnSbb[int(EOprSize::Count)] = {
-		FuncCmdExec(&CBasicCommands::SbbB),  FuncCmdExec(&CBasicCommands::SbbW),
-		FuncCmdExec(&CBasicCommands::SbbDW), FuncCmdExec(&CBasicCommands::SbbQW) };
-	Register({t_csz("SBB"), EOpCode::SBB, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
-			 apfnSbb, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnIMul[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::IMulB),  FuncCmdExec(&CBasicCommands::IMulW),
 		FuncCmdExec(&CBasicCommands::IMulDW), FuncCmdExec(&CBasicCommands::IMulQW) };
-	Register({t_csz("IMUL"), EOpCode::IMUL, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("IMUL"), EOpCode::IMUL, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnIMul, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	FuncCmdExec apfnIDiv[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::IDivB),  FuncCmdExec(&CBasicCommands::IDivW),
 		FuncCmdExec(&CBasicCommands::IDivDW), FuncCmdExec(&CBasicCommands::IDivQW) };
-	Register({t_csz("IDIV"), EOpCode::IDIV, EOprType::GR, EOprType::GR, SCommandMetaInfo::HasOprSize},
+	Register({t_csz("IDIV"), EOpCode::IDIV, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
 			 apfnIDiv, FuncCmdDisasm(&CBasicCommands::DisAsm));
-	FuncCmdExec apfnNeg[int(EOprSize::Count)] = {
-		FuncCmdExec(&CBasicCommands::NegB),  FuncCmdExec(&CBasicCommands::NegW),
-		FuncCmdExec(&CBasicCommands::NegDW), FuncCmdExec(&CBasicCommands::NegQW) };
-	Register({t_csz("NEG"), EOpCode::NEG, EOprType::GR, SCommandMetaInfo::HasOprSize},
-			 apfnNeg, FuncCmdDisasm(&CBasicCommands::DisAsm));
 	
-	FuncCmdExec apfnSexd[int(EOprSize::Count)] = {
+	FuncCmdExec apfnCast[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::Cast<int8>),  FuncCmdExec(&CBasicCommands::Cast<int16>),
 		FuncCmdExec(&CBasicCommands::Cast<int32>), FuncCmdExec(&CBasicCommands::Cast<int64>) };
-	Register({t_csz("CAST"), EOpCode::CAST, EOprType::GR, SCommandMetaInfo::HasOprSize | SCommandMetaInfo::CustomExtension},
-			 apfnSexd, FuncCmdDisasm(&CBasicCommands::dasmCast));
+	Register({t_csz("CAST"), EOpCode::CAST, EOprType::Reg, SCommandMetaInfo::HasOprSize | SCommandMetaInfo::CustomExtension},
+			 apfnCast, FuncCmdDisasm(&CBasicCommands::dasmCast));
 }
 
 CBasicCommands::~CBasicCommands() = default;
 
 //
-// Address increment/decrement
-//
-void CBasicCommands::Inc(SCommandContext& tCtxt)
-{
-	uint32* pTarget = tCtxt.tOpr[EOprIdx::First].pu32;
-	uint32* pOffset = tCtxt.tOpr[EOprIdx::Second].pu32;
-	uint16 uFlags = fnADD32(pTarget, pOffset, pTarget);
-	tCtxt.tCPUState.oFlags.setFlags(uFlags);
-}
-
-void CBasicCommands::Dec(SCommandContext& tCtxt)
-{
-	uint32* pTarget = tCtxt.tOpr[EOprIdx::First].pu32;
-	uint32* pOffset = tCtxt.tOpr[EOprIdx::Second].pu32;
-	uint16 uFlags = fnSUB32(pTarget, pOffset, pTarget);
-	tCtxt.tCPUState.oFlags.setFlags(uFlags);
-}
-
-void CBasicCommands::Inc2(SCommandContext& tCtxt)
-{
-	uint32* pTarget = tCtxt.tOpr[EOprIdx::First].ptr<t_address>();
-	uint32 nOffset = static_cast<uint32>(*tCtxt.tOpr[EOprIdx::Second].pu16);
-	uint16 uFlags = fnADD32(pTarget, &nOffset, pTarget);
-	tCtxt.tCPUState.oFlags.setFlags(uFlags);
-}
-
-void CBasicCommands::Dec2(SCommandContext& tCtxt)
-{
-	uint32* pTarget = tCtxt.tOpr[EOprIdx::First].ptr<t_address>();
-	uint32 nOffset = static_cast<uint32>(*tCtxt.tOpr[EOprIdx::Second].pu16);
-	uint16 uFlags = fnSUB32(pTarget, &nOffset, pTarget);
-	tCtxt.tCPUState.oFlags.setFlags(uFlags);
-}
-
-
-//
 // Assignemnt instuctions
 //
-void CBasicCommands::AssignA0(SCommandContext& tCtxt)
-{
-	*tCtxt.tOpr[EOprIdx::First].ptr<t_address>() = 0;
-}
-
-void CBasicCommands::AssignA4(SCommandContext& tCtxt)
+void CBasicCommands::MovIA(SCommandContext& tCtxt)
 {
 	*tCtxt.tOpr[EOprIdx::First].ptr<t_address>() = static_cast<t_address>(*tCtxt.tOpr[EOprIdx::Second].pu32);
 }
 
-void CBasicCommands::AssignR1(SCommandContext& tCtxt)
+void CBasicCommands::MovI1(SCommandContext& tCtxt)
 {
 	*tCtxt.tOpr[EOprIdx::First].pu8 = *tCtxt.tOpr[EOprIdx::Second].pu8;
 }
 
-void CBasicCommands::AssignR2(SCommandContext& tCtxt)
+void CBasicCommands::MovI2(SCommandContext& tCtxt)
 {
 	*tCtxt.tOpr[EOprIdx::First].pu16 = *tCtxt.tOpr[EOprIdx::Second].pu16;
 }
 
-void CBasicCommands::AssignR4(SCommandContext& tCtxt)
+void CBasicCommands::MovI4(SCommandContext& tCtxt)
 {
 	*tCtxt.tOpr[EOprIdx::First].pu32 = *tCtxt.tOpr[EOprIdx::Second].pu32;
 }
 
-void CBasicCommands::AssignR8(SCommandContext& tCtxt)
-{
-	*tCtxt.tOpr[EOprIdx::First].pu64 = *tCtxt.tOpr[EOprIdx::Second].pu64;
-}
+//void CBasicCommands::MovI8(SCommandContext& tCtxt)
+//{
+//	*tCtxt.tOpr[EOprIdx::First].pu64 = *tCtxt.tOpr[EOprIdx::Second].pu64;
+//}
 
 //
 // Register manipulation instructions
@@ -441,6 +408,34 @@ void CBasicCommands::Swap(SCommandContext& tCtxt)
 	TOperandType nTmp = *tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>();
 	*tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>() = *tCtxt.tOpr[EOprIdx::Second].ptr<TOperandType>();
 	*tCtxt.tOpr[EOprIdx::Second].ptr<TOperandType>() = nTmp;
+}
+
+//
+//	Flags manipulation instructions
+//
+void CBasicCommands::GetF(SCommandContext& tCtxt)
+{
+	*tCtxt.tOpr[EOprIdx::First].pu16 = tCtxt.tCPUState.oFlags.getFlags();
+}
+
+void CBasicCommands::SetF(SCommandContext& tCtxt)
+{
+	tCtxt.tCPUState.oFlags.setFlags(*tCtxt.tOpr[EOprIdx::First].pu16);
+}
+
+void CBasicCommands::CLC(SCommandContext& tCtxt)
+{
+	tCtxt.tCPUState.oFlags.clearCarry();
+}
+
+void CBasicCommands::STC(SCommandContext& tCtxt)
+{
+	tCtxt.tCPUState.oFlags.setCarry(true);
+}
+
+void CBasicCommands::CMC(SCommandContext& tCtxt)
+{
+	tCtxt.tCPUState.oFlags.setCarry(!tCtxt.tCPUState.oFlags.getCarry());
 }
 
 template <typename TOperandType>
@@ -799,74 +794,6 @@ void CBasicCommands::ShrQW(SCommandContext& tCtxt)
 }
 
 
-// ROL
-void CBasicCommands::RolB(SCommandContext& tCtxt)
-{
-	uint8* pDst = tCtxt.tOpr[EOprIdx::First].pu8;
-	uint8* pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
-	uint16 nFlags = fnROL8(pDst, pCnt);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::RolW(SCommandContext& tCtxt)
-{
-	uint16* pDst = tCtxt.tOpr[EOprIdx::First].pu16;
-	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
-	uint16  nFlags = fnROL16(pDst, pCnt);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::RolDW(SCommandContext& tCtxt)
-{
-	uint32* pDst = tCtxt.tOpr[EOprIdx::First].pu32;
-	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
-	uint16  nFlags = fnROL32(pDst, pCnt);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::RolQW(SCommandContext& tCtxt)
-{
-	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
-	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
-	uint16  nFlags = fnROL64(pDst, pCnt);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-
-// ROR
-void CBasicCommands::RorB(SCommandContext& tCtxt)
-{
-	uint8* pDst = tCtxt.tOpr[EOprIdx::First].pu8;
-	uint8* pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
-	uint16 nFlags = fnROR8(pDst, pCnt);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::RorW(SCommandContext& tCtxt)
-{
-	uint16* pDst = tCtxt.tOpr[EOprIdx::First].pu16;
-	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
-	uint16  nFlags = fnROR16(pDst, pCnt);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::RorDW(SCommandContext& tCtxt)
-{
-	uint32* pDst = tCtxt.tOpr[EOprIdx::First].pu32;
-	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
-	uint16  nFlags = fnROR32(pDst, pCnt);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::RorQW(SCommandContext& tCtxt)
-{
-	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
-	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
-	uint16  nFlags = fnROR64(pDst, pCnt);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-
 // SAL
 void CBasicCommands::SalB(SCommandContext& tCtxt)
 {
@@ -931,6 +858,74 @@ void CBasicCommands::SarQW(SCommandContext& tCtxt)
 	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
 	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
 	uint16  nFlags = fnSAR64(pDst, pCnt);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+
+// ROL
+void CBasicCommands::RolB(SCommandContext& tCtxt)
+{
+	uint8* pDst = tCtxt.tOpr[EOprIdx::First].pu8;
+	uint8* pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
+	uint16 nFlags = fnROL8(pDst, pCnt);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::RolW(SCommandContext& tCtxt)
+{
+	uint16* pDst = tCtxt.tOpr[EOprIdx::First].pu16;
+	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
+	uint16  nFlags = fnROL16(pDst, pCnt);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::RolDW(SCommandContext& tCtxt)
+{
+	uint32* pDst = tCtxt.tOpr[EOprIdx::First].pu32;
+	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
+	uint16  nFlags = fnROL32(pDst, pCnt);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::RolQW(SCommandContext& tCtxt)
+{
+	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
+	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
+	uint16  nFlags = fnROL64(pDst, pCnt);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+
+// ROR
+void CBasicCommands::RorB(SCommandContext& tCtxt)
+{
+	uint8* pDst = tCtxt.tOpr[EOprIdx::First].pu8;
+	uint8* pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
+	uint16 nFlags = fnROR8(pDst, pCnt);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::RorW(SCommandContext& tCtxt)
+{
+	uint16* pDst = tCtxt.tOpr[EOprIdx::First].pu16;
+	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
+	uint16  nFlags = fnROR16(pDst, pCnt);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::RorDW(SCommandContext& tCtxt)
+{
+	uint32* pDst = tCtxt.tOpr[EOprIdx::First].pu32;
+	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
+	uint16  nFlags = fnROR32(pDst, pCnt);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::RorQW(SCommandContext& tCtxt)
+{
+	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
+	uint8*  pCnt = tCtxt.tOpr[EOprIdx::Second].pu8;
+	uint16  nFlags = fnROR64(pDst, pCnt);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
 }
 
@@ -1004,7 +999,7 @@ void CBasicCommands::RcrQW(SCommandContext& tCtxt)
 
 
 //
-// Unsigned integral arithmetic instructions
+// Integral arithmetic instructions
 //
 
 // ADD
@@ -1075,78 +1070,6 @@ void CBasicCommands::SubQW(SCommandContext& tCtxt)
 }
 
 
-// MUL
-void CBasicCommands::MulB(SCommandContext& tCtxt)
-{
-	uint8* pDst = tCtxt.tOpr[EOprIdx::First].pu8;
-	uint8* pSrc = tCtxt.tOpr[EOprIdx::Second].pu8;
-	uint16 nFlags = fnMUL8(pDst, pSrc, pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::MulW(SCommandContext& tCtxt)
-{
-	uint16* pDst = tCtxt.tOpr[EOprIdx::First].pu16;
-	uint16* pSrc = tCtxt.tOpr[EOprIdx::Second].pu16;
-	uint16  nFlags = fnMUL16(pDst, pSrc, pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::MulDW(SCommandContext& tCtxt)
-{
-	uint32* pDst = tCtxt.tOpr[EOprIdx::First].pu32;
-	uint32* pSrc = tCtxt.tOpr[EOprIdx::Second].pu32;
-	uint16  nFlags = fnMUL32(pDst, pSrc, pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::MulQW(SCommandContext& tCtxt)
-{
-	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
-	uint64* pSrc = tCtxt.tOpr[EOprIdx::Second].pu64;
-	uint16  nFlags = fnMUL64(pDst, pSrc, pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-
-// DIV
-void CBasicCommands::DivB(SCommandContext& tCtxt)
-{
-	uint8* pDst = tCtxt.tOpr[EOprIdx::First].pu8;
-	uint8* pSrc = tCtxt.tOpr[EOprIdx::Second].pu8;
-	uint16 nFlags = fnDIV8(pDst, pSrc, pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::DivW(SCommandContext& tCtxt)
-{
-	uint16* pDst = tCtxt.tOpr[EOprIdx::First].pu16;
-	uint16* pSrc = tCtxt.tOpr[EOprIdx::Second].pu16;
-	uint16  nFlags = fnDIV16(pDst, pSrc, pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::DivDW(SCommandContext& tCtxt)
-{
-	uint32* pDst = tCtxt.tOpr[EOprIdx::First].pu32;
-	uint32* pSrc = tCtxt.tOpr[EOprIdx::Second].pu32;
-	uint16  nFlags = fnDIV32(pDst, pSrc, pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::DivQW(SCommandContext& tCtxt)
-{
-	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
-	uint64* pSrc = tCtxt.tOpr[EOprIdx::Second].pu64;
-	uint16  nFlags = fnDIV64(pDst, pSrc, pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-
-//
-// Signed integral arithmetic instructions
-//
-
 // ADC
 void CBasicCommands::AdcB(SCommandContext& tCtxt)
 {
@@ -1211,6 +1134,128 @@ void CBasicCommands::SbbQW(SCommandContext& tCtxt)
 	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
 	uint64* pSrc = tCtxt.tOpr[EOprIdx::Second].pu64;
 	uint16  nFlags = fnSBB64(pDst, pSrc, pDst, tCtxt.tCPUState.oFlags.getCarry());
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+
+// NEG
+void CBasicCommands::NegB(SCommandContext& tCtxt)
+{
+	uint8* pDst = tCtxt.tOpr[EOprIdx::First].pu8;
+	uint16 nFlags = fnNEG8(pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::NegW(SCommandContext& tCtxt)
+{
+	uint16* pDst = tCtxt.tOpr[EOprIdx::First].pu16;
+	uint16  nFlags = fnNEG16(pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::NegDW(SCommandContext& tCtxt)
+{
+	uint32* pDst = tCtxt.tOpr[EOprIdx::First].pu32;
+	uint16  nFlags = fnNEG32(pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::NegQW(SCommandContext& tCtxt)
+{
+	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
+	uint16  nFlags = fnNEG64(pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+
+//
+// Address increment/decrement
+//
+void CBasicCommands::Inc(SCommandContext& tCtxt)
+{
+	uint32* pTarget = tCtxt.tOpr[EOprIdx::First].ptr<t_address>();
+	uint32 nOffset = static_cast<uint32>(*tCtxt.tOpr[EOprIdx::Second].pu16);
+	uint16 uFlags = fnADD32(pTarget, &nOffset, pTarget);
+	tCtxt.tCPUState.oFlags.setFlags(uFlags);
+}
+
+void CBasicCommands::Dec(SCommandContext& tCtxt)
+{
+	uint32* pTarget = tCtxt.tOpr[EOprIdx::First].ptr<t_address>();
+	uint32 nOffset = static_cast<uint32>(*tCtxt.tOpr[EOprIdx::Second].pu16);
+	uint16 uFlags = fnSUB32(pTarget, &nOffset, pTarget);
+	tCtxt.tCPUState.oFlags.setFlags(uFlags);
+}
+
+
+//
+// Multiplication and Division Instructions
+//
+
+// MUL
+void CBasicCommands::MulB(SCommandContext& tCtxt)
+{
+	uint8* pDst = tCtxt.tOpr[EOprIdx::First].pu8;
+	uint8* pSrc = tCtxt.tOpr[EOprIdx::Second].pu8;
+	uint16 nFlags = fnMUL8(pDst, pSrc, pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::MulW(SCommandContext& tCtxt)
+{
+	uint16* pDst = tCtxt.tOpr[EOprIdx::First].pu16;
+	uint16* pSrc = tCtxt.tOpr[EOprIdx::Second].pu16;
+	uint16  nFlags = fnMUL16(pDst, pSrc, pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::MulDW(SCommandContext& tCtxt)
+{
+	uint32* pDst = tCtxt.tOpr[EOprIdx::First].pu32;
+	uint32* pSrc = tCtxt.tOpr[EOprIdx::Second].pu32;
+	uint16  nFlags = fnMUL32(pDst, pSrc, pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::MulQW(SCommandContext& tCtxt)
+{
+	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
+	uint64* pSrc = tCtxt.tOpr[EOprIdx::Second].pu64;
+	uint16  nFlags = fnMUL64(pDst, pSrc, pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+
+// DIV
+void CBasicCommands::DivB(SCommandContext& tCtxt)
+{
+	uint8* pDst = tCtxt.tOpr[EOprIdx::First].pu8;
+	uint8* pSrc = tCtxt.tOpr[EOprIdx::Second].pu8;
+	uint16 nFlags = fnDIV8(pDst, pSrc, pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::DivW(SCommandContext& tCtxt)
+{
+	uint16* pDst = tCtxt.tOpr[EOprIdx::First].pu16;
+	uint16* pSrc = tCtxt.tOpr[EOprIdx::Second].pu16;
+	uint16  nFlags = fnDIV16(pDst, pSrc, pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::DivDW(SCommandContext& tCtxt)
+{
+	uint32* pDst = tCtxt.tOpr[EOprIdx::First].pu32;
+	uint32* pSrc = tCtxt.tOpr[EOprIdx::Second].pu32;
+	uint16  nFlags = fnDIV32(pDst, pSrc, pDst);
+	tCtxt.tCPUState.oFlags.setFlags(nFlags);
+}
+
+void CBasicCommands::DivQW(SCommandContext& tCtxt)
+{
+	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
+	uint64* pSrc = tCtxt.tOpr[EOprIdx::Second].pu64;
+	uint16  nFlags = fnDIV64(pDst, pSrc, pDst);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
 }
 
@@ -1283,36 +1328,6 @@ void CBasicCommands::IDivQW(SCommandContext& tCtxt)
 }
 
 
-// NEG
-void CBasicCommands::NegB(SCommandContext& tCtxt)
-{
-	uint8* pDst = tCtxt.tOpr[EOprIdx::First].pu8;
-	uint16 nFlags = fnNEG8(pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::NegW(SCommandContext& tCtxt)
-{
-	uint16* pDst = tCtxt.tOpr[EOprIdx::First].pu16;
-	uint16  nFlags = fnNEG16(pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::NegDW(SCommandContext& tCtxt)
-{
-	uint32* pDst = tCtxt.tOpr[EOprIdx::First].pu32;
-	uint16  nFlags = fnNEG32(pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-void CBasicCommands::NegQW(SCommandContext& tCtxt)
-{
-	uint64* pDst = tCtxt.tOpr[EOprIdx::First].pu64;
-	uint16  nFlags = fnNEG64(pDst);
-	tCtxt.tCPUState.oFlags.setFlags(nFlags);
-}
-
-
 // CAST
 template <typename TTargetType>
 void CBasicCommands::Cast(SCommandContext& tCtxt)
@@ -1380,17 +1395,7 @@ void CBasicCommands::Cast(SCommandContext& tCtxt)
 //
 //	Disassembly functions
 //
-t_string CBasicCommands::dasmAssignA0(SCommandInfo const& tCmd, bool)
-{
-	// Command name
-	t_string sCmd = DisAsmCmd(tCmd);
-	// Arguments
-	sCmd += base::toStr(t_csz(" A%1, null"), (uint) tCmd.nRegIdx[EOprIdx::First]);
-	//
-	return std::move(sCmd);
-}
-
-t_string CBasicCommands::dasmAssignA4(SCommandInfo const& tCmd, bool bHexadecimal)
+t_string CBasicCommands::dasmMovIA(SCommandInfo const& tCmd, bool bHexadecimal)
 {
 	t_string sCmd;
 	core::IAddressRecoveryPtr pAddrRec = GetAddressRecovery();
@@ -1408,7 +1413,7 @@ t_string CBasicCommands::dasmAssignA4(SCommandInfo const& tCmd, bool bHexadecima
 	return std::move(sCmd);
 }
 
-t_string CBasicCommands::dasmAssignRn(SCommandInfo const& tCmd, bool bHexadecimal)
+t_string CBasicCommands::dasmMovIR(SCommandInfo const& tCmd, bool bHexadecimal)
 {
 	t_string sCmd = DisAsmCmd(tCmd);
 	sCmd += DisAsmOprSize(tCmd, true);

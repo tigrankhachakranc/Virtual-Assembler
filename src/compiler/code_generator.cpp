@@ -175,8 +175,7 @@ void CCodeGenerator::MakeFunc(
 	t_uoffset nCodeMarkerBase = nCodeMarker;
 
 	// Preserve space for the code
-	constexpr const uchar cnCmdAvrgLength = (core::cnCmdMaxLength - core::cnCmdMinLength) / 2;
-	tPackage.aCode.resize(nCodeMarker + tFunc.aCommands.size() * cnCmdAvrgLength + core::cnCmdMaxLength);
+	tPackage.aCode.resize(nCodeMarker + tFunc.aCommands.size() * core::cnCmdAvrgLength + core::cnCmdMaxLength);
 
 	// Also collect label code locations to adjust local labels later in this function
 	std::vector<t_uoffset> aLblLocations(tFunc.aLabels.size());
@@ -197,7 +196,7 @@ void CCodeGenerator::MakeFunc(
 
 		// Check code buffer available space
 		if (tPackage.aCode.size() < nCodeMarker + core::cnCmdMaxLength)
-			tPackage.aCode.resize(nCodeMarker + (tFunc.aCommands.size() - nCmd) * cnCmdAvrgLength + core::cnCmdMaxLength);
+			tPackage.aCode.resize(nCodeMarker + (tFunc.aCommands.size() - nCmd) * core::cnCmdAvrgLength + core::cnCmdMaxLength);
 
 		// Collect function relative line number to Function relative command offset mapping
 		if (pDbgInfo != nullptr)

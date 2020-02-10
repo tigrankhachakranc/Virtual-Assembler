@@ -20,23 +20,24 @@ namespace vm {
 using t_address = core::t_address;
 using t_uoffset = core::t_uoffset;
 
-using EOpCode = core::EOpCode;
-using EOprType = core::EOprType;
-using EOprIdx = core::EOprIdx;
-using EOprSize = core::EOprSize;
-using EImvType = core::EImvType;
-using ECndtnCode = core::ECndtnCode;
+using EOpCode		= core::EOpCode;
+using EOprType		= core::EOprType;
+using EOprIdx		= core::EOprIdx;
+using EOprSize		= core::EOprSize;
+using EOprSwitch	= core::EOprSwitch;
+using EImvType		= core::EImvType;
+using ECndtnCode	= core::ECndtnCode;
 
-using SCommandMetaInfo = core::SCommandMetaInfo;
-using SCommandInfo = core::SCommandInfo;
-using SCommandContext = core::SCommandContext;
+using SCommandMetaInfo	= core::SCommandMetaInfo;
+using SCommandInfo		= core::SCommandInfo;
+using SCommandContext	= core::SCommandContext;
 
-using CMemory = core::CMemory;
-using CDecoder = core::CDecoder;
-using IInstruction = core::IInstruction;
+using CMemory		= core::CMemory;
+using CDecoder		= core::CDecoder;
+using IInstruction	= core::IInstruction;
 
-using CMemoryPtr = core::CMemoryPtr;
-using CDecoderUPtr = core::CDecoderUPtr;
+using CMemoryPtr		 = core::CMemoryPtr;
+using CDecoderUPtr		 = core::CDecoderUPtr;
 using CCommandLibraryPtr = core::CCommandLibraryPtr;
 
 ////////////////////////////////////////////////////////////////////////////////

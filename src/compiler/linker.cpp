@@ -69,7 +69,7 @@ void CLinker::WriteCodeHeader(SPackage& tFinalPkg)
 	SCommand tCmd;
 	int nCodeOffset = 0;
 
-	tCmd.eOpCode = EOpCode::ASSIGNA4;
+	tCmd.eOpCode = EOpCode::MOVI4;
 	tCmd.eImvType = EImvType::Num32;
 	tCmd.nArgCount = 2;
 	tCmd.aArguments[EOprIdx::First].eType = EArgType::AR;
@@ -78,7 +78,7 @@ void CLinker::WriteCodeHeader(SPackage& tFinalPkg)
 	tCmd.aArguments[EOprIdx::Second].nIdx = 0;
 	nCodeOffset += oEncoder.Encode(tCmd, nCodeOffset);
 
-	tCmd.eOpCode = EOpCode::CALL;
+	tCmd.eOpCode = EOpCode::CALLA;
 	tCmd.eImvType = EImvType::None;
 	tCmd.nArgCount = 1;
 	tCmd.aArguments[EOprIdx::First].eType = EArgType::AR;

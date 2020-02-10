@@ -63,6 +63,22 @@ using t_aVariables = std::vector<SVariable>;
 
 ////////////////////////////////////////////////////////////////////////////////
 //
+//	Extended Operand type for the parsing
+//
+enum class EOprTypeEx
+{
+	None	= 0,	// No operand
+	AR		= 0x01,	// Address register
+	GR		= 0x02,	// General purpose register 
+	AGR		= 0x03,	// Either address or general purpose register
+	IMV		= 0x04,	// Immediate value
+	GRIMV	= 0x06,	// Register or immediate value
+};
+////////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
 //	Argument type
 //
 enum class EArgType

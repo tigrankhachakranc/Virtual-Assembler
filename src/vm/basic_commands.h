@@ -45,19 +45,12 @@ private:
 	// Instruction execution functions
 	//
 
-	// Address increment/decrement
-	void Inc(SCommandContext&);
-	void Dec(SCommandContext&);
-	void Inc2(SCommandContext&);
-	void Dec2(SCommandContext&);
-
-	// Assignemnt instuctions
-	void AssignA0(SCommandContext&);	// Assign NULL to address register
-	void AssignA4(SCommandContext&);	// Assign dword to address register
-	void AssignR1(SCommandContext&);	// Assign byte to GP register
-	void AssignR2(SCommandContext&);	// Assign word to GP register
-	void AssignR4(SCommandContext&);	// Assign dword to GP register
-	void AssignR8(SCommandContext&);	// Assign qword to GP register
+	// Assignemnt operations
+	void MovIA(SCommandContext&);	// Assign dword address to register
+	void MovI1(SCommandContext&);	// Assign byte to register
+	void MovI2(SCommandContext&);	// Assign word to register
+	void MovI4(SCommandContext&);	// Assign dword to register
+	//void MovI8(SCommandContext&);	// Assign qword to register
 
 	// Register manipulation instructions
 	template <typename TOperandType>
@@ -65,6 +58,12 @@ private:
 	template <typename TOperandType>
 	void Swap(SCommandContext&);
 
+	// Flags manipulation instructions
+	void GetF(SCommandContext&);	// Get low word Flags into register
+	void SetF(SCommandContext&);	// Set low word Flags from register
+	void CLC(SCommandContext&);		// Clear Carry Flag
+	void STC(SCommandContext&);		// Set Carry Flag
+	void CMC(SCommandContext&);		// Complement (toggle) Carry Flag
 	template <typename TOperandType>
 	void Set(SCommandContext&);		// Set register to 1 based on CC
 
@@ -79,7 +78,7 @@ private:
 	void CmpDW(SCommandContext&);
 	void CmpQW(SCommandContext&);
 
-	// Logical Instructions
+	// Logical bitwise operations
 	void AndB(SCommandContext&);
 	void AndW(SCommandContext&);
 	void AndDW(SCommandContext&);
@@ -110,8 +109,7 @@ private:
 	void NotDW(SCommandContext&);
 	void NotQW(SCommandContext&);
 
-
-	// Shift instructions
+	// Shift & Rotate
 	void ShlB(SCommandContext&);	// Shift left
 	void ShlW(SCommandContext&);
 	void ShlDW(SCommandContext&);
@@ -121,16 +119,6 @@ private:
 	void ShrW(SCommandContext&);
 	void ShrDW(SCommandContext&);
 	void ShrQW(SCommandContext&);
-
-	void RolB(SCommandContext&);	// Rotate left
-	void RolW(SCommandContext&);
-	void RolDW(SCommandContext&);
-	void RolQW(SCommandContext&);
-
-	void RorB(SCommandContext&);	// Rotate right
-	void RorW(SCommandContext&);
-	void RorDW(SCommandContext&);
-	void RorQW(SCommandContext&);
 
 	void SalB(SCommandContext&);	// Shift arithmetic left
 	void SalW(SCommandContext&);
@@ -142,6 +130,16 @@ private:
 	void SarDW(SCommandContext&);
 	void SarQW(SCommandContext&);
 
+	void RolB(SCommandContext&);	// Rotate left
+	void RolW(SCommandContext&);
+	void RolDW(SCommandContext&);
+	void RolQW(SCommandContext&);
+
+	void RorB(SCommandContext&);	// Rotate right
+	void RorW(SCommandContext&);
+	void RorDW(SCommandContext&);
+	void RorQW(SCommandContext&);
+
 	void RclB(SCommandContext&);	// Rotate with carry left
 	void RclW(SCommandContext&);
 	void RclDW(SCommandContext&);
@@ -152,63 +150,67 @@ private:
 	void RcrDW(SCommandContext&);
 	void RcrQW(SCommandContext&);
 
-	// Unsigned integral arithmetic instructions
+	// Integral arithmetic
 	void AddB(SCommandContext&);	// Addition
 	void AddW(SCommandContext&);
 	void AddDW(SCommandContext&);
 	void AddQW(SCommandContext&);
+
+	void AdcB(SCommandContext&);	// Addition with carry
+	void AdcW(SCommandContext&);
+	void AdcDW(SCommandContext&);
+	void AdcQW(SCommandContext&);
 
 	void SubB(SCommandContext&);	// Substruction
 	void SubW(SCommandContext&);
 	void SubDW(SCommandContext&);
 	void SubQW(SCommandContext&);
 
-	void MulB(SCommandContext&);	// Multiplication
-	void MulW(SCommandContext&);
-	void MulDW(SCommandContext&);
-	void MulQW(SCommandContext&);
-
-	void DivB(SCommandContext&);	// Division
-	void DivW(SCommandContext&);
-	void DivDW(SCommandContext&);
-	void DivQW(SCommandContext&);
-
-	// Signed integral arithmetic instructions
-	void AdcB(SCommandContext&);	// Addition with carry
-	void AdcW(SCommandContext&);
-	void AdcDW(SCommandContext&);
-	void AdcQW(SCommandContext&);
-
 	void SbbB(SCommandContext&);	// Substruction with borrow
 	void SbbW(SCommandContext&);
 	void SbbDW(SCommandContext&);
 	void SbbQW(SCommandContext&);
-
-	void IMulB(SCommandContext&);	// Multiplication
-	void IMulW(SCommandContext&);
-	void IMulDW(SCommandContext&);
-	void IMulQW(SCommandContext&);
-
-	void IDivB(SCommandContext&);	// Division
-	void IDivW(SCommandContext&);
-	void IDivDW(SCommandContext&);
-	void IDivQW(SCommandContext&);
 
 	void NegB(SCommandContext&);	// Sign negation
 	void NegW(SCommandContext&);
 	void NegDW(SCommandContext&);
 	void NegQW(SCommandContext&);
 
+	// Address increment/decrement
+	void Inc(SCommandContext&);
+	void Dec(SCommandContext&);
+
+	// Multiplication & Division
+	void MulB(SCommandContext&);	// Unsigned multiplication
+	void MulW(SCommandContext&);
+	void MulDW(SCommandContext&);
+	void MulQW(SCommandContext&);
+
+	void DivB(SCommandContext&);	// Unsigned division
+	void DivW(SCommandContext&);
+	void DivDW(SCommandContext&);
+	void DivQW(SCommandContext&);
+
+	void IMulB(SCommandContext&);	// Signed multiplication
+	void IMulW(SCommandContext&);
+	void IMulDW(SCommandContext&);
+	void IMulQW(SCommandContext&);
+
+	void IDivB(SCommandContext&);	// Signed division
+	void IDivW(SCommandContext&);
+	void IDivDW(SCommandContext&);
+	void IDivQW(SCommandContext&);
+
+	// Type conversion
 	template <typename TOperandType>
-	void Cast(SCommandContext&);	// Sign extension (type conversion)
+	void Cast(SCommandContext&);	// Sign extension 
 
 private:
 	//
 	// Custom Disassembly functions
 	//
-	t_string dasmAssignA0(SCommandInfo const&, bool bHexadecimal);
-	t_string dasmAssignA4(SCommandInfo const&, bool bHexadecimal);
-	t_string dasmAssignRn(SCommandInfo const&, bool bHexadecimal);
+	t_string dasmMovIA(SCommandInfo const&, bool bHexadecimal);
+	t_string dasmMovIR(SCommandInfo const&, bool bHexadecimal);
 	t_string dasmCast(SCommandInfo const&, bool bHexadecimal);
 };
 ////////////////////////////////////////////////////////////////////////////////

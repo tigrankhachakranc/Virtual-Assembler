@@ -21,7 +21,7 @@ CIOCommands::CIOCommands(CIOControllerPtr pIOController) :
 	FuncCmdExec apfnIn[int(EOprSize::Count)] = {
 		FuncCmdExec(&CIOCommands::In<uint8>), FuncCmdExec(&CIOCommands::In<uint16>),
 		FuncCmdExec(&CIOCommands::In<uint32>), FuncCmdExec(&CIOCommands::In<uint64>) };
-	Register({t_csz("IN"), EOpCode::IN, EOprType::GR, EOprType::GRIMV, EImvType::Port,
+	Register({t_csz("IN"), EOpCode::IN, EOprType::Reg, EOprType::RegImv, EImvType::Port,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch |
 			 SCommandMetaInfo::SingularOperandSize | SCommandMetaInfo::CustomExtension},
 			 apfnIn, FuncCmdDisasm(&CIOCommands::DisAsm));
@@ -29,7 +29,7 @@ CIOCommands::CIOCommands(CIOControllerPtr pIOController) :
 	FuncCmdExec apfnOut[int(EOprSize::Count)] = {
 		FuncCmdExec(&CIOCommands::Out<uint8>), FuncCmdExec(&CIOCommands::Out<uint16>),
 		FuncCmdExec(&CIOCommands::Out<uint32>), FuncCmdExec(&CIOCommands::Out<uint64>) };
-	Register({t_csz("OUT"), EOpCode::OUT, EOprType::GR, EOprType::GRIMV, EImvType::Port,
+	Register({t_csz("OUT"), EOpCode::OUT, EOprType::Reg, EOprType::RegImv, EImvType::Port,
 			 SCommandMetaInfo::HasOprSize | SCommandMetaInfo::HasOprSwitch |
 			 SCommandMetaInfo::SingularOperandSize | SCommandMetaInfo::CustomExtension},
 			 apfnOut, FuncCmdDisasm(&CIOCommands::DisAsm));

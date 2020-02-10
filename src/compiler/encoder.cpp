@@ -12,11 +12,12 @@ namespace vasm {
 namespace cl {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-using EOpCode	= core::EOpCode;
-using EOprType	= core::EOprType;
-using EOprSize	= core::EOprSize;
-using EOprIdx	= core::EOprIdx;
-using EImvType	= core::EImvType;
+using EOpCode	 = core::EOpCode;
+using EOprType	 = core::EOprType;
+using EOprSize	 = core::EOprSize;
+using EOprSwitch = core::EOprSwitch;
+using EOprIdx	 = core::EOprIdx;
+using EImvType	 = core::EImvType;
 
 using SCommandMetaInfo = core::SCommandMetaInfo;
 
@@ -84,27 +85,35 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		}
 		else if (tInfo.eExtInfo & SCommandMetaInfo::HasOprSwitch)
 		{
-			if (tInfo.aeOprTypes[EOprIdx::First] == EOprType::AGR)
+			EOprSwitch eOprSwitch = EOprSwitch::Default;
+			EArgType eArgType = EArgType::None;
+			// Only one operand could be switched, either First, Second or Third
+			// (though currently there is no such usage for the third operand)
+			if (tInfo.aeOprTypes[EOprIdx::First] == EOprType::RegImv)
+				eArgType = tCmd.aArguments[EOprIdx::First].eType;
+			else if (tInfo.aeOprTypes[EOprIdx::Second] == EOprType::RegImv)
+				eArgType = tCmd.aArguments[EOprIdx::Second].eType;
+			else if (tInfo.aeOprTypes[EOprIdx::Third] == EOprType::RegImv)
+				eArgType = tCmd.aArguments[EOprIdx::Third].eType;
+
+			switch (eArgType)
 			{
-				if (tCmd.aArguments[EOprIdx::First].eType != EArgType::AR)
-					nExt |= uint8(SCommandMetaInfo::MaskOprSwitch1);
-			}
-			else if (tInfo.aeOprTypes[EOprIdx::First] == EOprType::GRIMV)
-			{
-				if (tCmd.aArguments[EOprIdx::First].eType != EArgType::GR)
-					nExt |= uint8(SCommandMetaInfo::MaskOprSwitch1);
+			case EArgType::AR:
+			case EArgType::GR:
+				eOprSwitch = EOprSwitch::Reg;
+				break;
+			case EArgType::FUNC:
+			case EArgType::LBL:
+			case EArgType::NUM:
+			case EArgType::SNUM:
+			case EArgType::VAR:
+				eOprSwitch = EOprSwitch::Imv;
+				break;
+			default:
+				break;
 			}
 
-			if (tInfo.aeOprTypes[EOprIdx::Second] == EOprType::AGR)
-			{
-				if (tCmd.aArguments[EOprIdx::Second].eType != EArgType::AR)
-					nExt |= uint8(SCommandMetaInfo::MaskOprSwitch2);
-			}
-			else if (tInfo.aeOprTypes[EOprIdx::Second] == EOprType::GRIMV)
-			{
-				if (tCmd.aArguments[EOprIdx::Second].eType != EArgType::GR)
-					nExt |= uint8(SCommandMetaInfo::MaskOprSwitch2);
-			}
+			nExt |= (uint8(eOprSwitch) << SCommandMetaInfo::OprSwitchShift) & uint8(SCommandMetaInfo::MaskOprSwitch);
 		}
 
 		// Write extension
@@ -112,16 +121,16 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		++pCode; // Move to next byte
 	}
 
-	for (uint i = 0; i < tInfo.nOperandCount; ++i)
+	for (uint nArg = 0; nArg < tInfo.nOperandCount; ++nArg)
 	{
-		uchar eOprType = (uchar) tInfo.aeOprTypes[i];
-		SArgument const& tArg = tCmd.aArguments[i];
+		uchar eOprType = (uchar) tInfo.aeOprTypes[nArg];
+		SArgument const& tArg = tCmd.aArguments[nArg];
 
 		switch (tArg.eType)
 		{
 		case EArgType::AR:
 		{
-			if (!bool(eOprType & (uchar) EOprType::AR))
+			if (!bool(eOprType & (uchar) EOprType::Reg))
 				throw CError(t_csz("Encoder: Invalid use of address register"), tCmd.nLineNumber, tInfo.pcszName);
 
 			if (tArg.nIdx >= core::SCPUStateBase::eAddressRegistersPoolSize)
@@ -134,14 +143,14 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		}
 		case EArgType::GR:
 		{
-			if (!bool(eOprType & (uchar) EOprType::GR))
+			if (!bool(eOprType & (uchar) EOprType::Reg))
 				throw CError(t_csz("Encoder: Invalid use of general pusrpose register"), tCmd.nLineNumber, tInfo.pcszName);
 
-			if (tArg.nIdx >= core::SCPUStateBase::eGeneralPurposeRegisterPoolSize)
+			if (tArg.nIdx >= core::SCPUStateBase::eRegisterPoolSize)
 				throw CError(base::toStr("Encoder: Invalid general purpose register index '%1'", tArg.nIdx), tCmd.nLineNumber, tInfo.pcszName);
 
 			uchar nAlignedRIdx = (uchar) tArg.nIdx;
-			if (i == 0 || !bool(tInfo.eExtInfo & SCommandMetaInfo::SingularOperandSize))
+			if (nArg == 0 || !bool(tInfo.eExtInfo & SCommandMetaInfo::SingularOperandSize))
 			{
 				uchar nOprSizeInBytes = 0;
 				if (tInfo.eExtInfo & SCommandMetaInfo::HasOprSize)
@@ -164,9 +173,10 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		}
 		case EArgType::VAR:
 		{
-			if (!bool(eOprType & (uchar) EOprType::IMV))
+			if (!bool(eOprType & (uchar) EOprType::Imv))
 				throw CError(t_csz("Encoder: Invalid use of variable"), tCmd.nLineNumber, tInfo.pcszName);
-			if (tInfo.eOpCode != EOpCode::ASSIGNA4) // Variables could be used only with the instruction ASSIGN A?, VAR_NAME 
+			if (tInfo.eOpCode != EOpCode::MOVI4 || nArg != 1 || tCmd.aArguments[0].eType != EArgType::AR)
+				// Variables could be used only with the instruction MOVI An, VAR_NAME 
 				throw CError(t_csz("Encoder: Invalid use of variable"), tCmd.nLineNumber, tInfo.pcszName);
 
 			// Convert variable index into corresponding symbol index
@@ -181,9 +191,10 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		}
 		case EArgType::FUNC:
 		{
-			if (!bool(eOprType & (uchar) EOprType::IMV))
+			if (!bool(eOprType & (uchar) EOprType::Imv))
 				throw CError(t_csz("Encoder: Invalid use of Function"), tCmd.nLineNumber, tInfo.pcszName);
-			if (tInfo.eOpCode != EOpCode::ASSIGNA4) // Variables could be used only with the instruction ASSIGN A?, VAR_NAME 
+			if (tInfo.eOpCode != EOpCode::MOVI4 || nArg != 1 || tCmd.aArguments[0].eType != EArgType::AR)
+				// Function names could be used only with the instruction MOVI An, FUNC_NAME 
 				throw CError(t_csz("Encoder: Invalid use of Function"), tCmd.nLineNumber, tInfo.pcszName);
 
 			// Convert function index into corresponding symbol index
@@ -198,10 +209,10 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		}
 		case EArgType::LBL:
 		{
-			if (!bool(eOprType & (uchar) EOprType::IMV))
+			if (!bool(eOprType & (uchar) EOprType::Imv))
 				throw CError(t_csz("Encoder: Invalid use of label"), tCmd.nLineNumber, tInfo.pcszName);
-			if (tInfo.eOpCode != EOpCode::JUMPR && tInfo.eOpCode != EOpCode::ASSIGNR2)
-				// Label could be used only with the JUMP & ASSIGN R?, LBL_NAME instructions
+			if (tInfo.eOpCode != EOpCode::JUMPR && tInfo.eOpCode != EOpCode::MOVI2)
+				// Label could be used only with the JUMP & MOVI Rn, LBL_NAME instructions
 				throw CError(t_csz("Encoder: Invalid use of label"), tCmd.nLineNumber, tInfo.pcszName);
 
 			// Write lbl index for now, actual address will be resolved later by the linker
@@ -213,8 +224,10 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		}
 		case EArgType::NUM:
 		{
-			if (!bool(eOprType & (uchar) EOprType::IMV))
+			if (!bool(eOprType & (uchar) EOprType::Imv))
 				throw CError(t_csz("Encoder: Invalid use of numeric value"), tCmd.nLineNumber, tInfo.pcszName);
+			if (tCmd.eImvType != tInfo.eImvType)
+				throw CError(t_csz("Encoder: Immediate value type mismatch"), tCmd.nLineNumber, tInfo.pcszName);
 
 			switch (tCmd.eImvType)
 			{
@@ -268,8 +281,10 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		}
 		case EArgType::SNUM:
 		{
-			if (!bool(eOprType & (uchar) EOprType::IMV))
+			if (!bool(eOprType & (uchar) EOprType::Imv))
 				throw CError(t_csz("Encoder: Invalid use of signed numeric value"), tCmd.nLineNumber, tInfo.pcszName);
+			if (tCmd.eImvType != tInfo.eImvType)
+				throw CError(t_csz("Encoder: Immediate value type mismatch"), tCmd.nLineNumber, tInfo.pcszName);
 
 			switch (tCmd.eImvType)
 			{
