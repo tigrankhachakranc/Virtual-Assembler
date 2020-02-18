@@ -329,7 +329,7 @@ void CDebugger::ChangeRegister(ERegType eRegType, uint nRegIdx, CValue const& oV
 			VASM_THROW_ERROR(t_csz("Debugger: Invalid address register index"));
 		if (oValue.GetType() != core::ValueType<t_address>() || oValue.GetCount() != 1)
 			VASM_THROW_ERROR(t_csz("Debugger: Invalid address register value"));
-		reinterpret_cast<t_address*>(tState.aui8RPool)[nRegIdx] = static_cast<t_address>(oValue);
+		*tState.rptr<t_address>(nRegIdx) = static_cast<t_address>(oValue);
 	}
 	else //(eRegType == ERegType::GP)
 	{
@@ -343,19 +343,19 @@ void CDebugger::ChangeRegister(ERegType eRegType, uint nRegIdx, CValue const& oV
 		switch (oValue.GetType())
 		{
 		case EValueType::Byte:
-			tState.aui8RPool[nRegIdx] = static_cast<uint8>(oValue);
+			tState.reg<uint8>(nRegIdx) = static_cast<uint8>(oValue);
 			break;
 		case EValueType::Word:
-			reinterpret_cast<uint16&>(tState.aui8RPool[nRegIdx]) = static_cast<uint16>(oValue);
+			tState.reg<uint16>(nRegIdx) = static_cast<uint16>(oValue);
 			break;
 		case EValueType::DWord:
-			reinterpret_cast<uint32&>(tState.aui8RPool[nRegIdx]) = static_cast<uint32>(oValue);
+			tState.reg<uint32>(nRegIdx) = static_cast<uint32>(oValue);
 			break;
 		case EValueType::QWord:
-			reinterpret_cast<uint64&>(tState.aui8RPool[nRegIdx]) = static_cast<uint64>(oValue);
+			tState.reg<uint64>(nRegIdx) = static_cast<uint64>(oValue);
 			break;
 		case EValueType::Char:
-			tState.aui8RPool[nRegIdx] = static_cast<uint8>(oValue);
+			tState.reg<char>(nRegIdx) = static_cast<uint8>(oValue);
 		default:
 			break;
 		}

@@ -192,7 +192,7 @@
     <ClCompile Include="src\vm\loader.cpp" />
     <ClCompile Include="src\vm\machine.cpp" />
     <ClCompile Include="src\vm\main_commands.cpp" />
-    <ClCompile Include="src\vm\native_commands.cpp">
+    <ClCompile Include="src\vm\x86_native_operations.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -259,7 +259,7 @@
     <ClInclude Include="src\vm\processor.h" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="src\vm\native_commands.asm">
+    <MASM Include="src\vm\x64_native_operations.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
     </MASM>

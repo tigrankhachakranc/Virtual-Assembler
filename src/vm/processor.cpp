@@ -134,6 +134,8 @@ CProcessor::EStatus CProcessor::Run(bool bOnce)
 	{
 		try
 		{
+			// Always init R0 because for the program R0 is a readonly ZERO register
+			m_tState.reg<uint32>(0) = 0;
 			// Save current IP
 			m_tState.nCIP = m_tState.nIP;
 			// Fetch current command
@@ -210,9 +212,9 @@ void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)
 
 	// Finalize decoding
 	tCmdCtxt.pExec = (*m_pCmdLib)[tCmdInfo.tMetaInfo.eOpCode].pExec;
-	tCmdCtxt.tOpr[EOprIdx::First].p = nullptr;
-	tCmdCtxt.tOpr[EOprIdx::Second].p = nullptr;
-	tCmdCtxt.tOpr[EOprIdx::Third].p = nullptr;
+	tCmdCtxt.apOperands[EOprIdx::First] = nullptr;
+	tCmdCtxt.apOperands[EOprIdx::Second] = nullptr;
+	tCmdCtxt.apOperands[EOprIdx::Third] = nullptr;
 
 	for (int eOprIdx = EOprIdx::First; eOprIdx < tCmdInfo.tMetaInfo.nOperandCount; ++eOprIdx)
 	{
@@ -220,46 +222,17 @@ void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)
 		if (eOprType == EOprType::Reg || (eOprType == EOprType::RegImv && tCmdInfo.eOprSwitch == EOprSwitch::Reg))
 		{
 			// Multiply Reg idx with OprSize to align with OpSize
-			uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCmdInfo.nRegIdx[eOprIdx]), tCmdInfo.eOprSize);
+			uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCmdInfo.anRegIdx[eOprIdx]), tCmdInfo.eOprSize);
 			if (nRegIdx + OperandSize(tCmdInfo.eOprSize) > SState::eRegisterPoolSize)
 				VASM_THROW_ERROR(base::toStr("CPU: Invalid GP register index #%1", int(nRegIdx)));
-			tCmdCtxt.tOpr[eOprIdx].p = &m_tState.aui8RPool[nRegIdx];
+			tCmdCtxt.apOperands[eOprIdx] = &m_tState.aui8RPool[nRegIdx];
 			break;
 		}
 		else if (eOprType == EOprType::Imv || (eOprType == EOprType::RegImv && tCmdInfo.eOprSwitch == EOprSwitch::Imv))
 		{
-			//switch (tCmdInfo.tMetaInfo.eImvType)
-			//{
-			//case EImvType::Num8:
-			//case EImvType::SNum8:
-			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u8Imv;
-			//	break;
-			//case EImvType::Num16:
-			//case EImvType::SNum16:
-			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u16Imv;
-			//	break;
-			//case EImvType::Num32:
-			//case EImvType::SNum32:
-			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u32Imv;
-			//	break;
-			//case EImvType::Num64:
-			//case EImvType::SNum64:
-			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u64Imv;
-			//	break;
-			//case EImvType::Count:
-			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u8Imv;
-			//	break;
-			//case EImvType::Port:
-			//	tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u16Imv;
-			//	break;
-			//default:
-			//	VASM_THROW_ERROR(t_csz("CPU: Invalid IMV type"));
-			//	break;
-			//}
-
 			if (tCmdInfo.tMetaInfo.eImvType == EImvType::None)
 				VASM_THROW_ERROR(t_csz("CPU: Invalid IMV type"));
-			tCmdCtxt.tOpr[eOprIdx].p = &tCmdCtxt.tCmdInfo.u64Imv;
+			tCmdCtxt.apOperands[eOprIdx] = &tCmdCtxt.tCmdInfo.u64Imv;
 		}
 		else
 		{

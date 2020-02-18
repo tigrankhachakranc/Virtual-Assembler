@@ -44,7 +44,7 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands{
 	{t_csz("RET"),  {EOpCode::RET}},
 	// Conditional branching
 	{t_csz("JEQ"),	{EOpCode::JUMPR, ECndtnCode::Equal, EOprTypeEx::GRIMV, EImvType::SNum16}},
-	{t_csz("JZO"),	{EOpCode::JUMPR, ECndtnCode::Equal, EOprTypeEx::GRIMV, EImvType::SNum16}},
+	{t_csz("JZ"),	{EOpCode::JUMPR, ECndtnCode::Equal, EOprTypeEx::GRIMV, EImvType::SNum16}},
 	//
 	{t_csz("JNE"),	{EOpCode::JUMPR, ECndtnCode::NotEqual, EOprTypeEx::GRIMV, EImvType::SNum16}},
 	{t_csz("JNZ"),	{EOpCode::JUMPR, ECndtnCode::NotEqual, EOprTypeEx::GRIMV, EImvType::SNum16}},
@@ -84,17 +84,17 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands{
 	// Memory access instructions
 	//
 	{t_csz("LOD"),	{EOpCode::LOAD, EOprTypeEx::AR, EOprTypeEx::AR, eFixedOprSizeDWord}},
-	{t_csz("LOD"),	{EOpCode::LOAD, EOprTypeEx::AR, EOprTypeEx::AR, eFixedOprSizeDWord}},
-	{t_csz("LOAD"),	{EOpCode::LOAD, EOprTypeEx::GR, EOprTypeEx::AR, eHasOprSize}},
+	{t_csz("LOD"),	{EOpCode::LOAD, EOprTypeEx::GR, EOprTypeEx::AR, eHasOprSize}},
+	{t_csz("LOAD"),	{EOpCode::LOAD, EOprTypeEx::AR, EOprTypeEx::AR, eFixedOprSizeDWord}},
 	{t_csz("LOAD"),	{EOpCode::LOAD, EOprTypeEx::GR, EOprTypeEx::AR, eHasOprSize}},
 	{t_csz("STO"),	{EOpCode::STORE,EOprTypeEx::AR, EOprTypeEx::AR, eFixedOprSizeDWord}},
-	{t_csz("STO"),	{EOpCode::STORE,EOprTypeEx::AR, EOprTypeEx::AR, eFixedOprSizeDWord}},
-	{t_csz("STORE"),{EOpCode::STORE,EOprTypeEx::AR, EOprTypeEx::GR, eHasOprSize}},
-	{t_csz("STORE"),{EOpCode::STORE,EOprTypeEx::AR, EOprTypeEx::GR, eHasOprSize}},
+	{t_csz("STO"),	{EOpCode::STORE,EOprTypeEx::GR, EOprTypeEx::AR, eHasOprSize}},
+	{t_csz("STORE"),{EOpCode::STORE,EOprTypeEx::AR, EOprTypeEx::AR, eFixedOprSizeDWord}},
+	{t_csz("STORE"),{EOpCode::STORE,EOprTypeEx::GR, EOprTypeEx::AR, eHasOprSize}},
 	{t_csz("LDREL"),{EOpCode::LDREL,EOprTypeEx::AR, EOprTypeEx::AR, EOprTypeEx::IMV, EImvType::SNum32, eFixedOprSizeDWord}},
 	{t_csz("LDREL"),{EOpCode::LDREL,EOprTypeEx::GR, EOprTypeEx::AR, EOprTypeEx::IMV, EImvType::SNum32, eHasOprSize}},
 	{t_csz("STREL"),{EOpCode::STREL,EOprTypeEx::AR, EOprTypeEx::AR, EOprTypeEx::IMV, EImvType::SNum32, eFixedOprSizeDWord}},
-	{t_csz("STREL"),{EOpCode::STREL,EOprTypeEx::AR, EOprTypeEx::GR, EOprTypeEx::IMV, EImvType::SNum32, eHasOprSize}},
+	{t_csz("STREL"),{EOpCode::STREL,EOprTypeEx::GR, EOprTypeEx::AR, EOprTypeEx::IMV, EImvType::SNum32, eHasOprSize}},
 	//
 	// Stack instructions
 	//
@@ -548,7 +548,7 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands{
 	// I/O instructions
 	//
 	{t_csz("IN"),	{EOpCode::IN,  EOprTypeEx::GR, EOprTypeEx::GRIMV, EImvType::Port, eHasOprSize}},
-	{t_csz("OUT"),	{EOpCode::OUT, EOprTypeEx::GRIMV, EOprTypeEx::GR, EImvType::Port, eHasOprSize}},
+	{t_csz("OUT"),	{EOpCode::OUT, EOprTypeEx::GR, EOprTypeEx::GRIMV, EImvType::Port, eHasOprSize}},
 };
 
 //
@@ -611,9 +611,10 @@ void CCommandParser::Parse(SCommand& tCommand)
 		if (!bOprSizeParsed || itOprSz == ms_cmapOprSizeKeywords.end())
 			throw CError(t_csz("CAST command requires  source and target operand sizes"), GetCurrentPos(), sName);
 
-		// Source operand size already kept in its regular place
-		// Keep target operasnd size in the place of third arg and you have to remember that it is in the third arg
-		tCommand.aArguments[EOprIdx::Third].u8Val = (uint8) itOprSz->second;
+		// Source operand size already parsed, keep in in the place of third arg remember that it is there
+		tCommand.aArguments[EOprIdx::Third].u8Val = (uint8) tCommand.eOprSize;
+		// Keep target operasnd size in its regular place 
+		tCommand.eOprSize = itOprSz->second;
 
 		// Parse next token
 		sToken = std::move(ParseToken());

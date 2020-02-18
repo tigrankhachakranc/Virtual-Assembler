@@ -77,7 +77,7 @@ private:
 	//
 	// Custom Disassembly functions
 	//
-	t_string dasmJumpR(SCommandInfo const&, bool bHexadecimal);
+	t_string dasmBranchRel(SCommandInfo const&, bool bHexadecimal);
 };
 ////////////////////////////////////////////////////////////////////////////////
 

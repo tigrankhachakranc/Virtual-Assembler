@@ -449,9 +449,9 @@ t_string CCommandBase::DisAsmArg(SCommandInfo const& tCmd, bool bHexadecimal, t_
 	case EOprType::Reg:
 	{
 		if (IsOperandAddressRegister(tCmd.tMetaInfo.eOpCode, nArg))
-			sCmd = base::toStr(t_csz("A%1"), (uint) tCmd.nRegIdx[nArg]);
+			sCmd = base::toStr(t_csz("A%1"), (uint) tCmd.anRegIdx[nArg]);
 		else
-			sCmd = base::toStr(t_csz("R%1"), (uint) tCmd.nRegIdx[nArg] * OperandSize(tCmd.eOprSize));
+			sCmd = base::toStr(t_csz("R%1"), (uint) tCmd.anRegIdx[nArg] * OperandSize(tCmd.eOprSize));
 		break;
 	}
 	case EOprType::Imv:
@@ -462,7 +462,7 @@ t_string CCommandBase::DisAsmArg(SCommandInfo const& tCmd, bool bHexadecimal, t_
 	case EOprType::RegImv:
 	{
 		if (tCmd.eOprSwitch == EOprSwitch::Reg)
-			sCmd = base::toStr(t_csz("R%1"), (uint) tCmd.nRegIdx[nArg] * OperandSize(tCmd.eOprSize));
+			sCmd = base::toStr(t_csz("R%1"), (uint) tCmd.anRegIdx[nArg] * OperandSize(tCmd.eOprSize));
 		else
 			sCmd = DisAsmImv(tCmd, bHexadecimal);
 		break;

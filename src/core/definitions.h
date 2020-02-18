@@ -64,10 +64,10 @@ enum class EOpCode : uchar
 	Reserved11,	// Reserved for HALT
 
 	// Memory access instructions
-	LOAD,	// IL(4) LOAD  [opsz] Rn <- *An				Reads specified number of bytes from memory at source address into the target register
-	STORE,	// IL(4) STORE [opsz] *An <- Rn				Writes into memory at target address from the source register
-	LDREL,	// IL(8) LDREL [opsz] Rn <- *An켖ffset32	Load relative from source address, Offset is signed 32 bit numeric value
-	STREL,	// IL(8) STREL [opsz] *An켖ffset32 <- Rn	Store relative to target address, Offset is signed 32 bit numeric value
+	LOAD,	// IL(4) LOAD  [opsz] An|Rn <- *An			Reads specified number of bytes from memory at source address into the target register
+	STORE,	// IL(4) STORE [opsz] An|Rn -> *An			Writes into memory at target address from the source register
+	LDREL,	// IL(8) LDREL [opsz] An|Rn <- *An켖ffset32	Load relative from source address, Offset is signed 32 bit numeric value
+	STREL,	// IL(8) STREL [opsz] An|Rn -> *An켖ffset32 Store relative to target address, Offset is signed 32 bit numeric value
 
 	// Stack instructions
 	PUSHSF,	// IL(2) PUSHSF	[Rn]					Pushes stack frame
@@ -161,7 +161,7 @@ enum class EOpCode : uchar
 
 	// Input from/Output to port instructions
 	IN,		// IL(4) IN  [opsz] Rn <- Rn|Port (Number12)	Reads corresponding number of bytes from the source port int the target register
-	OUT,	// IL(4) OUT [opsz] Rn|Port <- Rn (Number12)	Writes corresponding number of bytes from source register into target port
+	OUT,	// IL(4) OUT [opsz] Rn -> Rn|Port (Number12)	Writes corresponding number of bytes from source register into target port
 
 	// TODO! FPU & Future Instructions
 	Reserved
@@ -178,19 +178,19 @@ enum class ECndtnCode : uchar
 {
 	None = 0,
 	
-	Equal,			// zf=1				xE|xZ
+	Equal,			// zf=1				xEQ|xZ
 	NotEqual,		// zf=0				xNE|xNZ
-	Above,			// cf=0 & zf=0		xA|xNBE
+	Above,			// cf=0 & zf=0		xAB|xNBE
 	AboveEqual,		// cf=0				xAE|xNB
-	Below,			// cf=1				xB|xNAE
+	Below,			// cf=1				xBL|xNAE
 	BelowEqual,		// cf=1 | zf=1		xBE|xNA
-	Great,			// zf=0 & sf=of		xG|xNLE
+	Great,			// zf=0 & sf=of		xGR|xNLE
 	GreatEqual,		// sf=of			xGE|xNL
-	Low,			// sf<>of			xL|xNGE
+	Low,			// sf<>of			xLO|xNGE
 	LowEqual,		// zf=1 | sf<>of	xLE|xNG
-	Overflow,		// of=1				xO
+	Overflow,		// of=1				xOF
 	NotOverflow,	// of=0				xNO
-	Signed,			// sf=1				xS
+	Signed,			// sf=1				xSN
 	NotSigned,		// sf=0				xNS
 
 	Invalid
@@ -245,9 +245,9 @@ enum class EOprSwitch : uchar
 enum class EOprType : uchar
 {
 	None	= 0,	// No operand
-	Reg		= 0x01,	// Register index (address or general purpose) 
-	Imv		= 0x02,	// Immediate value
-	RegImv	= 0x03,	// Register index or immediate value
+	Reg		= 0x01,	// Register index for readonly use
+	Imv		= 0x02,	// Immediate value (of course readonly)
+	RegImv	= 0x03,	// Register index or immediate value (readonly)
 };
 ////////////////////////////////////////////////////////////////////////////////
 

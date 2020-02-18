@@ -79,7 +79,7 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 
 		// Special handling for the CAST command
 		if (tInfo.eOpCode == EOpCode::CAST)
-		{	// We remember that target operand size kept in the place of third operand/
+		{	// We remember that the source operand size kept in the place of third operand
 			// Now pack it in the place of highest bits of the extension and rember that it is there
 			nExt |= ((tCmd.aArguments[EOprIdx::Third].u8Val << 6) & 0xC0ui8);
 		}

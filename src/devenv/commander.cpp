@@ -967,7 +967,7 @@ void CCommander::PrintCurrentState() const
 	std::ostream& os = m_cout;
 	vm::CProcessor::SState const& tState = m_pDebugger->CPUState();
 	vm::CProcessor::EStatus eStatus = m_pDebugger->CPUStatus().eStatus;
-	t_address const* const anARPool = reinterpret_cast<t_address const*>(tState.aui8RPool);
+	t_address const* const anARPool = tState.rptr<t_address>(core::SCPUStateBase::eARBaseIndex);
 
 	if (eStatus == vm::CProcessor::EStatus::NotInitialized)
 	{
@@ -993,15 +993,15 @@ void CCommander::PrintCurrentState() const
 	os << "SP = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eSPIndex] << "  ";
 	os << " SF = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eSFIndex] << "  ";
 	os << std::endl;
-	os << "A4 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 0] << "  ";
-	os << " A5 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 1] << "  ";
+	os << "A0 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 0] << "  ";
+	os << " A1 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 1] << "  ";
 	os << std::endl;
-	os << "A6 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 2] << "  ";
-	os << " A7 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 3] << "  ";
+	os << "A2 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 2] << "  ";
+	os << " A3 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 3] << "  ";
 
 	os << std::endl;
 	os << "General purpose registers (0x): --------------------------------------------------" << std::endl;
-	for (uint nRIdx = 0; nRIdx < core::SCPUStateBase::eRegisterPoolSize; nRIdx += 16)
+	for (uint nRIdx = 0 /*core::SCPUStateBase::eGPRBaseIndex*/; nRIdx < core::SCPUStateBase::eRegisterPoolSize; nRIdx += 16)
 	{
 		os << "R" << std::dec << std::setfill('0') << std::setw(2) << nRIdx << ": ";
 		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 0] << " ";

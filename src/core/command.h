@@ -4,6 +4,7 @@
 //
 // Includes
 //
+#include <base_exception.h>
 #include "definitions.h"
 #include "flags.h"
 
@@ -42,7 +43,9 @@ struct SCommandMetaInfo
 		HasOprSwitch		= 0x04,
 		CustomExtension		= 0x08,
 
+		// If specified processor will skip centralized condition check
 		SkipCdtnCheck		= 0x10,
+		// If specified then operand size rules will be applied on to the first operand
 		SingularOperandSize	= 0x20,
 
 		// Fixed operand sizes used for commands which do not have extension/oprsize field
@@ -105,7 +108,7 @@ struct SCommandInfo
 	EOprSwitch	eOprSwitch;		// Operand switch
 
 	// Register idx for Operands (when applicable)
-	uchar		nRegIdx[EOprIdx::Count];
+	uchar		anRegIdx[EOprIdx::Count];
 
 	// Immediate value for Op1, Op2 or Op3 (when applicable)
 	union
@@ -144,7 +147,8 @@ struct SCPUStateBase
 		eSPIndex = 2,
 		eSFIndex = 3,
 
-		eARBaseIndex = 4, // R16
+		eARBaseIndex = 4,	// R16
+		eGPRBaseIndex = 32,	// R32
 		
 		eAddressRegistersPoolSize = 8, // 4x8 = 32 Bytes
 		eRegisterPoolSize = 64 // Bytes
@@ -154,7 +158,7 @@ struct SCPUStateBase
 	CFlags	oFlags;
 	
 	// Instruction pointer of the next command 
-	t_address	nIP;
+	t_address	nIP;	// Reference to R0
 	// Current IP, IP value of the current command at the moment of the fetch
 	t_address	nCIP;
 	// Return address, points to the next instruction after Call instraction
@@ -176,6 +180,17 @@ struct SCPUStateBase
 	// processor runs while this flag is true,
 	// it stops its execution and returns when it is turned off
 	volatile bool	bRun;
+
+	// Typed access to registers 
+	template <typename TOprType>
+	inline TOprType& reg(t_index nRegIdx); // byte aligned register index
+	template <typename TOprType>
+	inline TOprType const& reg(t_index nRegIdx) const; // byte aligned register index
+	
+	template <typename TOprType>
+	inline TOprType* rptr(t_index nArrayIdx); // typed array index
+	template <typename TOprType>
+	inline TOprType const* rptr(t_index nArrayIdx) const; // typed array index
 
 	//
 	SCPUStateBase(t_uoffset cs, t_uoffset slb, t_uoffset sub);
@@ -204,29 +219,19 @@ struct SCommandContext
 	// RAM
 	CMemory&			oMemory;
 
+	void* apOperands[EOprIdx::Count];
+
 	// Pointer to decoded operands
-	// Points to either Address reg., GP reg. or Intermediate value when applicable, nullptr otherwise
-	union UOperandPtr
-	{
-		void*		p;
-		int8*		pi8;
-		uint8*		pu8;
-		int16*		pi16;
-		uint16*		pu16;
-		int32*		pi32;
-		uint32*		pu32;
-		int64*		pi64;
-		uint64*		pu64;
-
-		template <typename TOprSize> TOprSize* ptr() const
-			{return reinterpret_cast<TOprSize*>(p);}
-
-	}	tOpr[EOprIdx::Count];
+	// Points to either register or immediate value when applicable, nullptr otherwise
+	template <typename TOprType> inline TOprType* operand(EOprIdx idx) const;
+	template <typename TOprType> inline TOprType const* coperand(EOprIdx idx) const;
 
 	inline SCommandContext(SCommandInfo const&, SCPUStateBase&, CMemory&);
 
 	SCommandContext(SCommandContext const&) = delete;
 	void operator=(SCommandContext const&) = delete;
+
+private:
 };
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -435,6 +440,39 @@ using CCommandUPtr = std::unique_ptr<CCommandBase>;
 ////////////////////////////////////////////////////////////////////////////////
 
 //
+//	SCPUStateBase
+//
+template <typename TOprType>
+inline TOprType& SCPUStateBase::reg(t_index nRegIdx)
+{
+	VASM_CHECK_IDX(nRegIdx, eRegisterPoolSize);
+	VASM_CHECK(nRegIdx % sizeof(TOprType) == 0);
+	return reinterpret_cast<TOprType&>(aui8RPool[nRegIdx]);
+}
+
+template <typename TOprType>
+inline TOprType const& SCPUStateBase::reg(t_index nRegIdx) const
+{
+	VASM_CHECK_IDX(nRegIdx, eRegisterPoolSize);
+	VASM_CHECK(nRegIdx % sizeof(TOprType) == 0);
+	return reinterpret_cast<TOprType const&>(aui8RPool[nRegIdx]);
+}
+
+template <typename TOprType>
+inline TOprType* SCPUStateBase::rptr(t_index nArrayIdx)
+{
+	VASM_CHECK_IDX(nArrayIdx * sizeof(TOprType), eRegisterPoolSize);
+	return reinterpret_cast<TOprType*>(&aui8RPool[nArrayIdx * sizeof(TOprType)]);
+}
+
+template <typename TOprType>
+inline TOprType const* SCPUStateBase::rptr(t_index nArrayIdx) const
+{
+	VASM_CHECK_IDX(nArrayIdx * sizeof(TOprType), eRegisterPoolSize);
+	return reinterpret_cast<TOprType const*>(&aui8RPool[nArrayIdx * sizeof(TOprType)]);
+}
+
+//
 //	SCommandInfo
 //
 inline SCommandInfo::SCommandInfo(SCommandMetaInfo const& mi) :
@@ -445,9 +483,9 @@ inline SCommandInfo::SCommandInfo(SCommandMetaInfo const& mi) :
 	eOprSwitch(EOprSwitch::Default),
 	u64Imv(0)
 {
-	nRegIdx[EOprIdx::First] = 0;
-	nRegIdx[EOprIdx::Second] = 0;
-	nRegIdx[EOprIdx::Third] = 0;
+	anRegIdx[EOprIdx::First] = 0;
+	anRegIdx[EOprIdx::Second] = 0;
+	anRegIdx[EOprIdx::Third] = 0;
 }
 
 //
@@ -457,9 +495,23 @@ inline SCommandContext::SCommandContext(
 	SCommandInfo const& info, SCPUStateBase& state, CMemory& mem) :
 	tInfo(info), tCPUState(state), oMemory(mem)
 {
-	tOpr[0].p = nullptr;
-	tOpr[1].p = nullptr;
-	tOpr[2].p = nullptr;
+	apOperands[0] = nullptr;
+	apOperands[1] = nullptr;
+	apOperands[2] = nullptr;
+}
+
+template <typename TOprType> 
+inline TOprType* SCommandContext::operand(EOprIdx idx) const
+{
+	VASM_CHECK_IDX(idx, EOprIdx::Count);
+	return reinterpret_cast<TOprType*>(apOperands[idx]);
+}
+
+template <typename TOprType>
+inline TOprType const* SCommandContext::coperand(EOprIdx idx) const
+{
+	VASM_CHECK_IDX(idx, EOprIdx::Count);
+	return reinterpret_cast<TOprType*>(apOperands[idx]);
 }
 
 //

@@ -49,17 +49,17 @@ void CIOCommands::In(SCommandContext& tCtxt)
 {
 	VASM_CHECK_PTR(m_pIOController);
 	CValue oValue(core::ValueType<TOperandType>());
-	t_port nPort = *tCtxt.tOpr[EOprIdx::Second].ptr<t_port>();
+	t_port nPort = *tCtxt.operand<t_port>(EOprIdx::Second);
 	m_pIOController->In(nPort, oValue);
-	*tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>() = static_cast<TOperandType>(oValue);
+	*tCtxt.operand<TOperandType>(EOprIdx::First) = static_cast<TOperandType>(oValue);
 }
 
 template <typename TOperandType>
 void CIOCommands::Out(SCommandContext& tCtxt)
 {
 	VASM_CHECK_PTR(m_pIOController);
-	CValue oValue(*tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>());
-	t_port nPort = *tCtxt.tOpr[EOprIdx::Second].ptr<t_port>();
+	CValue oValue(*tCtxt.operand<TOperandType>(EOprIdx::First));
+	t_port nPort = *tCtxt.operand<t_port>(EOprIdx::Second);
 	m_pIOController->Out(nPort, oValue);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -58,9 +58,9 @@ void CDecoder::Decode(uchar const* pCmd, SCommandInfo& tCmdInfo)
 	}
 
 	tCmdInfo.u64Imv = 0; // Empty imv in any case
-	tCmdInfo.nRegIdx[EOprIdx::First] = 0;
-	tCmdInfo.nRegIdx[EOprIdx::Second] = 0;
-	tCmdInfo.nRegIdx[EOprIdx::Third] = 0;
+	tCmdInfo.anRegIdx[EOprIdx::First] = 0;
+	tCmdInfo.anRegIdx[EOprIdx::Second] = 0;
+	tCmdInfo.anRegIdx[EOprIdx::Third] = 0;
 
 	if (tCmdInfo.tMetaInfo.nOperandCount > 0)
 	{
@@ -83,7 +83,7 @@ void CDecoder::DecodeArg(uchar const*& pCmd, SCommandInfo& tCmdInfo, EOprIdx eOp
 	{
 	case EOprType::Reg:
 	{
-		tCmdInfo.nRegIdx[eOprIdx] = *pCmd;
+		tCmdInfo.anRegIdx[eOprIdx] = *pCmd;
 		++pCmd; // Skip Operand and move to next byte
 		// Reg. idx should be OprSize aligned
 		break;
@@ -97,7 +97,7 @@ void CDecoder::DecodeArg(uchar const*& pCmd, SCommandInfo& tCmdInfo, EOprIdx eOp
 	{
 		if (tCmdInfo.eOprSwitch == EOprSwitch::Reg)
 		{
-			tCmdInfo.nRegIdx[eOprIdx] = *pCmd;
+			tCmdInfo.anRegIdx[eOprIdx] = *pCmd;
 			++pCmd; // Skip Operand and move to next byte
 		}
 		else

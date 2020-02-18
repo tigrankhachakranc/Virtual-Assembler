@@ -202,8 +202,12 @@ private:
 	void IDivQW(SCommandContext&);
 
 	// Type conversion
-	template <typename TOperandType>
-	void Cast(SCommandContext&);	// Sign extension 
+	template <typename TTargetType>
+	void Cast(SCommandContext&);
+	template <typename TSourceType, typename TTargetType>
+	void CastUp(SCommandContext&);	// Sign extension 
+	template <typename TSourceType, typename TTargetType>
+	void CastDown(SCommandContext&);// Truncation
 
 private:
 	//

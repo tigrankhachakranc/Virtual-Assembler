@@ -33,13 +33,13 @@ CMainCommands::CMainCommands() : CCommandBase()
 	Register({t_csz("JUMP"), EOpCode::JUMPA, EOprType::Reg},
 			 FuncCmdExec(&CMainCommands::JumpA), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("JUMP"), t_csz("J"), EOpCode::JUMPR, EOprType::RegImv, EImvType::SNum16,
-			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::HasCndtnCode | SCommandMetaInfo::FixedOprSizeWord},
-			 FuncCmdExec(&CMainCommands::JumpR), FuncCmdDisasm(&CMainCommands::dasmJumpR));
+			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::HasCndtnCode | SCommandMetaInfo::FixedOprSizeDWord},
+			 FuncCmdExec(&CMainCommands::JumpR), FuncCmdDisasm(&CMainCommands::dasmBranchRel));
 	Register({t_csz("CALL"), EOpCode::CALLA, EOprType::Reg},
 			 FuncCmdExec(&CMainCommands::CallA), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("CALL"), EOpCode::CALLR, EOprType::RegImv, EImvType::SNum16,
-			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeWord},
-			 FuncCmdExec(&CMainCommands::CallR), FuncCmdDisasm(&CMainCommands::dasmJumpR));
+			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeDWord},
+			 FuncCmdExec(&CMainCommands::CallR), FuncCmdDisasm(&CMainCommands::dasmBranchRel));
 	Register({t_csz("RET"), EOpCode::RET},
 			 FuncCmdExec(&CMainCommands::Ret), FuncCmdDisasm(&CMainCommands::DisAsm));
 
@@ -70,12 +70,12 @@ CMainCommands::CMainCommands() : CCommandBase()
 	Register({t_csz("PUSHSF"), EOpCode::PUSHSF},
 			 FuncCmdExec(&CMainCommands::PushSF), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("PUSHSF"), EOpCode::PUSHSF2, EOprType::RegImv, EImvType::Num16,
-			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeWord},
+			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeDWord},
 			 FuncCmdExec(&CMainCommands::PushSF), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("POPSF"), EOpCode::POPSF},
 			 FuncCmdExec(&CMainCommands::PopSF), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("POPSF"), EOpCode::POPSF2, EOprType::RegImv, EImvType::Num16,
-			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeWord},
+			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeDWord},
 			 FuncCmdExec(&CMainCommands::PopSF), FuncCmdDisasm(&CMainCommands::DisAsm));
 	FuncCmdExec apfnPushR[int(EOprSize::Count)] = {
 		FuncCmdExec(&CMainCommands::Push<uint8>), FuncCmdExec(&CMainCommands::Push<uint16>), 
@@ -111,12 +111,20 @@ void CMainCommands::Exit(SCommandContext& tCtxt)
 //
 void CMainCommands::JumpA(SCommandContext& tCtxt)
 {
-	tCtxt.tCPUState.nIP = *tCtxt.tOpr[EOprIdx::First].ptr<t_address>();
+	tCtxt.tCPUState.nIP = *tCtxt.operand<t_address>(EOprIdx::First);
 }
 
 void CMainCommands::JumpR(SCommandContext& tCtxt)
 {
-	tCtxt.tCPUState.nIP += static_cast<t_address>(*tCtxt.tOpr[EOprIdx::First].pi16);
+	if (tCtxt.tInfo.eOprSize == EOprSize::Word)
+	{
+		tCtxt.tCPUState.nIP = static_cast<t_address>(static_cast<int32>(tCtxt.tCPUState.nIP) + static_cast<int32>(*tCtxt.operand<int16>(EOprIdx::First)));
+	}
+	else
+	{
+		VASM_CHECK_X(tCtxt.tInfo.eOprSize == EOprSize::DWord, t_csz("Invalid operand size detected for the Relative Jump instruction!"));
+		tCtxt.tCPUState.nIP = static_cast<t_address>(static_cast<int32>(tCtxt.tCPUState.nIP) + *tCtxt.operand<int32>(EOprIdx::First));
+	}
 }
 
 void CMainCommands::CallA(SCommandContext& tCtxt)
@@ -124,7 +132,7 @@ void CMainCommands::CallA(SCommandContext& tCtxt)
 	// Save return address into RIP
 	tCtxt.tCPUState.nRIP = tCtxt.tCPUState.nIP;
 	// Change IP
-	tCtxt.tCPUState.nIP = *tCtxt.tOpr[EOprIdx::First].ptr<t_address>();
+	tCtxt.tCPUState.nIP = *tCtxt.operand<t_address>(EOprIdx::First);
 }
 
 void CMainCommands::CallR(SCommandContext& tCtxt)
@@ -132,7 +140,15 @@ void CMainCommands::CallR(SCommandContext& tCtxt)
 	// Save return address into RIP
 	tCtxt.tCPUState.nRIP = tCtxt.tCPUState.nIP;
 	// Change IP
-	tCtxt.tCPUState.nIP += static_cast<t_address>(*tCtxt.tOpr[EOprIdx::First].pi16);
+	if (tCtxt.tInfo.eOprSize == EOprSize::Word)
+	{
+		tCtxt.tCPUState.nIP = static_cast<t_address>(static_cast<int32>(tCtxt.tCPUState.nIP) + static_cast<int32>(*tCtxt.operand<int16>(EOprIdx::First)));
+	}
+	else
+	{
+		VASM_CHECK_X(tCtxt.tInfo.eOprSize == EOprSize::DWord, t_csz("Invalid operand size detected for the Relative Call instruction!"));
+		tCtxt.tCPUState.nIP = static_cast<t_address>(static_cast<int32>(tCtxt.tCPUState.nIP) + *tCtxt.operand<int32>(EOprIdx::First));
+	}
 }
 
 void CMainCommands::Ret(SCommandContext& tCtxt)
@@ -149,31 +165,33 @@ void CMainCommands::Ret(SCommandContext& tCtxt)
 template <typename TOperandType>
 void CMainCommands::Load(SCommandContext& tCtxt)
 {
-	tCtxt.oMemory.ReadAt<TOperandType>(*tCtxt.tOpr[EOprIdx::Second].ptr<t_address>(), *tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>(), true);
+	bool bAlignmentCheck = !(tCtxt.apOperands[EOprIdx::Second] == &tCtxt.tCPUState.nSP || tCtxt.apOperands[EOprIdx::Second] == &tCtxt.tCPUState.nSF);
+	tCtxt.oMemory.ReadAt<TOperandType>(*tCtxt.operand<t_address>(EOprIdx::Second), *tCtxt.operand<TOperandType>(EOprIdx::First), bAlignmentCheck);
 }
 
 template <typename TOperandType>
 void CMainCommands::Store(SCommandContext& tCtxt)
 {
-	tCtxt.oMemory.WriteAt<TOperandType>(*tCtxt.tOpr[EOprIdx::Second].ptr<t_address>(), *tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>(), true);
+	bool bAlignmentCheck = !(tCtxt.apOperands[EOprIdx::Second] == &tCtxt.tCPUState.nSP || tCtxt.apOperands[EOprIdx::Second] == &tCtxt.tCPUState.nSF);
+	tCtxt.oMemory.WriteAt<TOperandType>(*tCtxt.operand<t_address>(EOprIdx::Second), *tCtxt.operand<TOperandType>(EOprIdx::First), bAlignmentCheck);
 }
 
 template <typename TOperandType>
 void CMainCommands::LoadRel(SCommandContext& tCtxt)
 {
-	// Read effective address
-	t_address nEffectiveAddress = *tCtxt.tOpr[EOprIdx::Second].ptr<t_address>() + *tCtxt.tOpr[EOprIdx::Third].pi32;
-	bool bAlignmentCheck = !(tCtxt.tOpr[EOprIdx::Second].p == &tCtxt.tCPUState.nSP || tCtxt.tOpr[EOprIdx::Second].p == &tCtxt.tCPUState.nSF);
-	tCtxt.oMemory.ReadAt<TOperandType>(nEffectiveAddress, *tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>(), bAlignmentCheck);
+	// Calculate effective address
+	t_address const nEffectiveAddress = static_cast<t_address>(*tCtxt.operand<int32>(EOprIdx::Second) + *tCtxt.operand<int32>(EOprIdx::Third));
+	bool bAlignmentCheck = !(tCtxt.apOperands[EOprIdx::Second] == &tCtxt.tCPUState.nSP || tCtxt.apOperands[EOprIdx::Second] == &tCtxt.tCPUState.nSF);
+	tCtxt.oMemory.ReadAt<TOperandType>(nEffectiveAddress, *tCtxt.operand<TOperandType>(EOprIdx::First), bAlignmentCheck);
 }
 
 template <typename TOperandType>
 void CMainCommands::StoreRel(SCommandContext& tCtxt)
 {
 	// Read effective address
-	t_address nEffectiveAddress = *tCtxt.tOpr[EOprIdx::Second].ptr<t_address>() + *tCtxt.tOpr[EOprIdx::Third].pi32;
-	bool bAlignmentCheck = !(tCtxt.tOpr[EOprIdx::Second].p == &tCtxt.tCPUState.nSP || tCtxt.tOpr[EOprIdx::Second].p == &tCtxt.tCPUState.nSF);
-	tCtxt.oMemory.WriteAt<TOperandType>(nEffectiveAddress, *tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>(), bAlignmentCheck);
+	t_address const nEffectiveAddress = static_cast<t_address>(*tCtxt.operand<int32>(EOprIdx::Second) + *tCtxt.operand<int32>(EOprIdx::Third));
+	bool bAlignmentCheck = !(tCtxt.apOperands[EOprIdx::Second] == &tCtxt.tCPUState.nSP || tCtxt.apOperands[EOprIdx::Second] == &tCtxt.tCPUState.nSF);
+	tCtxt.oMemory.WriteAt<TOperandType>(nEffectiveAddress, *tCtxt.operand<TOperandType>(EOprIdx::First), bAlignmentCheck);
 }
 
 //
@@ -195,15 +213,26 @@ void CMainCommands::PushSF(SCommandContext& tCtxt)
 	// Allocate space on the the stack if specified
 	if (tCtxt.tInfo.tMetaInfo.nOperandCount > 0)
 	{
-		if (tCtxt.tCPUState.nSP - *tCtxt.tOpr[EOprIdx::First].pu16 < tCtxt.tCPUState.cnStackUBound)
+		t_uoffset nOffset;
+		if (tCtxt.tInfo.eOprSize == EOprSize::Word)
+		{
+			nOffset = static_cast<t_uoffset>(*tCtxt.operand<uint16>(EOprIdx::First));
+		}
+		else
+		{
+			VASM_CHECK_X(tCtxt.tInfo.eOprSize == EOprSize::DWord, t_csz("Invalid operand size detected for the PushSF instruction!"));
+			nOffset = static_cast<t_uoffset>(*tCtxt.operand<uint32>(EOprIdx::First));
+		}
+
+		if (tCtxt.tCPUState.nSP - nOffset < tCtxt.tCPUState.cnStackUBound)
 			VASM_THROW_ERROR(t_csz("CPU: Stack overflow in stack frame creation"));
-		tCtxt.tCPUState.nSP -= *tCtxt.tOpr[EOprIdx::First].pu16;
+		tCtxt.tCPUState.nSP -= nOffset;
 	}
 }
 
 void CMainCommands::PopSF(SCommandContext& tCtxt)
 {
-	if ((tCtxt.tCPUState.nSP + 2 * sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
+	if ((tCtxt.tCPUState.nSF + 2 * sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
 		VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
 
 	// Change SP to point to SF
@@ -217,27 +246,38 @@ void CMainCommands::PopSF(SCommandContext& tCtxt)
 	// Do stack cleanup
 	if (tCtxt.tInfo.tMetaInfo.nOperandCount > 0)
 	{
-		if (tCtxt.tCPUState.nSP + *tCtxt.tOpr[EOprIdx::First].pu16 > tCtxt.tCPUState.cnStackLBound)
+		t_uoffset nOffset;
+		if (tCtxt.tInfo.eOprSize == EOprSize::Word)
+		{
+			nOffset = static_cast<t_uoffset>(*tCtxt.operand<uint16>(EOprIdx::First));
+		}
+		else
+		{
+			VASM_CHECK_X(tCtxt.tInfo.eOprSize == EOprSize::DWord, t_csz("Invalid operand size detected for the PopSF instruction!"));
+			nOffset = static_cast<t_uoffset>(*tCtxt.operand<uint32>(EOprIdx::First));
+		}
+
+		if (tCtxt.tCPUState.nSP + nOffset > tCtxt.tCPUState.cnStackLBound)
 			VASM_THROW_ERROR(t_csz("CPU: Stack underflow on stack frame cleanup"));
-		tCtxt.tCPUState.nSP += *tCtxt.tOpr[EOprIdx::First].pu16;
+		tCtxt.tCPUState.nSP += nOffset;
 	}
 }
 
 template <typename TOperandType>
 void CMainCommands::Push(SCommandContext& tCtxt)
 {
-	uint nCount = uint(*tCtxt.tOpr[EOprIdx::Second].pu8);
+	uint nCount = uint(*tCtxt.operand<uint8>(EOprIdx::Second));
 	if (nCount == 0)
 	{	// Push single register
 		if ((tCtxt.tCPUState.nSP - sizeof(TOperandType)) < tCtxt.tCPUState.cnStackUBound)
 			VASM_THROW_ERROR(t_csz("CPU: Stack overflow"));
 		tCtxt.tCPUState.nSP -= sizeof(TOperandType);
-		tCtxt.oMemory.WriteAt<TOperandType>(tCtxt.tCPUState.nSP, *tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>(), false);
+		tCtxt.oMemory.WriteAt<TOperandType>(tCtxt.tCPUState.nSP, *tCtxt.operand<TOperandType>(EOprIdx::First), false);
 	}
 	else
 	{	// Push nCount Registers
 		// For GP registers multiply Reg idx to align with OpSize
-		uint nRegIdx = AlignToOperandSize(tCtxt.tInfo.nRegIdx[EOprIdx::First], tCtxt.tInfo.eOprSize);
+		uint nRegIdx = AlignToOperandSize(tCtxt.tInfo.anRegIdx[EOprIdx::First], tCtxt.tInfo.eOprSize);
 		uint nCountBuytes = nCount * OperandSize(tCtxt.tInfo.eOprSize);
 		if (nRegIdx + nCountBuytes > SCPUStateBase::eRegisterPoolSize)
 			VASM_THROW_ERROR(t_csz("CPU: GP Registers pool size excceded"));
@@ -245,32 +285,32 @@ void CMainCommands::Push(SCommandContext& tCtxt)
 			VASM_THROW_ERROR(t_csz("CPU: Stack overflow"));
 		// Push GP registers
 		tCtxt.tCPUState.nSP -= nCountBuytes;
-		tCtxt.oMemory.Write<TOperandType>(tCtxt.tCPUState.nSP, tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>(), nCount, false);
+		tCtxt.oMemory.Write<TOperandType>(tCtxt.tCPUState.nSP, tCtxt.operand<TOperandType>(EOprIdx::First), nCount, false);
 	}
 }
 
 template <typename TOperandType>
 void CMainCommands::Pop(SCommandContext& tCtxt)
 {
-	uint nCount = uint(*tCtxt.tOpr[EOprIdx::Second].pu8);
+	uint nCount = uint(*tCtxt.operand<uint8>(EOprIdx::Second));
 	if (nCount == 0)
 	{	// Pop single register
 		if ((tCtxt.tCPUState.nSP + sizeof(TOperandType)) > tCtxt.tCPUState.cnStackLBound)
 			VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
-		tCtxt.oMemory.ReadAt<TOperandType>(tCtxt.tCPUState.nSP, *tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>(), false);
+		tCtxt.oMemory.ReadAt<TOperandType>(tCtxt.tCPUState.nSP, *tCtxt.operand<TOperandType>(EOprIdx::First), false);
 		tCtxt.tCPUState.nSP += sizeof(TOperandType);
 	}
 	else
 	{	// Pop nCount Registers
 		// For GP registers multiply Reg idx to align with OpSize
-		uint nRegIdx = AlignToOperandSize(tCtxt.tInfo.nRegIdx[EOprIdx::First], tCtxt.tInfo.eOprSize);
+		uint nRegIdx = AlignToOperandSize(tCtxt.tInfo.anRegIdx[EOprIdx::First], tCtxt.tInfo.eOprSize);
 		uint nCountBuytes = nCount * OperandSize(tCtxt.tInfo.eOprSize);
 		if (nRegIdx + nCountBuytes > SCPUStateBase::eRegisterPoolSize)
 			VASM_THROW_ERROR(t_csz("CPU: GP Registers pool size excceded"));
 		if ((tCtxt.tCPUState.nSP + nCountBuytes) > tCtxt.tCPUState.cnStackLBound)
 			VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
 		// Pop GP registers
-		tCtxt.oMemory.Read<TOperandType>(tCtxt.tCPUState.nSP, tCtxt.tOpr[EOprIdx::First].ptr<TOperandType>(), nCount, false);
+		tCtxt.oMemory.Read<TOperandType>(tCtxt.tCPUState.nSP, tCtxt.operand< TOperandType>(EOprIdx::First), nCount, false);
 		tCtxt.tCPUState.nSP += nCountBuytes;
 	}
 }
@@ -278,7 +318,7 @@ void CMainCommands::Pop(SCommandContext& tCtxt)
 //
 //	Disassembly functions
 //
-t_string CMainCommands::dasmJumpR(SCommandInfo const& tCmd, bool bHexadecimal)
+t_string CMainCommands::dasmBranchRel(SCommandInfo const& tCmd, bool bHexadecimal)
 {
 	t_string sCmd;
 	core::IAddressRecoveryPtr pAddrRec = GetAddressRecovery();

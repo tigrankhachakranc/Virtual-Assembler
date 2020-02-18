@@ -54,9 +54,6 @@
     <ClCompile Include="src\base\parser.cpp">
       <Filter>Base Files\Impl</Filter>
     </ClCompile>
-    <ClCompile Include="src\vm\native_commands.cpp">
-      <Filter>VM Files\Impl</Filter>
-    </ClCompile>
     <ClCompile Include="src\app\main.cpp">
       <Filter>Application Files</Filter>
     </ClCompile>
@@ -131,6 +128,9 @@
     </ClCompile>
     <ClCompile Include="src\devenv\disassembly.cpp">
       <Filter>Developement Environemtn Files\Impl</Filter>
+    </ClCompile>
+    <ClCompile Include="src\vm\x86_native_operations.cpp">
+      <Filter>VM Files\Impl</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -310,13 +310,13 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="src\vm\native_commands.asm">
-      <Filter>VM Files\Impl</Filter>
-    </MASM>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="test\test1.vasm">
       <Filter>Test Modules</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="src\vm\x64_native_operations.asm">
+      <Filter>VM Files\Impl</Filter>
+    </MASM>
   </ItemGroup>
 </Project>
