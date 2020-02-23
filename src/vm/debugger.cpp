@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Debugger"
+
+//
 //	Includes
 //
 #include "debugger.h"
@@ -191,7 +196,7 @@ void CDebugger::StepOver(t_size nCount)
 		// Need to analyze target instruction to skip over CALL instruction
 		EOpCode eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nIP);
 
-		if (eOpCode != EOpCode::CALLA || eOpCode != EOpCode::CALLR)
+		if (eOpCode != EOpCode::CALLA && eOpCode != EOpCode::CALLR)
 		{	// Behave like regular Step
 			// Run single instruction (trace)
 			m_pCPU->Run(true);
@@ -329,7 +334,7 @@ void CDebugger::ChangeRegister(ERegType eRegType, uint nRegIdx, CValue const& oV
 			VASM_THROW_ERROR(t_csz("Debugger: Invalid address register index"));
 		if (oValue.GetType() != core::ValueType<t_address>() || oValue.GetCount() != 1)
 			VASM_THROW_ERROR(t_csz("Debugger: Invalid address register value"));
-		*tState.rptr<t_address>(nRegIdx) = static_cast<t_address>(oValue);
+		tState.rega<t_address>(nRegIdx) = static_cast<t_address>(oValue);
 	}
 	else //(eRegType == ERegType::GP)
 	{
@@ -561,8 +566,12 @@ t_string CDebugger::GetDisassembledCommand(t_address& nAddress, t_string* pBinar
 		if (pBinaryRepresentation)
 		{
 			std::stringstream os;
-			for (uchar i = tInfo.tMetaInfo.nLength - 1; i < tInfo.tMetaInfo.nLength; --i)
-				os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +(*(pCmd + i));
+			for (uchar i = tInfo.tMetaInfo.nLength; i > 0; --i)
+			{
+				if (i % 2 == 0)
+					os << " ";
+				os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +(*(pCmd + (i - 1)));
+			}
 			*pBinaryRepresentation = os.str();
 		}
 
@@ -925,7 +934,7 @@ bool CDebugger::LookupSource(t_address nCodeAddr, t_index& nFuncIdx, t_index& nL
 				do
 				{
 					nLineNumber = tInfo.nBaseLine + iLine; // Convert function relative line number to unit level
-				} while (tInfo.aCodeTbl.at(++iLine) == nCodeAddr);
+				} while (++iLine < tInfo.aCodeTbl.size() && tInfo.aCodeTbl.at(iLine) == nCodeAddr);
 				break;
 			}
 		}

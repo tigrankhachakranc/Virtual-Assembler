@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Disassembler"
+
+//
 //	Includes
 //
 #include "disassembly.h"

@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Compiler"
+
+//
 // Includes
 //
 #include "encoder.h"
@@ -175,7 +180,7 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		{
 			if (!bool(eOprType & (uchar) EOprType::Imv))
 				throw CError(t_csz("Encoder: Invalid use of variable"), tCmd.nLineNumber, tInfo.pcszName);
-			if (tInfo.eOpCode != EOpCode::MOVI4 || nArg != 1 || tCmd.aArguments[0].eType != EArgType::AR)
+			if (tInfo.eOpCode != EOpCode::MOVIA || nArg != 1 || tCmd.aArguments[0].eType != EArgType::AR)
 				// Variables could be used only with the instruction MOVI An, VAR_NAME 
 				throw CError(t_csz("Encoder: Invalid use of variable"), tCmd.nLineNumber, tInfo.pcszName);
 
@@ -193,7 +198,7 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 		{
 			if (!bool(eOprType & (uchar) EOprType::Imv))
 				throw CError(t_csz("Encoder: Invalid use of Function"), tCmd.nLineNumber, tInfo.pcszName);
-			if (tInfo.eOpCode != EOpCode::MOVI4 || nArg != 1 || tCmd.aArguments[0].eType != EArgType::AR)
+			if (tInfo.eOpCode != EOpCode::MOVIA || nArg != 1 || tCmd.aArguments[0].eType != EArgType::AR)
 				// Function names could be used only with the instruction MOVI An, FUNC_NAME 
 				throw CError(t_csz("Encoder: Invalid use of Function"), tCmd.nLineNumber, tInfo.pcszName);
 

@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "VM"
+
+//
 //	Includes
 //
 #include "main_commands.h"
@@ -30,12 +35,12 @@ CMainCommands::CMainCommands() : CCommandBase()
 	Register({t_csz("EXIT"), EOpCode::EXIT},
 			 FuncCmdExec(&CMainCommands::Exit), FuncCmdDisasm(&CMainCommands::DisAsm));
 
-	Register({t_csz("JUMP"), EOpCode::JUMPA, EOprType::Reg},
+	Register({t_csz("JUMP"), EOpCode::JUMPA, EOprType::Reg, SCommandMetaInfo::FixedOprSizeDWord},
 			 FuncCmdExec(&CMainCommands::JumpA), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("JUMP"), t_csz("J"), EOpCode::JUMPR, EOprType::RegImv, EImvType::SNum16,
 			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::HasCndtnCode | SCommandMetaInfo::FixedOprSizeDWord},
 			 FuncCmdExec(&CMainCommands::JumpR), FuncCmdDisasm(&CMainCommands::dasmBranchRel));
-	Register({t_csz("CALL"), EOpCode::CALLA, EOprType::Reg},
+	Register({t_csz("CALL"), EOpCode::CALLA, EOprType::Reg, SCommandMetaInfo::FixedOprSizeDWord},
 			 FuncCmdExec(&CMainCommands::CallA), FuncCmdDisasm(&CMainCommands::DisAsm));
 	Register({t_csz("CALL"), EOpCode::CALLR, EOprType::RegImv, EImvType::SNum16,
 			 SCommandMetaInfo::HasOprSwitch | SCommandMetaInfo::FixedOprSizeDWord},
@@ -116,14 +121,14 @@ void CMainCommands::JumpA(SCommandContext& tCtxt)
 
 void CMainCommands::JumpR(SCommandContext& tCtxt)
 {
-	if (tCtxt.tInfo.eOprSize == EOprSize::Word)
-	{
-		tCtxt.tCPUState.nIP = static_cast<t_address>(static_cast<int32>(tCtxt.tCPUState.nIP) + static_cast<int32>(*tCtxt.operand<int16>(EOprIdx::First)));
-	}
-	else
+	if (tCtxt.tInfo.eOprSwitch == EOprSwitch::Reg)
 	{
 		VASM_CHECK_X(tCtxt.tInfo.eOprSize == EOprSize::DWord, t_csz("Invalid operand size detected for the Relative Jump instruction!"));
 		tCtxt.tCPUState.nIP = static_cast<t_address>(static_cast<int32>(tCtxt.tCPUState.nIP) + *tCtxt.operand<int32>(EOprIdx::First));
+	}
+	else
+	{
+		tCtxt.tCPUState.nIP = static_cast<t_address>(static_cast<int32>(tCtxt.tCPUState.nIP) + static_cast<int32>(*tCtxt.operand<int16>(EOprIdx::First)));
 	}
 }
 
@@ -140,14 +145,14 @@ void CMainCommands::CallR(SCommandContext& tCtxt)
 	// Save return address into RIP
 	tCtxt.tCPUState.nRIP = tCtxt.tCPUState.nIP;
 	// Change IP
-	if (tCtxt.tInfo.eOprSize == EOprSize::Word)
-	{
-		tCtxt.tCPUState.nIP = static_cast<t_address>(static_cast<int32>(tCtxt.tCPUState.nIP) + static_cast<int32>(*tCtxt.operand<int16>(EOprIdx::First)));
-	}
-	else
+	if (tCtxt.tInfo.eOprSwitch == EOprSwitch::Reg)
 	{
 		VASM_CHECK_X(tCtxt.tInfo.eOprSize == EOprSize::DWord, t_csz("Invalid operand size detected for the Relative Call instruction!"));
 		tCtxt.tCPUState.nIP = static_cast<t_address>(static_cast<int32>(tCtxt.tCPUState.nIP) + *tCtxt.operand<int32>(EOprIdx::First));
+	}
+	else
+	{
+		tCtxt.tCPUState.nIP = static_cast<t_address>(static_cast<int32>(tCtxt.tCPUState.nIP) + static_cast<int32>(*tCtxt.operand<int16>(EOprIdx::First)));
 	}
 }
 

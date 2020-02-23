@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Core"
+
+//
 //	Includes
 //
 #include "io_controller.h"

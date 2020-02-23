@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "VM"
+
+//
 //	Includes
 //
 #include "basic_commands.h"
@@ -207,7 +212,7 @@ CBasicCommands::CBasicCommands() : CCommandBase()
 		FuncCmdExec(&CBasicCommands::CmpB),  FuncCmdExec(&CBasicCommands::CmpW),
 		FuncCmdExec(&CBasicCommands::CmpDW), FuncCmdExec(&CBasicCommands::CmpQW) };
 	Register({t_csz("CMP"), EOpCode::CMP, EOprType::Reg, EOprType::Reg, SCommandMetaInfo::HasOprSize},
-			apfnTest, FuncCmdDisasm(&CBasicCommands::DisAsm));
+			 apfnCmp, FuncCmdDisasm(&CBasicCommands::DisAsm));
 
 	FuncCmdExec apfnAnd[int(EOprSize::Count)] = {
 		FuncCmdExec(&CBasicCommands::AndB),  FuncCmdExec(&CBasicCommands::AndW),
@@ -1514,7 +1519,7 @@ t_string CBasicCommands::dasmMovIA(SCommandInfo const& tCmd, bool bHexadecimal)
 		// Command name
 		sCmd = DisAsmCmd(tCmd);
 		// Arguments
-		sCmd += base::toStr(t_csz(" A%1, %2"), (uint) tCmd.anRegIdx[EOprIdx::First], sSymbol);
+		sCmd += base::toStr(t_csz(" A%1, %2"), (uint) tCmd.anRegIdx[EOprIdx::First] - SCPUStateBase::eARBaseIndex, sSymbol);
 	}
 	return std::move(sCmd);
 }

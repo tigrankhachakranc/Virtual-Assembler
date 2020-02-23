@@ -31,9 +31,9 @@ public:
 	inline CException();
 	~CException() override;
 
-	inline CException(t_csz psErrMsg, t_csz pcszFile = t_csz(nullptr), int nLine = -1);
-	inline CException(t_string const& sErrMsg, t_csz pcszFile = t_csz(nullptr), int nLine = -1);
-	inline CException(t_string&& sErrMsg, t_csz pcszFile = t_csz(nullptr), int nLine = -1);
+	inline CException(t_csz psErrMsg, t_csz pcszFile = t_csz(nullptr), int nLine = -1, t_csz pcszComponent = t_csz(nullptr));
+	inline CException(t_string const& sErrMsg, t_csz pcszFile = t_csz(nullptr), int nLine = -1, t_csz pcszComponent = t_csz(nullptr));
+	inline CException(t_string&& sErrMsg, t_csz pcszFile = t_csz(nullptr), int nLine = -1, t_csz pcszComponent = t_csz(nullptr));
 
 	inline CException(std::exception const&);
 	inline CException(CException const& o);
@@ -49,9 +49,14 @@ public:
 	inline bool IsEmpty() const;
 	inline void Clear();
 
+	inline int Line() const;
+	inline t_csz File() const;
+	inline t_csz Component() const;
+
 protected:
 	int const	m_cnLine;
 	t_csz const	m_cszFile;
+	t_csz const	m_cszComponent;
 	t_string	m_sErrorMsg;
 };
 ////////////////////////////////////////////////////////////////////////////////
@@ -63,37 +68,37 @@ protected:
 //
 ////////////////////////////////////////////////////////////////////////////////
 inline CException::CException() :
-	Base(), m_cnLine(-1), m_cszFile(nullptr)
+	Base(), m_cnLine(-1), m_cszFile(nullptr), m_cszComponent(nullptr)
 {
 }
 
-inline CException::CException(t_csz psErrMsg, t_csz pcszFile, int nLine) :
-	Base(psErrMsg, 1), m_cnLine(nLine), m_cszFile(pcszFile)
+inline CException::CException(t_csz psErrMsg, t_csz pcszFile, int nLine, t_csz pcszComponent) :
+	Base(psErrMsg, 1), m_cnLine(nLine), m_cszFile(pcszFile), m_cszComponent(pcszComponent)
 {
 }
 
-inline CException::CException(t_string const& sErrMsg, t_csz pcszFile, int nLine) :
-	Base("", 1), m_cnLine(nLine), m_cszFile(pcszFile), m_sErrorMsg(sErrMsg)
+inline CException::CException(t_string const& sErrMsg, t_csz pcszFile, int nLine, t_csz pcszComponent) :
+	Base("", 1), m_cnLine(nLine), m_cszFile(pcszFile), m_cszComponent(pcszComponent), m_sErrorMsg(sErrMsg)
 {
 }
 
-inline CException::CException(t_string&& sErrMsg, t_csz pcszFile, int nLine) :
-	Base("", 1), m_cnLine(nLine), m_cszFile(pcszFile), m_sErrorMsg(sErrMsg)
+inline CException::CException(t_string&& sErrMsg, t_csz pcszFile, int nLine, t_csz pcszComponent) :
+	Base("", 1), m_cnLine(nLine), m_cszFile(pcszFile), m_cszComponent(pcszComponent), m_sErrorMsg(sErrMsg)
 {
 }
 
 inline CException::CException(std::exception const& o) :
-	Base(o), m_cnLine(-1), m_cszFile(nullptr)
+	Base(o), m_cnLine(-1), m_cszFile(nullptr), m_cszComponent(nullptr)
 {
 }
 
 inline CException::CException(CException const& o) :
-	Base(o), m_cnLine(o.m_cnLine), m_cszFile(o.m_cszFile), m_sErrorMsg(o.m_sErrorMsg)
+	Base(o), m_cnLine(o.m_cnLine), m_cszFile(o.m_cszFile), m_cszComponent(o.m_cszComponent), m_sErrorMsg(o.m_sErrorMsg)
 {
 }
 
 inline CException::CException(CException&& o) :
-	Base(o), m_cnLine(o.m_cnLine), m_cszFile(o.m_cszFile), m_sErrorMsg(std::move(o.m_sErrorMsg))
+	Base(o), m_cnLine(o.m_cnLine), m_cszFile(o.m_cszFile), m_cszComponent(o.m_cszComponent), m_sErrorMsg(std::move(o.m_sErrorMsg))
 {
 }
 
@@ -136,6 +141,21 @@ inline void CException::Clear()
 {
 	m_sErrorMsg.clear();
 }
+
+inline int CException::Line() const
+{
+	return m_cnLine;
+}
+
+inline t_csz CException::File() const
+{
+	return m_cszFile;
+}
+
+inline t_csz CException::Component() const
+{
+	return m_cszComponent;
+}
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -144,11 +164,15 @@ inline void CException::Clear()
 } // namespace vasm
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifndef __COMPONENT__
+#	define __COMPONENT__ nullptr
+#endif
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //	Throw helpers
 //
-#define VASM_SRC_LINE								t_csz(__FILE__), int(__LINE__)
+#define VASM_SRC_LINE								t_csz(__FILE__), int(__LINE__), t_csz(__COMPONENT__)
 #define VASM_THROW_BAD_ALLOC( _allocsize_ )			throw ::vasm::base::CException(t_csz("Not enough memopry"), VASM_SRC_LINE )
 #define VASM_THROW_INVALID_CONDITION()				throw ::vasm::base::CException(t_csz("Should not happen"), VASM_SRC_LINE )
 #define VASM_THROW_INVALID_INDEX( _idx_, _size_ )	throw ::vasm::base::CException(t_csz("Invalid index"), VASM_SRC_LINE )

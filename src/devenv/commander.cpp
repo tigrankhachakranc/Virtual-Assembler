@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Commander"
+
+//
 // Includes
 //
 #include "commander.h"
@@ -36,6 +41,8 @@ CCommander::t_mapCmdHandlers CCommander::ms_mapCmdHandlers = {
 
 	{"r",		&CCommander::cmd_run},
 	{"run",		&CCommander::cmd_run},
+	{"g",		&CCommander::cmd_run},
+	{"go",		&CCommander::cmd_run},
 	{"t",		&CCommander::cmd_step_in},
 	{"trace",	&CCommander::cmd_step_in},
 	{"n",		&CCommander::cmd_step_over},
@@ -967,7 +974,6 @@ void CCommander::PrintCurrentState() const
 	std::ostream& os = m_cout;
 	vm::CProcessor::SState const& tState = m_pDebugger->CPUState();
 	vm::CProcessor::EStatus eStatus = m_pDebugger->CPUStatus().eStatus;
-	t_address const* const anARPool = tState.rptr<t_address>(core::SCPUStateBase::eARBaseIndex);
 
 	if (eStatus == vm::CProcessor::EStatus::NotInitialized)
 	{
@@ -990,39 +996,39 @@ void CCommander::PrintCurrentState() const
 	//os << "CIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nCIP << "  ";
 	os << "RIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nRIP << "  ";
 	os << std::endl;
-	os << "SP = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eSPIndex] << "  ";
-	os << " SF = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eSFIndex] << "  ";
+	os << "SP = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nSP << "  ";
+	os << " SF = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nSF << "  ";
 	os << std::endl;
-	os << "A0 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 0] << "  ";
-	os << " A1 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 1] << "  ";
+	os << "A0 = "   << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 0) << "  ";
+	os << " A1 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 1) << "  ";
 	os << std::endl;
-	os << "A2 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 2] << "  ";
-	os << " A3 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << anARPool[core::SCPUStateBase::eARBaseIndex + 3] << "  ";
+	os << "A2 = "   << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 2) << "  ";
+	os << " A3 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 3) << "  ";
 
 	os << std::endl;
 	os << "General purpose registers (0x): --------------------------------------------------" << std::endl;
 	for (uint nRIdx = 0 /*core::SCPUStateBase::eGPRBaseIndex*/; nRIdx < core::SCPUStateBase::eRegisterPoolSize; nRIdx += 16)
 	{
-		os << "R" << std::dec << std::setfill('0') << std::setw(2) << nRIdx << ": ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 0] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 1] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 2] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 3] << " ";
+		os << "R" << std::dec << nRIdx + 15 << "-" << std::setfill('0') << std::setw(2) << nRIdx << ": ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 15) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 14) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 13) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 12) << " ";
 		os << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 4] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 5] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 6] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 7] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 11) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 10) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 9) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 8) << " ";
 		os << "  ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 8] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 9] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 10] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 11] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 7) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 6) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 5) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 4) << " ";
 		os << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 12] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 13] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 14] << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.aui8RPool[nRIdx + 15] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 3) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 2) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 1) << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 0) << " ";
 		os << std::endl;
 	}
 

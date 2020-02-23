@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Compiler"
+
+//
 // Includes
 //
 #include "asm_parser.h"
@@ -610,12 +615,13 @@ void CAsmParser::ParseFunctionBody(SFunction& tFunction)
 
 		try
 		{
+			// Save line number
+			tCommand.nLineNumber = tRawCmd.second;
 			// Parse command
 			oParser.Parse(tCommand);
 			// Opcode should be valid because empty lines and comments already skipped
 			VASM_CHECK(tCommand.eOpCode != EOpCode::Invalid);
 			// Keep parsed command
-			tCommand.nLineNumber = tRawCmd.second;
 			tFunction.aCommands.push_back(tCommand);
 		}
 		catch (CCommandParser::CError& e)

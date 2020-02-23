@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "VM"
+
+//
 //	Includes
 //
 #include "processor.h"
@@ -226,7 +231,6 @@ void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)
 			if (nRegIdx + OperandSize(tCmdInfo.eOprSize) > SState::eRegisterPoolSize)
 				VASM_THROW_ERROR(base::toStr("CPU: Invalid GP register index #%1", int(nRegIdx)));
 			tCmdCtxt.apOperands[eOprIdx] = &m_tState.aui8RPool[nRegIdx];
-			break;
 		}
 		else if (eOprType == EOprType::Imv || (eOprType == EOprType::RegImv && tCmdInfo.eOprSwitch == EOprSwitch::Imv))
 		{

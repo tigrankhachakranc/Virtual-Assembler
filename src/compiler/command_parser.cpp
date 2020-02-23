@@ -1,8 +1,14 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Compiler"
+
+//
 //	Includes
 //
 #include "command_parser.h"
 #include "asm_parser.h"
+#include <base_utility.h>
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -117,8 +123,8 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands{
 	{t_csz("MOVI"),	{EOpCode::MOVI1, EOprTypeEx::GR, EOprTypeEx::IMV, EImvType::SNum8,  eOprSizeVital}},
 	{t_csz("MVI"),	{EOpCode::MOVI2, EOprTypeEx::GR, EOprTypeEx::IMV, EImvType::SNum16, eOprSizeVital}},
 	{t_csz("MOVI"),	{EOpCode::MOVI2, EOprTypeEx::GR, EOprTypeEx::IMV, EImvType::SNum16, eOprSizeVital}},
-	{t_csz("MVI"),	{EOpCode::MOVI4, EOprTypeEx::GR, EOprTypeEx::IMV, EImvType::SNum32, eOprSizeVital}},
-	{t_csz("MOVI"),	{EOpCode::MOVI4, EOprTypeEx::GR, EOprTypeEx::IMV, EImvType::SNum32, eOprSizeVital}},
+	{t_csz("MVI"),	{EOpCode::MOVI4, EOprTypeEx::GR, EOprTypeEx::IMV, EImvType::SNum32, eHasOprSize}},
+	{t_csz("MOVI"),	{EOpCode::MOVI4, EOprTypeEx::GR, EOprTypeEx::IMV, EImvType::SNum32, eHasOprSize}},
 	//
 	// Register manipulation instructions
 	//
@@ -655,34 +661,79 @@ void CCommandParser::Parse(SCommand& tCommand)
 		throw CError("Invalid command: extra characters", GetCurrentPos(), sToken);
 
 	// Find corresponding command (OpCode)
+	int nErrorLevel = 0;
+	t_string sErrorDetails;
 	t_mapCommandDefinitions::const_iterator it;
+
 	for (it = itCmdRange.first; it != itCmdRange.second; ++it)
 	{
 		SCommandDefinition const& tCmdInfo = it->second;
 
 		// Match operand size
-		if (bOprSizeParsed && !tCmdInfo.HasOprSize())
+		if (bOprSizeParsed && !tCmdInfo.HasOprSize() && !tCmdInfo.IsOprSizeVital())
+		{
+			if (nErrorLevel < 1)
+			{
+				nErrorLevel = 1;
+				sErrorDetails = t_csz("Command doesn't support operand size specifier");
+			}
 			continue; // Skip
+		}
+		else if (!bOprSizeParsed && tCmdInfo.IsOprSizeVital())
+		{
+			if (nErrorLevel < 2)
+			{
+				nErrorLevel = 2;
+				sErrorDetails = t_csz("Invalid command: operand size is not specified");
+			}
+			continue; // Skip
+		}
 
 		// Match argument count
 		if (tCommand.nArgCount != tCmdInfo.nArgCount)
+		{
+			if (nErrorLevel < 3)
+			{
+				nErrorLevel = 3;
+				if (tCommand.nArgCount == 0)
+					sErrorDetails = t_csz("Invalid command: no operands");
+				else if (tCommand.nArgCount < tCmdInfo.nArgCount)
+					sErrorDetails = t_csz("Invalid command: specified number of operands is less than expected");
+				else
+					sErrorDetails = t_csz("Invalid command: specified number of operands is more than expected");
+			}
 			continue; // Skip
+		}
 
 		// Match argument types
 		t_index nArg = 0;
 		for (; nArg < tCommand.nArgCount; ++nArg)
 		{
 			SArgument const& tArg = tCommand.aArguments[nArg];
-			// Check argument type compastibility
+			// Check argument type compatibility
 			if (!bool(uchar(tArg.eType) & uchar(tCmdInfo.eOperands[nArg]) & uchar(0x0F)))
+			{
+				if (nErrorLevel < 4)
+				{
+					nErrorLevel = 4;
+					sErrorDetails = base::toStr(t_csz("Invalid command: operand #%1 type is incompatible with expected type"), nArg);
+				}
 				break;
+			}
 
 			// When IMV type is specifed also match by sign
 			if (tArg.eType == EArgType::SNUM && tCmdInfo.eImvType != EImvType::None)
 			{
 				// There is implicit rule that all unsigned types are odd and signed ones are even numbers
 				if (uchar(tCmdInfo.eImvType) % 2 != 0)
+				{
+					if (nErrorLevel < 5)
+					{
+						nErrorLevel = 5;
+						sErrorDetails = base::toStr(t_csz("Invalid command: operand #%1, signed immediate value is not expected"), nArg);
+					}
 					break;
+				}
 			}
 		}
 		if (nArg != tCommand.nArgCount)
@@ -715,16 +766,27 @@ void CCommandParser::Parse(SCommand& tCommand)
 			default:
 				break;
 			}
+			
 			if (tCommand.eOprSize != eTargetOprSz)
+			{
+				if (nErrorLevel < 6)
+				{
+					nErrorLevel = 6;
+					sErrorDetails = t_csz("Invalid command: immediate operand's size doesn't match with expected operand size");
+				}
 				continue; // Skip
+			}
 		}
 
 		break; // Command found, do not continue!
 	}
 
 	if (it == itCmdRange.second)
-		// Command not found
-		throw CError(t_csz("Incomplete or ill formed command"), GetCurrentPos(), sName);
+	{
+		if (sErrorDetails.empty())
+			sErrorDetails = t_csz("Incomplete or ill formed command");
+		throw CError(sErrorDetails, GetCurrentPos(), sName);
+	}
 
 	// Complete command
 	tCommand.eOpCode = it->second.eOpCode;
@@ -742,31 +804,31 @@ void CCommandParser::Parse(SCommand& tCommand)
 		case EArgType::AR:
 		{
 			if (tArg.nIdx >= core::SCPUStateBase::eAddressRegistersPoolSize)
-				throw CError(base::toStr("Invalid address register index ", tArg.nIdx), GetCurrentPos(), {});
+				throw CError(base::toStr("Invalid address register index #%1", tArg.nIdx - core::SCPUStateBase::eARBaseIndex), GetCurrentPos(), {});
 			break;
 		}
 		case EArgType::GR:
 		{
 			if (tArg.nIdx >= core::SCPUStateBase::eRegisterPoolSize)
-				throw CError(base::toStr("Invalid general purpose register index ", tArg.nIdx), GetCurrentPos(), {});
+				throw CError(base::toStr("Invalid general purpose register index #%1", tArg.nIdx), GetCurrentPos(), {});
 			break;
 		}
 		case EArgType::VAR:
 		{
 			if (tCommand.eImvType != EImvType::Num32)
-				throw CError("Incorrect variable name usage", GetCurrentPos(), {});
+				throw CError(t_csz("Incorrect variable name usage"), GetCurrentPos(), {});
 			break;
 		}
 		case EArgType::FUNC:
 		{
 			if (tCommand.eImvType != EImvType::Num32)
-				throw CError("Incorrect function name usage", GetCurrentPos(), {});
+				throw CError(t_csz("Incorrect function name usage"), GetCurrentPos(), {});
 			break;
 		}
 		case EArgType::LBL:
 		{
 			if (tCommand.eImvType != EImvType::Num16 && tCommand.eImvType != EImvType::SNum16)
-				throw CError("Incorrect label name usage", GetCurrentPos(), {});
+				throw CError(t_csz("Incorrect label name usage"), GetCurrentPos(), {});
 			break;
 		}
 		case EArgType::NUM:

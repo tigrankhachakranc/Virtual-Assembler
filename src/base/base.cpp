@@ -48,6 +48,9 @@ t_string CException::GetErrorMsg(bool bDetailed) const
 		else
 			oBuff << "." << std::endl;
 
+		if (m_cszComponent != nullptr)
+			oBuff << "Component: " << m_cszComponent << "  ";
+
 		if (m_cnLine >= 0 && m_cszFile != nullptr)
 			oBuff << "File: " << m_cszFile << "  Line: " << m_cnLine << std::endl;
 

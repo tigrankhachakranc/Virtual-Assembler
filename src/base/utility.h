@@ -27,6 +27,11 @@ namespace base {
 //
 //	String formatting helpers
 //
+inline t_string toStr(t_csz pcsz)
+{
+	return t_string(pcsz);
+}
+
 inline t_string toStr(t_csz pcsz, int nArg1)
 {
 	t_string str(pcsz);

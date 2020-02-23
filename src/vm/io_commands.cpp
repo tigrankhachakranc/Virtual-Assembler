@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "VM"
+
+//
 //	Includes
 //
 #include "io_commands.h"

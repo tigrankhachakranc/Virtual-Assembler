@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Compiler"
+
+//
 // Includes
 //
 #include "output_generator.h"

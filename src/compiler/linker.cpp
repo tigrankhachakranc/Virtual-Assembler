@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Compiler"
+
+//
 // Includes
 //
 #include "linker.h"
@@ -69,7 +74,7 @@ void CLinker::WriteCodeHeader(SPackage& tFinalPkg)
 	SCommand tCmd;
 	int nCodeOffset = 0;
 
-	tCmd.eOpCode = EOpCode::MOVI4;
+	tCmd.eOpCode = EOpCode::MOVIA;
 	tCmd.eImvType = EImvType::Num32;
 	tCmd.nArgCount = 2;
 	tCmd.aArguments[EOprIdx::First].eType = EArgType::AR;
@@ -83,6 +88,7 @@ void CLinker::WriteCodeHeader(SPackage& tFinalPkg)
 	tCmd.nArgCount = 1;
 	tCmd.aArguments[EOprIdx::First].eType = EArgType::AR;
 	tCmd.aArguments[EOprIdx::First].nIdx = core::SCPUStateBase::eARBaseIndex;
+	tCmd.eOprSize = EOprSize::DWord;
 	nCodeOffset += oEncoder.Encode(tCmd, nCodeOffset);
 
 	tCmd.eOpCode = EOpCode::EXIT;

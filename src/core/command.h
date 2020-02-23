@@ -188,9 +188,9 @@ struct SCPUStateBase
 	inline TOprType const& reg(t_index nRegIdx) const; // byte aligned register index
 	
 	template <typename TOprType>
-	inline TOprType* rptr(t_index nArrayIdx); // typed array index
+	inline TOprType& rega(t_index nArrayIdx); // typed array index
 	template <typename TOprType>
-	inline TOprType const* rptr(t_index nArrayIdx) const; // typed array index
+	inline TOprType const& rega(t_index nArrayIdx) const; // typed array index
 
 	//
 	SCPUStateBase(t_uoffset cs, t_uoffset slb, t_uoffset sub);
@@ -459,17 +459,17 @@ inline TOprType const& SCPUStateBase::reg(t_index nRegIdx) const
 }
 
 template <typename TOprType>
-inline TOprType* SCPUStateBase::rptr(t_index nArrayIdx)
+inline TOprType& SCPUStateBase::rega(t_index nArrayIdx)
 {
 	VASM_CHECK_IDX(nArrayIdx * sizeof(TOprType), eRegisterPoolSize);
-	return reinterpret_cast<TOprType*>(&aui8RPool[nArrayIdx * sizeof(TOprType)]);
+	return reinterpret_cast<TOprType&>(aui8RPool[nArrayIdx * sizeof(TOprType)]);
 }
 
 template <typename TOprType>
-inline TOprType const* SCPUStateBase::rptr(t_index nArrayIdx) const
+inline TOprType const& SCPUStateBase::rega(t_index nArrayIdx) const
 {
 	VASM_CHECK_IDX(nArrayIdx * sizeof(TOprType), eRegisterPoolSize);
-	return reinterpret_cast<TOprType const*>(&aui8RPool[nArrayIdx * sizeof(TOprType)]);
+	return reinterpret_cast<TOprType const&>(aui8RPool[nArrayIdx * sizeof(TOprType)]);
 }
 
 //

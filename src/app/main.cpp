@@ -171,7 +171,10 @@ int main(int argc, char* argv[])
 	{
 		nRetCode = -1;
 		std::cout << std::endl << e.GetErrorMsg(true) << std::endl;
-		std::cout << t_csz("Program exited due to error!") << std::endl;
+		if (e.Component() != nullptr)
+			std::cout << base::toStr("Program exited due to %1 error!", e.Component()) << std::endl;
+		else
+			std::cout << t_csz("Program exited due to error!") << std::endl;
 	}
 	catch (std::exception& e)
 	{

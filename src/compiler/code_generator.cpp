@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Compiler"
+
+//
 // Includes
 //
 #include "code_generator.h"

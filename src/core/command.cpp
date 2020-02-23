@@ -1,4 +1,9 @@
 //
+//	Component
+//
+#define __COMPONENT__ "Core"
+
+//
 // Includes
 //
 #include "command.h"
@@ -449,7 +454,26 @@ t_string CCommandBase::DisAsmArg(SCommandInfo const& tCmd, bool bHexadecimal, t_
 	case EOprType::Reg:
 	{
 		if (IsOperandAddressRegister(tCmd.tMetaInfo.eOpCode, nArg))
-			sCmd = base::toStr(t_csz("A%1"), (uint) tCmd.anRegIdx[nArg]);
+		{
+			switch (tCmd.anRegIdx[nArg])
+			{
+			case 0:
+				sCmd = t_csz("Invalid");
+				break;
+			case SCPUStateBase::eRIPIndex:
+				sCmd = t_csz("RIP");
+				break;
+			case SCPUStateBase::eSPIndex:
+				sCmd = t_csz("SP");
+				break;
+			case SCPUStateBase::eSFIndex:
+				sCmd = t_csz("SF");
+				break;
+			default:
+				sCmd = base::toStr(t_csz("A%1"), (uint) tCmd.anRegIdx[nArg] - SCPUStateBase::eARBaseIndex);
+				break;
+			}
+		}
 		else
 			sCmd = base::toStr(t_csz("R%1"), (uint) tCmd.anRegIdx[nArg] * OperandSize(tCmd.eOprSize));
 		break;
@@ -523,11 +547,11 @@ bool CCommandBase::IsOperandAddressRegister(EOpCode eOpCode, t_index nArgIdx)
 		bVal = true;
 		break;
 	case EOpCode::LOAD:
+	case EOpCode::STORE:
 	case EOpCode::LDREL:
+	case EOpCode::STREL:
 		bVal = (nArgIdx == 1);
 		break;
-	case EOpCode::STORE:
-	case EOpCode::STREL:
 	case EOpCode::MOVIA:
 	case EOpCode::INC:
 	case EOpCode::DEC:
