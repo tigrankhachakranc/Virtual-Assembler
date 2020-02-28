@@ -56,6 +56,7 @@ public:
 	};
 
 	using t_aCodeLineInfos = std::vector<SCodeLineInfo>;
+	using CError = base::CException;
 
 public:
 	//
@@ -108,10 +109,12 @@ public:
 	void RemoveAllBreakPoints();
 
 	// Debug helpers to resolve address
+	t_address ResolveAddressFromVariable(t_string const& sVarName) const;
 	t_address ResolveAddressFromLabel(t_string const& sLabel) const;
 	t_address ResolveAddressFromFunction(t_string const& sFunction, t_string const& sLabel = {}) const;
 	t_address ResolveAddressFromSource(t_index nLineNumber, t_string const& sSrcUnit) const;
-	bool CheckCodeAddress(t_address nAddress) const;
+	bool CheckVariableAddress(t_address const nAddress) const;
+	bool CheckCodeAddress(t_address const nAddress) const;
 
 	// Returns src code info fir the specifed code address
 	SCodeLineInfo GetCodeLineInfo(t_address nAddress) const;

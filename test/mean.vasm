@@ -1,0 +1,43 @@
+.data
+DWORD adwNums[5] = 106, 202, 56, 72, 94
+DWORD dwCount = 5
+DWORD dwAnswer
+
+.code
+
+Func CalculateMean; 
+
+Func Start:
+	PUSHSF 
+    MVI	A0, dwCount
+	LOD	R32, A0
+	MVI A0, adwNums
+	MVI A1, CalculateMean
+	CALL A1 #->R32
+	MVI A0, dwAnswer
+	STO R32, A0
+	POPSF
+	RET
+EndF
+
+Func CalculateMean:
+	CMP R32, R0
+	JEQ Finished
+	MOV R44, R32
+	MVI R48, 1
+NextNum:
+	LOD R40, A0
+	ADD R36, R40
+	INC A0, 4
+	SUB R44, R48 
+	JNZ NextNum
+	DIV R36, R32
+	SHR R32, 1
+	CMP R32, R40
+	ADC R36, R0
+	MOV R32, R36
+Finished:
+	RET
+EndF
+
+.main = Start

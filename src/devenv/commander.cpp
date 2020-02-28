@@ -1,9 +1,4 @@
 //
-//	Component
-//
-#define __COMPONENT__ "Commander"
-
-//
 // Includes
 //
 #include "commander.h"
@@ -22,6 +17,7 @@ namespace dev {
 
 CStringComparator<EComparisonType::Equal_CI> compare;
 
+using base::toStr;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -58,13 +54,14 @@ CCommander::t_mapCmdHandlers CCommander::ms_mapCmdHandlers = {
 	{"set",		&CCommander::cmd_set},
 	{"a",		&CCommander::cmd_assign},
 	{"assign",	&CCommander::cmd_assign},
+	{"w",		&CCommander::cmd_watch},
+	{"watch",	&CCommander::cmd_watch},
 
 	{"bt",		&CCommander::cmd_backtrace},
 	{"d",		&CCommander::cmd_dump},
 	{"dump",	&CCommander::cmd_dump},
 	{"p",		&CCommander::cmd_dump},
 	{"print",	&CCommander::cmd_print},
-	{"watch",	&CCommander::cmd_watch},
 
 	{"l",		&CCommander::cmd_load},
 	{"load",	&CCommander::cmd_load},
@@ -121,19 +118,29 @@ void CCommander::Start()
 		try
 		{
 			std::getline(m_cin, sCmdLine);
+			if (sCmdLine.empty())
+				continue;
+
 			CCmdParser oParser(sCmdLine);
 			t_string sCommand = std::move(oParser.ParseToken());
 
 			auto it = ms_mapCmdHandlers.find(sCommand);
 			if (it == ms_mapCmdHandlers.end())
-				throw CError(t_csz("Unrecognized command"), oParser.GetPreviousPos(), sCommand);
+				throw CError(toStr("Error: Unrecognized command '%1'", sCommand));
 
 			fnCmdHandler pfn = it->second;
 			pfn(this, oParser);
 		}
-		catch (base::CException const& err)
+		catch (CParserError const& err)
 		{
 			m_cout << err.GetErrorMsg(true);
+		}
+		catch (base::CException const& err)
+		{
+			if (err.Component() == nullptr)
+				m_cout << err.GetErrorMsg(false);
+			else
+				m_cout << err.GetErrorMsg(true);
 		}
 		catch (std::exception const& err)
 		{
@@ -209,16 +216,10 @@ void CCommander::cmd_help(CCmdParser&)
 	m_cout << "              [CF|ZF|SF|OF 0|1]"																					<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "a|assign      [var_name +/-num|0xValue[,...]  Assigns value to the specified variable or memory location"		<< std::endl;
-	m_cout << ""																												<< std::endl;
-	m_cout << "bt                                            Prints current backtrace, see also 'print callstack'"				<< std::endl;
-	m_cout << "d|dump        -f|file file_path               Dumps entire memory content or part of it"							<< std::endl;
-	m_cout << "              -format text|bin"																					<< std::endl;
-	m_cout << "       memory [-at 0xAddress]"																					<< std::endl;
-	m_cout << "              [-sz|size byte_count]"																				<< std::endl;
-	m_cout << "       code   [-at src:line|label|func_name]  Dumps only code started from beginning or specified address"		<< std::endl;
-	m_cout << "              [-sz|size byte_count]"																				<< std::endl;
-	m_cout << "       data                                   Dumps data content only"											<< std::endl;
-	m_cout << "       stack  [-depth Num=MAX]                Dumps the content of the stack with specified call depth"			<< std::endl;
+	m_cout << "w|watch       [var_name [...]]                Prints current value of the specified variable(s)"					<< std::endl;
+	m_cout << "        add   var_name                        Ads specified variable to the watch list"							<< std::endl;
+	m_cout << "        rem   var_name                        Removes specified variable from the watch list"					<< std::endl;
+	m_cout << "        all                                   Prints values of all (defined) variables"							<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "p|print [state]                               Prints CPU current state"											<< std::endl;
 	m_cout << "        callstack                             Prints function call stack (same as backtrace)"					<< std::endl;
@@ -227,10 +228,16 @@ void CCommander::cmd_help(CCmdParser&)
 	m_cout << "              [-at srs:line|label|func_name|0xAddress]"															<< std::endl;
 	m_cout << "        bp                                    Prints Break points list"											<< std::endl;
 	m_cout << "        sf                                    Prints current stack frame"										<< std::endl;
+	m_cout << "bt                                            Prints current backtrace, see also 'print callstack'"				<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "w|watch       [var_name [...]]                Prints current value of the specified variables"					<< std::endl;
-	m_cout << "        add   var_name                        Ads specified variable to the watch list"							<< std::endl;
-	m_cout << "        rem   var_name                        Removes specified variable from the watch list"					<< std::endl;
+	m_cout << "d|dump        -f|file file_path               Dumps entire memory content or part of it"							<< std::endl;
+	m_cout << "              -format text|bin"																					<< std::endl;
+	m_cout << "       memory [-at 0xAddress]"																					<< std::endl;
+	m_cout << "              [-sz|size byte_count]"																				<< std::endl;
+	m_cout << "       code   [-at src:line|label|func_name]  Dumps only code started from beginning or specified address"		<< std::endl;
+	m_cout << "              [-sz|size byte_count]"																				<< std::endl;
+	m_cout << "       data                                   Dumps data content only"											<< std::endl;
+	m_cout << "       stack  [-depth Num=MAX]                Dumps the content of the stack with specified call depth"			<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "l|load        exec_file_path                  Opens specified binary exectuavle file and loads into memory"		<< std::endl;
 	m_cout << "o|open        source_file_name[,...]          Opens specifeid source file(s), compiles & loads them into memory"	<< std::endl;
@@ -241,7 +248,7 @@ void CCommander::cmd_info(CCmdParser& oParser)
 {
 	t_string sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 
 	if (!m_pMachine->IsValid())
 		m_cout << std::endl << "Machine is not initialized, no binary executable." << std::endl;
@@ -300,15 +307,15 @@ void CCommander::cmd_run(CCmdParser& oParser)
 		}
 		else if (compare(sToken, t_csz("-from")))
 		{
-			nAddressFrom = FetchCodeAddress(oParser);
+			nAddressFrom = FetchAddress(oParser, true);
 		}
 		else if (compare(sToken, t_csz("-to")))
 		{
-			nAddressTo = FetchCodeAddress(oParser);
+			nAddressTo = FetchAddress(oParser, true);
 		}
 		else
 		{
-			throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+			throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 		}
 	}
 
@@ -334,15 +341,19 @@ void CCommander::cmd_step_in(CCmdParser& oParser)
 	oParser.SkipWhiteSpaces();
 	if (!oParser.IsFinished())
 	{
-		t_string sToken = std::move(oParser.ParseToken());
-		if (!compare(sToken, t_csz("Num")) || oParser.GetChar(true) != t_char('='))
-			throw CError(t_csz("Expecting [Num = count]"), oParser.GetPreviousPos(), sToken);
+		t_string sToken;
+		if (base::CParser::IsAlpha(oParser.PeekChar()))
+		{
+			sToken = std::move(oParser.ParseToken());
+			if (!compare(sToken, t_csz("Num")) || oParser.GetChar(true) != t_char('='))
+				throw CParserError(t_csz("Expecting [Num = count]"), oParser.GetPreviousPos(), sToken);
+		}
 
 		nCount = oParser.ParseNumber<t_size>();
 
 		sToken = std::move(oParser.ParseToken());
 		if (!sToken.empty())
-			throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+			throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 	}
 
 	m_pDebugger->StepIn(nCount);
@@ -359,15 +370,19 @@ void CCommander::cmd_step_over(CCmdParser& oParser)
 	oParser.SkipWhiteSpaces();
 	if (!oParser.IsFinished())
 	{
-		t_string sToken = std::move(oParser.ParseToken());
-		if (!compare(sToken, t_csz("Num")) || oParser.GetChar(true) != t_char('='))
-			throw CError(t_csz("Expecting [Num = count]"), oParser.GetPreviousPos(), sToken);
+		t_string sToken;
+		if (base::CParser::IsAlpha(oParser.PeekChar()))
+		{
+			sToken = std::move(oParser.ParseToken());
+			if (!compare(sToken, t_csz("Num")) || oParser.GetChar(true) != t_char('='))
+				throw CParserError(t_csz("Expecting [Num = count]"), oParser.GetPreviousPos(), sToken);
+		}
 
 		nCount = oParser.ParseNumber<t_size>();
 
 		sToken = std::move(oParser.ParseToken());
 		if (!sToken.empty())
-			throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+			throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 	}
 
 	m_pDebugger->StepOver(nCount);
@@ -382,7 +397,7 @@ void CCommander::cmd_step_out(CCmdParser& oParser)
 
 	t_string sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 
 	m_pDebugger->StepOut();
 	PrintCurrentState();
@@ -396,7 +411,7 @@ void CCommander::cmd_stop(CCmdParser& oParser)
 
 	t_string sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 
 	m_pDebugger->Stop();
 }
@@ -407,7 +422,7 @@ void CCommander::cmd_reset(CCmdParser& oParser)
 
 	t_string sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 
 	m_pDebugger->ResetProgram();
 }
@@ -416,12 +431,12 @@ void CCommander::cmd_bp_set(CCmdParser& oParser)
 {
 	CheckCPUStatus();
 
-	t_address nAddress = FetchCodeAddress(oParser);
+	t_address nAddress = FetchAddress(oParser, true);
 	m_pDebugger->SetBreakPoint(nAddress);
 
 	t_string sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 }
 
 void CCommander::cmd_bp_remove(CCmdParser& oParser)
@@ -442,13 +457,13 @@ void CCommander::cmd_bp_remove(CCmdParser& oParser)
 	{
 		oParser.RevertPreviousParse();
 
-		t_address nAddress = FetchCodeAddress(oParser);
+		t_address nAddress = FetchAddress(oParser, true);
 		m_pDebugger->RemoveBreakPoint(nAddress);
 	}
 
 	sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 }
 
 void CCommander::cmd_set(CCmdParser& oParser)
@@ -458,46 +473,9 @@ void CCommander::cmd_set(CCmdParser& oParser)
 
 	if (compare(sToken, t_csz("IP")))
 	{
-		t_address nAddress = FetchCodeAddress(oParser);
+		t_address nAddress = FetchAddress(oParser, true);
 		if (!m_pDebugger->ChangeIP(nAddress))
 			VASM_THROW_ERROR(t_csz("Failed to change IP Register"));
-	}
-	else if (sToken.front() == t_char('A') || sToken.front() == t_char('a'))
-	{
-		std::size_t nPos;
-		sToken.erase(sToken.cbegin());
-		t_index nRegIdx = (t_index) std::stoul(sToken, &nPos);
-		if (nPos != sToken.size() || nRegIdx >= core::SCPUStateBase::eAddressRegistersPoolSize)
-			throw CError(t_csz("Invalid address register index"), oParser.GetPreviousPos(), sToken);
-
-		t_address nAddress = FetchCodeAddress(oParser);
-		m_pDebugger->ChangeRegister(CDebugger::ERegType::ADR, nRegIdx, {nAddress});
-	}
-	else if (compare(sToken, t_csz("")))
-	{
-		std::size_t nPos;
-		sToken.erase(sToken.cbegin());
-		t_index nRegIdx = (t_index) std::stoul(sToken, &nPos);
-		if (nPos != sToken.size() || nRegIdx >= core::SCPUStateBase::eRegisterPoolSize)
-			throw CError(t_csz("Invalid general purpose register index"), oParser.GetPreviousPos(), sToken);
-
-		EValueType eType = EValueType::Unknown;
-		sToken = std::move(oParser.ParseToken());
-		if (compare(sToken, t_csz("B")))
-			eType = EValueType::Byte;
-		else if (compare(sToken, t_csz("W")))
-			eType = EValueType::Word;
-		else if (compare(sToken, t_csz("DW")))
-			eType = EValueType::DWord;
-		else if (compare(sToken, t_csz("QW")))
-			eType = EValueType::QWord;
-		else if (compare(sToken, t_csz("CH")))
-			eType = EValueType::Char;
-		else
-			oParser.RevertPreviousParse();
-
-		CValue oValue = std::move(FetchValue(oParser, eType));
-		m_pDebugger->ChangeRegister(CDebugger::ERegType::GP, nRegIdx, oValue);
 	}
 	else if (compare(sToken, t_csz("CF")))
 	{
@@ -527,14 +505,109 @@ void CCommander::cmd_set(CCmdParser& oParser)
 		oFlags.setOverflow(bFlag);
 		m_pDebugger->ChangeFlags(oFlags);
 	}
+	else if (sToken.front() == t_char('A') || sToken.front() == t_char('a'))
+	{
+		std::size_t nPos;
+		sToken.erase(sToken.cbegin());
+		t_index nRegIdx = (t_index) std::stoul(sToken, &nPos);
+		if (nPos != sToken.size() || nRegIdx >= core::SCPUStateBase::eAddressRegistersPoolSize)
+			throw CParserError(t_csz("Invalid address register index"), oParser.GetPreviousPos(), sToken);
+
+		t_address nAddress = FetchAddress(oParser, false);
+		m_pDebugger->ChangeRegister(CDebugger::ERegType::ADR, nRegIdx, {nAddress});
+	}
 	else
 	{
-		throw CError(t_csz("Unknown argument"), oParser.GetPreviousPos(), sToken);
+		EValueType eType = EValueType::Unknown;
+		core::EOprSize eOprSize = core::EOprSize::Default;
+		t_index nRegIdx = g_ciInvalid;
+
+		for (auto i = 0; i < 2 && !sToken.empty(); ++i)
+		{
+			if (sToken.front() == t_char('R') || sToken.front() == t_char('r'))
+			{
+				if (nRegIdx != g_ciInvalid)
+					throw CParserError(t_csz("General purpose register should be specified once"), oParser.GetPreviousPos(), sToken);
+
+				std::size_t nPos;
+				sToken.erase(sToken.cbegin());
+				if (sToken.empty() || !base::CParser::IsNum(sToken.front()))
+					throw CParserError(t_csz("Invalid general purpose register specifier"), oParser.GetPreviousPos(), sToken);
+				nRegIdx = (t_index) std::stoul(sToken, &nPos);
+				if (nPos != sToken.size() || nRegIdx == g_ciInvalid)
+					throw CParserError(t_csz("Invalid general purpose register specifier"), oParser.GetPreviousPos(), sToken);
+
+				if (eType != EValueType::Unknown)
+					break;
+			}
+			else
+			{
+				if (compare(sToken, t_csz("B")))
+				{
+					eType = EValueType::Byte;
+					eOprSize = core::EOprSize::Byte;
+				}
+				else if (compare(sToken, t_csz("W")))
+				{
+					eType = EValueType::Word;
+					eOprSize = core::EOprSize::Word;
+				}
+				else if (compare(sToken, t_csz("DW")))
+				{
+					eType = EValueType::DWord;
+					eOprSize = core::EOprSize::DWord;
+				}
+				else if (compare(sToken, t_csz("QW")))
+				{
+					eType = EValueType::QWord;
+					eOprSize = core::EOprSize::QWord;
+				}
+				else if (compare(sToken, t_csz("CH")))
+				{
+					eType = EValueType::Char;
+					eOprSize = core::EOprSize::Byte;
+				}
+				else
+				{
+					oParser.RevertPreviousParse();
+					break;
+				}
+
+				if (nRegIdx != g_ciInvalid)
+					break;
+
+				if (i == 1)
+					throw CParserError(t_csz("Operand size should be specified once"), oParser.GetPreviousPos(), sToken);
+			}
+
+			sToken = std::move(oParser.ParseToken());
+		}
+
+		if (nRegIdx == g_ciInvalid)
+			throw CParserError(t_csz("General purpose register specifier is missing"), oParser.GetPreviousPos(), sToken);
+		if (nRegIdx < 4)
+			throw CError(t_csz("Content of the DW R0 register is readonly and could not modified"));
+		if (nRegIdx >= core::SCPUStateBase::eRegisterPoolSize)
+			throw CParserError(t_csz("Invalid general purpose register index"), oParser.GetPreviousPos(), sToken);
+
+		// Alignment check
+		uchar nOprSizeInBytes = core::OperandSize(eOprSize);
+		if (nOprSizeInBytes == 0)
+			throw CError(t_csz("Invalid operand size"));
+		else if (nRegIdx % nOprSizeInBytes != 0)
+			throw CError(base::toStr("Unaligned register index '%1'", nRegIdx));
+
+		if (eType == EValueType::Unknown)
+			// Take default value type 
+			eType = (EValueType) nOprSizeInBytes;
+
+		CValue oValue = std::move(FetchValue(oParser, eType));
+		m_pDebugger->ChangeRegister(CDebugger::ERegType::GP, nRegIdx, oValue);
 	}
 
 	sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 }
 
 void CCommander::cmd_assign(CCmdParser& oParser)
@@ -546,13 +619,13 @@ void CCommander::cmd_assign(CCmdParser& oParser)
 	CValue oValue = FetchValue(oParser, tVarInfo.eType, tVarInfo.nSize);
 
 	if (oValue.GetCount() > tVarInfo.nSize)
-		throw CError(t_csz("Provided value array size exceeds variable array size"), oParser.GetCurrentPos(), sName);
+		throw CError(t_csz("Error: Provided value array size exceeds variable array size"));
 
 	m_pDebugger->ChangeVariable(sName, std::move(oValue));
 
 	t_string sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 }
 
 void CCommander::cmd_backtrace(CCmdParser& oParser)
@@ -560,7 +633,7 @@ void CCommander::cmd_backtrace(CCmdParser& oParser)
 	CheckCPUStatus();
 	t_string sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 
 	PrintStackBacktrace();
 }
@@ -590,7 +663,7 @@ void CCommander::cmd_dump(CCmdParser& oParser)
 	else if (compare(sToken, t_csz("stack")))
 		nSection = 4;
 	else if (!sToken.empty())
-		throw CError(t_csz("Unknwon section"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unknwon section"), oParser.GetPreviousPos(), sToken);
 
 	oParser.SkipWhiteSpaces();
 	while (!oParser.IsFinished())
@@ -608,43 +681,43 @@ void CCommander::cmd_dump(CCmdParser& oParser)
 			else if (compare(sToken, t_csz("text")))
 				nFormat = 1;
 			else
-				throw CError(t_csz("Unknown format specifier"), oParser.GetPreviousPos(), sToken);
+				throw CError(toStr("Error: Unknown format specifier '%1'", sToken));
 		}
 		else if (compare(sToken, t_csz("-at")))
 		{
 			if (nSection == 1 || nSection == 3)
 				nAddress = oParser.ParseNumber<t_address, 16>();
 			else if (nSection == 2)
-				nAddress = FetchCodeAddress(oParser);
+				nAddress = FetchAddress(oParser, false);
 			else
-				throw CError(t_csz("Invalid use of the argument"), oParser.GetPreviousPos(), sToken);
+				throw CError(toStr("Invalid use of the argument '%1'", sToken));
 		}
 		else if (compare(sToken, t_csz("-sz")) || compare(sToken, t_csz("-size")))
 		{
 			if (nSection > 0 && nSection < 4)
 				nSize = oParser.ParseNumber<t_size, 0>();
 			else
-				throw CError(t_csz("Invalid use of the argument"), oParser.GetPreviousPos(), sToken);
+				throw CError(toStr("Error: Invalid use of the argument '%1'", sToken));
 		}
 		else if (compare(sToken, t_csz("-depth")))
 		{
 			if (nSection == 4)
 				nSize = oParser.ParseNumber<t_size>();
 			else
-				throw CError(t_csz("Invalid use of the argument"), oParser.GetPreviousPos(), sToken);
+				throw CError(toStr("Invalid use of the argument '%1'", sToken));
 		}
 		else
 		{
-			throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+			throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 		}
 	}
 
 	if (sFilePath.empty())
-		throw CError(t_csz("File specifier is missing"), oParser.GetPreviousPos(), sToken);
+		throw CError(t_csz("Error: File specifier is missing"));
 
 	sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 
 	// Open file
 	std::ofstream oDumpFile(sFilePath, (nFormat == 0) ? (std::ios_base::out | std::ios::binary | std::ios::trunc) : (std::ios_base::out));
@@ -708,27 +781,27 @@ void CCommander::cmd_print(CCmdParser& oParser)
 		{
 			sToken = std::move(oParser.ParseToken(base::CParser::IsSpace));
 			if (compare(sToken, t_csz("-at")))
-				nAddress = FetchCodeAddress(oParser);
+				nAddress = FetchAddress(oParser, true);
 			else if (compare(sToken, t_csz("-sz")) || compare(sToken, t_csz("-size")))
 				nSize = oParser.ParseNumber<t_size, 0>();
 			else
-				throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+				throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 		}
 
 		PrintCode(nAddress, nSize);
 	}
 	else
-		throw CError(t_csz("Unknwon section"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unknwon section"), oParser.GetPreviousPos(), sToken);
 
 	sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 }
 
 void CCommander::cmd_watch(CCmdParser& oParser)
 {
 	CheckCPUStatus();
-	t_string sToken = std::move(oParser.ParseName());
+	t_string sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
 
 	if (sToken.empty())
 	{
@@ -745,7 +818,7 @@ void CCommander::cmd_watch(CCmdParser& oParser)
 	{
 		sToken = std::move(oParser.ParseName());
 		if (sToken.empty())
-			throw CError(t_csz("Expecting variable name"), oParser.GetCurrentPos(), sToken);
+			throw CParserError(t_csz("Expecting variable name"), oParser.GetCurrentPos(), sToken);
 
 		// Check variable name
 		auto const& tInfo = m_pDebugger->GetVariableInfo(sToken);
@@ -757,7 +830,7 @@ void CCommander::cmd_watch(CCmdParser& oParser)
 	{
 		sToken = std::move(oParser.ParseName());
 		if (sToken.empty())
-			throw CError(t_csz("Expecting variable name"), oParser.GetCurrentPos(), sToken);
+			throw CParserError(t_csz("Expecting variable name"), oParser.GetCurrentPos(), sToken);
 
 		// Check variable name
 		auto const& tInfo = m_pDebugger->GetVariableInfo(sToken);
@@ -771,7 +844,7 @@ void CCommander::cmd_watch(CCmdParser& oParser)
 		do
 		{
 			aWatchList.insert(std::move(sToken));
-			sToken = std::move(oParser.ParseName());
+			sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
 		} while (!sToken.empty());
 
 		PrintWatchList(aWatchList);
@@ -782,7 +855,7 @@ void CCommander::cmd_load(CCmdParser& oParser)
 {
 	t_string sPath = std::move(oParser.ParseString(false));
 	if (sPath.empty())
-		throw CError(t_csz("Expecting binary executable path"), oParser.GetCurrentPos(), sPath);
+		throw CParserError(t_csz("Expecting binary executable path"), oParser.GetCurrentPos(), sPath);
 	Load(sPath);
 }
 
@@ -793,13 +866,13 @@ void CCommander::cmd_open(CCmdParser& oParser)
 	{
 		t_string sPath = std::move(oParser.ParseString(false));
 		if (sPath.empty())
-			throw CError(t_csz("Expecting source file name"), oParser.GetCurrentPos(), sPath);
+			throw CParserError(t_csz("Expecting source file name"), oParser.GetCurrentPos(), sPath);
 		aSourceCodeNames.push_back(std::move(sPath));
 	} while (oParser.GetChar(true) == t_char(','));
 
 	t_string sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
-		throw CError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 
 	Open(std::move(aSourceCodeNames));
 }
@@ -815,7 +888,7 @@ void CCommander::cmd_exit(CCmdParser&)
 //	Internal routines
 //
 
-t_address CCommander::FetchCodeAddress(CCmdParser& oParser)
+t_address CCommander::FetchAddress(CCmdParser& oParser, bool bCodeOnly)
 {
 	t_address nAddress = core::cnInvalidAddress;
 
@@ -831,7 +904,7 @@ t_address CCommander::FetchCodeAddress(CCmdParser& oParser)
 			t_index nLineNum = oParser.ParseNumber<t_address>(0, &sToken);
 			nAddress = m_pDebugger->ResolveAddressFromSource(nLineNum, sSrcUnit);
 			if (nAddress == core::cnInvalidAddress)
-				throw CError(t_csz("Invalid source:line_number"), oParser.GetPreviousPos(), sSrcUnit + ':' + sToken);
+				throw CError(toStr("Error: Invalid source:line_number '%1'", sSrcUnit + ':' + sToken));
 		}
 		else if (chNext == '.')
 		{
@@ -839,24 +912,37 @@ t_address CCommander::FetchCodeAddress(CCmdParser& oParser)
 			sToken = std::move(oParser.ParseName());
 			nAddress = m_pDebugger->ResolveAddressFromFunction(sFuncName, sToken);
 			if (nAddress == core::cnInvalidAddress)
-				throw CError(t_csz("Invalid function.label"), oParser.GetPreviousPos(), sFuncName + '.' + sToken);
+				throw CError(toStr("Error: Invalid function.label '%1'", sFuncName + '.' + sToken));
 		}
 		else
 		{
 			oParser.RevertPreviousParse();
 			nAddress = m_pDebugger->ResolveAddressFromLabel(sToken);
 			if (nAddress == core::cnInvalidAddress)
+				// Try function name
 				nAddress = m_pDebugger->ResolveAddressFromFunction(sToken);
-			if (nAddress == core::cnInvalidAddress)
-				throw CError(t_csz("Invalid label or function name"), oParser.GetPreviousPos(), sToken);
+			if (nAddress == core::cnInvalidAddress && !bCodeOnly)
+				// Try cariable name
+				nAddress = m_pDebugger->ResolveAddressFromVariable(sToken);
+
+			if (nAddress == core::cnInvalidAddress && bCodeOnly)
+				throw CError(toStr("Error: Invalid label or function name '%1'", sToken));
+			else if (nAddress == core::cnInvalidAddress)
+				throw CError(toStr("Error: Invalid label, function or variable name '%1'", sToken));
 		}
 	}
 	else if (ch == t_char('0'))
 	{
 		t_string sToken;
 		nAddress = oParser.ParseNumber<t_address, 0>(0, &sToken);
-		if (!m_pDebugger->CheckCodeAddress(nAddress))
-			throw CError(t_csz("Invalid code address"), oParser.GetPreviousPos(), sToken);
+		if (!m_pDebugger->CheckCodeAddress(nAddress) &&
+			(bCodeOnly || !m_pDebugger->CheckVariableAddress(nAddress)))
+		{
+			if (bCodeOnly)
+				throw CError(toStr("Error: Invalid code address '%1'", sToken));
+			else
+				throw CError(toStr("Error: Invalid code or variable address '%1'", sToken));
+		}
 	}
 	else if (CCmdParser::IsNum(ch))
 	{
@@ -864,12 +950,12 @@ t_address CCommander::FetchCodeAddress(CCmdParser& oParser)
 		t_index nLineNum = oParser.ParseNumber<t_address>(0, &sToken);
 		nAddress = m_pDebugger->ResolveAddressFromSource(nLineNum, {});
 		if (nAddress == core::cnInvalidAddress)
-			throw CError(t_csz("Invalid line number"), oParser.GetPreviousPos(), sToken);
+			throw CError(toStr("Error: Invalid line number '%1'", sToken));
 	}
 	else
 	{
 		t_string sToken = std::move(oParser.ParseToken());
-		throw CError(t_csz("Invalid code location specifer"), oParser.GetPreviousPos(), sToken);
+		throw CError(toStr("Error: Invalid code location specifer '%1'", sToken));
 	}
 
 	return nAddress;
@@ -1216,11 +1302,11 @@ void CCommander::PrintCurrentStackFrame() const
 	}
 }
 
-void CCommander::PrintWatchList(std::set<t_string> const&) const
+void CCommander::PrintWatchList(std::set<t_string> const& aWatchlist) const
 {
 	m_cout << std::endl;
 	m_cout << "Watch:  --------------------------------------------------------------------------------" << std::endl;
-	for (t_string const& sName : m_aWatchlist)
+	for (t_string const& sName : aWatchlist)
 	{
 		auto const& tInfo = m_pDebugger->GetVariableInfo(sName);
 		PrintVariable(tInfo);
@@ -1230,7 +1316,7 @@ void CCommander::PrintWatchList(std::set<t_string> const&) const
 void CCommander::PrintVariable(vm::SVariableInfo const& tInfo) const
 {
 	std::ostream& os = m_cout;
-	os << tInfo.sName << core::CValue::TypeToCStr(tInfo.eType);
+	os << core::CValue::TypeToCStr(tInfo.eType) << ' ' << tInfo.sName;
 	if (tInfo.nSize > 1)
 		os << '(' << std::dec << std::setw(1) << tInfo.nSize << ')';
 

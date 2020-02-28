@@ -403,7 +403,7 @@ inline bool TStringComparator<TString, ComparisonType>::operator()(
 		bRes = (v1 > v2);
 		break;
 	case EComparisonType::Equal:
-		bRes = (v1 == v2);
+		bRes = ((v1.size() == v2.size()) && (v1 == v2));
 		break;
 	case EComparisonType::Less_CI:
 		bRes = std::lexicographical_compare(
@@ -447,7 +447,7 @@ inline bool TStringComparator<TString, ComparisonType>::operator()(
 		bRes = (v1 > v2);
 		break;
 	case EComparisonType::Equal:
-		bRes = (v1 == v2);
+		bRes = ((v1.size() == TString::traits_type::length(v2)) && (v1 == v2));
 		break;
 	case EComparisonType::Less_CI:
 	{
@@ -477,7 +477,7 @@ inline bool TStringComparator<TString, ComparisonType>::operator()(
 	}
 	case EComparisonType::Equal_CI:
 	{
-		bRes = std::equal(
+		bRes = (v1.size() == TString::traits_type::length(v2)) && std::equal(
 			v1.begin(), v1.end(), v2,
 			[this](TString::value_type ch1, TString::value_type ch2)
 		{

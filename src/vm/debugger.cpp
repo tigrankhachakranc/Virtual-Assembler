@@ -217,13 +217,6 @@ void CDebugger::StepOver(t_size nCount)
 			{
 				eStatus = m_pCPU->Run(true);
 
-				// Restore BP to hit next time CPU will pass over the same instruction
-				if (bCurrBP)
-				{	// IP already shows next instruction, but CIP yet keeps previous value
-					TurnBreakPointAt(m_pCPU->State().nCIP, true);
-					bCurrBP = false;
-				}
-
 				// Analyze just executed instruction to find out corresponding CALLs & RETs
 				// IP already shows next instruction, but CIP yet keeps reference on the previous one
 				eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nCIP);
@@ -232,6 +225,12 @@ void CDebugger::StepOver(t_size nCount)
 				else if (eOpCode == EOpCode::RET)
 					--nCallLevel;
 
+				// Restore BP to hit next time CPU will pass over the same instruction
+				if (bCurrBP)
+				{	// IP already shows next instruction, but CIP yet keeps previous value
+					TurnBreakPointAt(m_pCPU->State().nCIP, true);
+					bCurrBP = false;
+				}
 			} while (eStatus == CProcessor::EStatus::Ready && nCallLevel != 0);
 
 			if (eStatus == CProcessor::EStatus::Break)
@@ -260,13 +259,6 @@ void CDebugger::StepOut()
 	{
 		eStatus = m_pCPU->Run(true);
 
-		// Restore BP to hit next time CPU will pass over the same instruction
-		if (bCurrBP)
-		{	// IP already shows next instruction, but CIP yet keeps previous value
-			TurnBreakPointAt(m_pCPU->State().nCIP, true);
-			bCurrBP = false;
-		}
-
 		// Analyze just executed instruction to find out corresponding CALLs & RETs
 		// IP already shows next instruction, but CIP yet keeps reference on the previous one
 		EOpCode eOpCode = Memory().operator[]<EOpCode>(m_pCPU->State().nCIP);
@@ -274,6 +266,13 @@ void CDebugger::StepOut()
 			++nCallLevel;
 		else if (eOpCode == EOpCode::RET)
 			--nCallLevel;
+
+		// Restore BP to hit next time CPU will pass over the same instruction
+		if (bCurrBP)
+		{	// IP already shows next instruction, but CIP yet keeps previous value
+			TurnBreakPointAt(m_pCPU->State().nCIP, true);
+			bCurrBP = false;
+		}
 
 	} while (eStatus == CProcessor::EStatus::Ready && nCallLevel != 0);
 
@@ -294,9 +293,9 @@ void CDebugger::ResetProgram()
 {
 	VASM_CHECK_PTR(m_pCPU);
 	if (m_pCPU->Status().eStatus == CProcessor::EStatus::Running)
-		VASM_THROW_ERROR(t_csz("Debugger: Can't reset runnning CPU."));
+		throw CError(t_csz("Debugger: Can't reset runnning CPU."));
 	else if (m_pCPU->Status().eStatus == CProcessor::EStatus::NotInitialized)
-		VASM_THROW_ERROR(t_csz("Debugger: Can't reset uninitialized CPU."));
+		throw CError(t_csz("Debugger: Can't reset uninitialized CPU."));
 
 	m_pCPU->Reinit(m_tPackage.nProgramStart); 
 }
@@ -331,19 +330,19 @@ void CDebugger::ChangeRegister(ERegType eRegType, uint nRegIdx, CValue const& oV
 	{
 		nRegIdx += core::SCPUStateBase::eARBaseIndex;
 		if (nRegIdx >= core::SCPUStateBase::eAddressRegistersPoolSize)
-			VASM_THROW_ERROR(t_csz("Debugger: Invalid address register index"));
+			throw CError(t_csz("Debugger: Invalid address register index"));
 		if (oValue.GetType() != core::ValueType<t_address>() || oValue.GetCount() != 1)
-			VASM_THROW_ERROR(t_csz("Debugger: Invalid address register value"));
+			throw CError(t_csz("Debugger: Invalid address register value"));
 		tState.rega<t_address>(nRegIdx) = static_cast<t_address>(oValue);
 	}
 	else //(eRegType == ERegType::GP)
 	{
 		if (nRegIdx >= core::SCPUStateBase::eRegisterPoolSize ||
 			nRegIdx % oValue.GetElementSize() != 0)
-			VASM_THROW_ERROR(t_csz("Debugger: Invalid GP register index"));
+			throw CError(t_csz("Debugger: Invalid GP register index"));
 		if (!oValue.IsValid() || oValue.GetCount() != 1 ||
 			(oValue.GetSize() + nRegIdx) >= core::SCPUStateBase::eRegisterPoolSize)
-			VASM_THROW_ERROR(t_csz("Debugger: Invalid GP register value"));
+			throw CError(t_csz("Debugger: Invalid GP register value"));
 
 		switch (oValue.GetType())
 		{
@@ -372,14 +371,14 @@ void CDebugger::ChangeVariable(t_string const& sName, CValue const& oValue)
 	// Lookup variable address
 	auto it = m_mapVariables.find(&sName);
 	if (it == m_mapVariables.end())
-		VASM_THROW_ERROR(base::toStr("Debugger: Variable '%1' not found", sName));
+		throw CError(base::toStr("Debugger: Variable '%1' not found", sName));
 
 	t_index nVarIdx = it->second;
 	VASM_CHECK_IDX(nVarIdx, m_tPackage.aVariableTable.size());
 
 	SVariableInfo const& tInfo = m_tPackage.aVariableTable.at(nVarIdx);
 	if (oValue.GetType() != tInfo.eType || oValue.GetCount() > tInfo.nSize)
-		VASM_THROW_ERROR(base::toStr("Debugger: Invalid value for the variable '%1'", sName));
+		throw CError(base::toStr("Debugger: Invalid value for the variable '%1'", sName));
 
 	RWMemory().WriteValue(tInfo.nAddress, oValue);
 }
@@ -391,7 +390,7 @@ SVariableInfo CDebugger::GetVariableInfo(t_string const& sName) const
 	// Lookup variable address
 	auto it = m_mapVariables.find(&sName);
 	if (it == m_mapVariables.end())
-		VASM_THROW_ERROR(base::toStr("Debugger: Variable '%1' not found", sName));
+		throw CError(base::toStr("Debugger: Variable '%1' not found", sName));
 	
 	t_index nVarIdx = it->second;
 	VASM_CHECK_IDX(nVarIdx, m_tPackage.aVariableTable.size());
@@ -460,6 +459,20 @@ void CDebugger::RemoveAllBreakPoints()
 //
 //	Debug Helpers
 //
+t_address CDebugger::ResolveAddressFromVariable(t_string const& sVarName) const
+{
+	VASM_CHECK_PTR(m_pCPU);
+	t_address nResolved = core::cnInvalidAddress;
+	auto it = m_mapVariables.find(CStringRef{&sVarName});
+	if (it != m_mapVariables.end())
+	{
+		t_index nVarIdx = it->second;
+		VASM_CHECK_IDX(nVarIdx, m_tPackage.aVariableTable.size());
+		nResolved = m_tPackage.aVariableTable.at(nVarIdx).nAddress;
+	}
+	return nResolved;
+}
+
 t_address CDebugger::ResolveAddressFromLabel(t_string const& sLabel) const
 {
 	VASM_CHECK_PTR(m_pCPU);
@@ -530,13 +543,35 @@ t_address CDebugger::ResolveAddressFromSource(t_index nLineNumber, t_string cons
 			SFunctionInfo const& tFuncInfo = m_tPackage.aFunctionTable[nFunc];
 			sSrcUnitRef = &tFuncInfo.sSrcUnit;
 		}
+		else if (m_tPackage.nMainFuncIndex != g_ciInvalid)
+		{
+			// If there is only source then take that
+			SFunctionInfo const& tFuncInfo = m_tPackage.aFunctionTable[m_tPackage.nMainFuncIndex];
+			sSrcUnitRef = &tFuncInfo.sSrcUnit;
+		}
 	}
 
-	t_address nResolved = LookupCode(sSrcUnitRef.str(), nLineNumber);
+	t_address nResolved = core::cnInvalidAddress;
+	if (sSrcUnitRef != nullptr)
+		nResolved = LookupCode(sSrcUnitRef.str(), nLineNumber);
 	return nResolved;
 }
 
-bool CDebugger::CheckCodeAddress(t_address nAddress) const
+bool CDebugger::CheckVariableAddress(t_address const nAddress) const
+{
+	bool bAnswer = false;
+	for (auto const& tInfo : m_tPackage.aVariableTable)
+	{
+		if (tInfo.nAddress == nAddress)
+		{
+			bAnswer = true;
+			break;
+		}
+	}
+	return bAnswer;
+}
+
+bool CDebugger::CheckCodeAddress(t_address const nAddress) const
 {
 	t_index nFunc, nLine;
 	return (nAddress != core::cnInvalidAddress && nAddress % 2 == 0 && LookupSource(nAddress, nFunc, nLine));
@@ -654,7 +689,7 @@ void CDebugger::DumpMemory(std::ostream& os, t_address nBaseAddress, t_size nSiz
 {
 	VASM_CHECK_PTR(m_pCPU);
 	if (nBaseAddress >= Memory().GetSize())
-		VASM_THROW_ERROR(t_csz("Debugger: memory dump failed due to invalid address"));
+		throw CError(t_csz("Debugger: memory dump failed due to invalid address"));
 
 	// Adjust number of bytes 
 	if (nSizeBytes == 0)
@@ -678,7 +713,7 @@ void CDebugger::DumpCode(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 		nBaseAddress = m_tPackage.nCodeBase;
 
 	if (nBaseAddress >= Memory().GetSize() || nBaseAddress < m_tPackage.nCodeBase || nBaseAddress >= nCodeEnd)
-		VASM_THROW_ERROR(t_csz("Debugger: memory dump for the code failed due to invalid address"));
+		throw CError(t_csz("Debugger: memory dump for the code failed due to invalid address"));
 
 	// Adjust size
 	nCodeEnd = std::min(nCodeEnd, Memory().GetSize());
@@ -716,7 +751,7 @@ void CDebugger::DumpData(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 		nBaseAddress = m_tPackage.nDataBase;
 
 	if (nBaseAddress >= Memory().GetSize() || nBaseAddress < m_tPackage.nDataBase || nBaseAddress >= nDataEnd)
-		VASM_THROW_ERROR(t_csz("Debugger: memory dump for the code failed due to invalid address"));
+		throw CError(t_csz("Debugger: memory dump for the code failed due to invalid address"));
 
 	// Adjust size
 	nDataEnd = std::min(nDataEnd, Memory().GetSize());

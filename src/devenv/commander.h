@@ -68,10 +68,11 @@ public:
 
 public:
 	//
-	//	Parser Error
+	//	Error
 	//
 	using CCmdParser = base::CParser;
-	using CError = CCmdParser::CError;
+	using CParserError = CCmdParser::CError;
+	using CError = base::CException;
 
 protected:
 	//
@@ -121,7 +122,7 @@ protected:
 	//
 	//	Implementation
 	//
-	t_address FetchCodeAddress(CCmdParser& oParser);
+	t_address FetchAddress(CCmdParser& oParser, bool bCodeOnly);
 	CValue FetchValue(CCmdParser& oParser, EValueType eType, t_count nCount = 1);
 	
 	void PrintCurrentState() const;

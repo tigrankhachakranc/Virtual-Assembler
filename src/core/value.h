@@ -108,7 +108,7 @@ public:
 	//
 	//	Static helpers
 	//
-	static t_csz TypeToCStr(EValueType eType) noexcept;
+	static t_csz TypeToCStr(EValueType eType, bool bLongVersion = false) noexcept;
 
 private:
 	union SData

@@ -45,7 +45,7 @@ t_string CParser::CError::GetErrorMsg(bool bDetailed) const
 
 		if (m_nPosition != g_ciInvalid)
 			oBuff << "  Position: " << m_nPosition;
-		if (m_sToken.empty())
+		if (!m_sToken.empty())
 			oBuff << "  Token: " << m_sToken;
 
 		oBuff << std::endl;
@@ -155,10 +155,10 @@ t_string CParser::ParseName()
 {
 	SkipWhiteSpaces();
 	if (IsFinished())
-		throw CException("Unexpected end of line: Expecting name");
+		throw CError(t_csz("Unexpected end of line: Expecting name"), GetCurrentPos());
 
 	if (!IsAlpha(PeekChar()))
-		throw CException(toStr("Unexpected character '%1': Expecting name", t_string(1, PeekChar())));
+		throw CError(toStr("Unexpected character '%1': Expecting name", t_string(1, PeekChar())), GetCurrentPos());
 
 	return std::move(ParseToken());
 }
@@ -171,7 +171,7 @@ TNumType CParser::ParseNumberInternal(int nRadix, t_char const chDelimiter, t_st
 
 	SkipWhiteSpaces();
 	if (IsFinished())
-		throw CException("Unexpected end of line: Expecting numeric value");
+		throw CError(t_csz("Unexpected end of line: Expecting numeric value"), GetCurrentPos());
 
 	FixCurrentPos();
 
@@ -188,7 +188,7 @@ TNumType CParser::ParseNumberInternal(int nRadix, t_char const chDelimiter, t_st
 		if (pchLastPos <= pchStartPos ||
 			i64Number > (int64) std::numeric_limits<TNumType>::max() ||
 			i64Number < (int64) std::numeric_limits<TNumType>::min())
-			throw CException("Invalid numeric value");
+			throw CError(t_csz("Invalid numeric value"), GetCurrentPos());
 		nNumber = (TNumType) i64Number;
 	}
 	else
@@ -198,7 +198,7 @@ TNumType CParser::ParseNumberInternal(int nRadix, t_char const chDelimiter, t_st
 			*psToken = std::move(t_string(pchStartPos, pchLastPos - pchStartPos));
 		if (pchLastPos <= pchStartPos ||
 			ui64Number > (uint64) std::numeric_limits<TNumType>::max())
-			throw CException("Invalid numeric value");
+			throw CError(t_csz("Invalid numeric value"), GetCurrentPos());
 		nNumber = (TNumType) ui64Number;
 	}
 
@@ -208,11 +208,11 @@ TNumType CParser::ParseNumberInternal(int nRadix, t_char const chDelimiter, t_st
 	{	// Ensure for delimiter
 		t_char chCurr = GetChar(true);
 		if (chCurr != 0 && chCurr != chDelimiter)
-			throw CException("Expecting delimiter");
+			throw CError(t_csz("Expecting delimiter"), GetCurrentPos());
 	}
 	else if (!IsFinished() && !IsWhiteSpace())
 	{	// Should be white space or end of string
-		throw CException("Invalid numeric value");
+		throw CError(t_csz("Invalid numeric value"), GetCurrentPos());
 	}
 
 	return nNumber;
@@ -233,7 +233,7 @@ t_char CParser::ParseCharacter(t_char const chDelimiter)
 {
 	SkipWhiteSpaces();
 	if (IsFinished())
-		throw CException("Unexpected end of line: Expecting character value");
+		throw CError(t_csz("Unexpected end of line: Expecting character value"), GetCurrentPos());
 
 	uchar chValue = 0;
 
@@ -246,13 +246,13 @@ t_char CParser::ParseCharacter(t_char const chDelimiter)
 		if (chCurr == '\\')
 			chCurr = GetChar(false);
 		if (chCurr == 0)
-			throw CException("Unexpected end of line: Invalid character specification");
+			throw CError(t_csz("Unexpected end of line: Invalid character specification"), GetCurrentPos());
 
 		chValue = (uchar) chCurr;
 
 		chCurr = GetChar(false);
 		if (chCurr != '\'')
-			throw CException("Expecting charcter closing quote (')");
+			throw CError(t_csz("Expecting charcter closing quote (')"), GetCurrentPos());
 	}
 	else if (chCurr == '0' && PeekChar(1) == 'x')
 	{	// Hexadecimal value
@@ -260,7 +260,7 @@ t_char CParser::ParseCharacter(t_char const chDelimiter)
 		t_char ch1 = GetChar(false);
 		t_char ch2 = GetChar(false);
 		if (!IsHexNum(ch1) || !IsHexNum(ch2))
-			throw CException("Expecting hexadecimal character value");
+			throw CError(t_csz("Expecting hexadecimal character value"), GetCurrentPos());
 
 		chValue = GetHexNumValue(ch1) * 16 + GetHexNumValue(ch2);
 	}
@@ -275,7 +275,7 @@ t_char CParser::ParseCharacter(t_char const chDelimiter)
 		if (pchLastPos <= pchStartPos ||
 			nNumber > std::numeric_limits<uchar>::max() ||
 			nNumber < std::numeric_limits<char>::min())
-			throw CException("Invalid character value");
+			throw CError(t_csz("Invalid character value"), GetCurrentPos());
 
 		SetCurrentPos(nPos + (pchLastPos - pchStartPos));
 
@@ -286,11 +286,11 @@ t_char CParser::ParseCharacter(t_char const chDelimiter)
 	{	// Ensure for delimiter
 		chCurr = GetChar(true);
 		if (chCurr != 0 && chCurr != chDelimiter)
-			throw CException("Expecting delimiter");
+			throw CError(t_csz("Expecting delimiter"), GetCurrentPos());
 	}
 	else if (!IsFinished() && !IsWhiteSpace())
 	{	// Should be white space or end of string
-		throw CException("Invalid character value");
+		throw CError(t_csz("Invalid character value"), GetCurrentPos());
 	}
 
 	return chValue;
@@ -311,7 +311,7 @@ t_string CParser::ParseString(
 	{
 		chCurr = GetChar(true);
 		if (chCurr != chOpeningQuote)
-			throw CException(base::toStr("Expecting string literal opening quote %1", t_string(1, chOpeningQuote)));
+			throw CError(base::toStr("Expecting string literal opening quote %1", t_string(1, chOpeningQuote)), GetCurrentPos());
 		bEnclosed = true;
 	}
 
@@ -328,7 +328,7 @@ t_string CParser::ParseString(
 			break;
 
 		if (bEnclosed && chCurr == 0)
-			throw CException(base::toStr("Expecting string literal closing quote %1", t_string(1, chClosingQuote)));
+			throw CError(base::toStr("Expecting string literal closing quote %1", t_string(1, chClosingQuote)), GetCurrentPos());
 
 		sLiteral.push_back(chCurr);
 	}
@@ -340,7 +340,7 @@ bool CParser::ParseBoolean(t_char const chDelimiter)
 {
 	SkipWhiteSpaces();
 	if (IsFinished())
-		throw CException("Unexpected end of line: Expecting Boolean value");
+		throw CError(t_csz("Unexpected end of line: Expecting Boolean value"), GetCurrentPos());
 
 	FixCurrentPos();
 
@@ -354,13 +354,13 @@ bool CParser::ParseBoolean(t_char const chDelimiter)
 			 compare(sToken, t_csz("no")) || compare(sToken, t_csz("off")))
 		bValue = false;
 	else
-		throw CException("Unexpected token: Expecting Boolean value");
+		throw CError(t_csz("Unexpected token: Expecting Boolean value"), GetCurrentPos());
 
 	if (chDelimiter != 0)
 	{	// Ensure for delimiter
 		t_char chCurr = GetChar(true);
 		if (chCurr != 0 && chCurr != chDelimiter)
-			throw CException("Expecting delimiter");
+			throw CError(t_csz("Expecting delimiter"), GetCurrentPos());
 	}
 
 	return bValue;

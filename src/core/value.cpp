@@ -280,20 +280,20 @@ t_size CValue::GetElementSize() const noexcept
 //
 //	Static routines
 //
-t_csz CValue::TypeToCStr(EValueType eType) noexcept
+t_csz CValue::TypeToCStr(EValueType eType, bool bLongVersion) noexcept
 {
 	switch (eType)
 	{
 	case EValueType::Byte:
-		return "Byte";
+		return bLongVersion ? t_csz("Byte") : t_csz("B ");
 	case EValueType::Word:
-		return "Word";
+		return bLongVersion ? t_csz("Word") : t_csz("W ");
 	case EValueType::DWord:
-		return "DWord";
+		return bLongVersion ? t_csz("DWord") : t_csz("DW");
 	case EValueType::QWord:
-		return "QWord";
+		return bLongVersion ? t_csz("QWord") : t_csz("QW");
 	case EValueType::Char:
-		return "Char";
+		return bLongVersion ? t_csz("Char") : t_csz("CH");
 	default:
 		break;
 	}

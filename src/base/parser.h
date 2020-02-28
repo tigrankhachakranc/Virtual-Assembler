@@ -33,8 +33,8 @@ public:
 		typedef base::CException Base;
 	public:
 		inline CError();
-		inline CError(t_csz psErrMsg, t_index nPos, t_string const& sToken);
-		inline CError(t_string const& sErrMsg, t_index nPos, t_string const& sToken);
+		inline CError(t_csz psErrMsg, t_index nPos, t_string const& sToken = t_string());
+		inline CError(t_string const& sErrMsg, t_index nPos, t_string const& sToken = t_string());
 		~CError() override;
 
 		inline CError(CError const&) = default;
@@ -60,6 +60,7 @@ public:
 	inline t_string const& Input() const;
 	
 	inline bool IsFinished() const;
+	inline bool IsFinished(bool bSkipWhiteSpaces);
 	inline bool IsWhiteSpace() const;
 
 	void Skip(int nCharCount);
@@ -153,6 +154,13 @@ inline t_string const& CParser::Input() const
 
 bool CParser::IsFinished() const
 {
+	return (m_nPos >= m_sInput.size());
+}
+
+bool CParser::IsFinished(bool bSkipWhiteSpaces)
+{
+	if (bSkipWhiteSpaces)
+		SkipWhiteSpaces();
 	return (m_nPos >= m_sInput.size());
 }
 
