@@ -57,11 +57,11 @@ CCommander::t_mapCmdHandlers CCommander::ms_mapCmdHandlers = {
 	{"w",		&CCommander::cmd_watch},
 	{"watch",	&CCommander::cmd_watch},
 
+	{"p",		&CCommander::cmd_print},
+	{"print",	&CCommander::cmd_print},
 	{"bt",		&CCommander::cmd_backtrace},
 	{"d",		&CCommander::cmd_dump},
 	{"dump",	&CCommander::cmd_dump},
-	{"p",		&CCommander::cmd_dump},
-	{"print",	&CCommander::cmd_print},
 
 	{"l",		&CCommander::cmd_load},
 	{"load",	&CCommander::cmd_load},
@@ -222,13 +222,13 @@ void CCommander::cmd_help(CCmdParser&)
 	m_cout << "        all                                   Prints values of all (defined) variables"							<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "p|print [state]                               Prints CPU current state"											<< std::endl;
-	m_cout << "        callstack                             Prints function call stack (same as backtrace)"					<< std::endl;
+	m_cout << "        cstack                                Prints function call stack (same as bt)"							<< std::endl;
+	m_cout << "        sf                                    Prints current stack frame"										<< std::endl;
+	m_cout << "        bp                                    Prints Break points list"											<< std::endl;
 	m_cout << "        ports                                 Prints I/O Devices and Port ranges occupied by them"				<< std::endl;
 	m_cout << "        code  [-sz|size instruction_count]    Prints code started from the current IP or specifieid address"		<< std::endl;
 	m_cout << "              [-at srs:line|label|func_name|0xAddress]"															<< std::endl;
-	m_cout << "        bp                                    Prints Break points list"											<< std::endl;
-	m_cout << "        sf                                    Prints current stack frame"										<< std::endl;
-	m_cout << "bt                                            Prints current backtrace, see also 'print callstack'"				<< std::endl;
+	m_cout << "bt                                            Prints function call stack (backtrace), see also 'print cstack'"	<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "d|dump        -f|file file_path               Dumps entire memory content or part of it"							<< std::endl;
 	m_cout << "              -format text|bin"																					<< std::endl;
@@ -329,8 +329,6 @@ void CCommander::cmd_run(CCmdParser& oParser)
 		m_pDebugger->Run(!isDebug);
 
 	PrintCurrentState();
-	if (!m_aWatchlist.empty())
-		PrintWatchList(m_aWatchlist);
 }
 
 void CCommander::cmd_step_in(CCmdParser& oParser)
@@ -358,8 +356,6 @@ void CCommander::cmd_step_in(CCmdParser& oParser)
 
 	m_pDebugger->StepIn(nCount);
 	PrintCurrentState();
-	if (!m_aWatchlist.empty())
-		PrintWatchList(m_aWatchlist);
 }
 
 void CCommander::cmd_step_over(CCmdParser& oParser)
@@ -387,8 +383,6 @@ void CCommander::cmd_step_over(CCmdParser& oParser)
 
 	m_pDebugger->StepOver(nCount);
 	PrintCurrentState();
-	if (!m_aWatchlist.empty())
-		PrintWatchList(m_aWatchlist);
 }
 
 void CCommander::cmd_step_out(CCmdParser& oParser)
@@ -401,8 +395,6 @@ void CCommander::cmd_step_out(CCmdParser& oParser)
 
 	m_pDebugger->StepOut();
 	PrintCurrentState();
-	if (!m_aWatchlist.empty())
-		PrintWatchList(m_aWatchlist);
 }
 
 void CCommander::cmd_stop(CCmdParser& oParser)
@@ -429,8 +421,6 @@ void CCommander::cmd_reset(CCmdParser& oParser)
 
 void CCommander::cmd_bp_set(CCmdParser& oParser)
 {
-	CheckCPUStatus();
-
 	t_address nAddress = FetchAddress(oParser, true);
 	m_pDebugger->SetBreakPoint(nAddress);
 
@@ -441,8 +431,6 @@ void CCommander::cmd_bp_set(CCmdParser& oParser)
 
 void CCommander::cmd_bp_remove(CCmdParser& oParser)
 {
-	CheckCPUStatus();
-
 	t_string sToken = std::move(oParser.ParseToken(base::CParser::IsSpace));
 	if (compare(sToken, t_csz("all")))
 	{
@@ -747,29 +735,29 @@ void CCommander::cmd_dump(CCmdParser& oParser)
 
 void CCommander::cmd_print(CCmdParser& oParser)
 {
-	CheckCPUStatus();
-
-	t_string sToken = std::move(oParser.ParseName());
+	t_string sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
 
 	if (sToken.empty() || compare(sToken, t_csz("state")))
 	{
 		PrintCurrentState();
 	}
-	else if (compare(sToken, t_csz("callstack")))
+	else if (compare(sToken, t_csz("cstack")))
 	{
+		CheckCPUStatus();
 		PrintStackBacktrace();
 	}
-	else if (compare(sToken, t_csz("ports")))
+	else if (compare(sToken, t_csz("sf")))
 	{
-		PrintPortsInfo();
+		CheckCPUStatus();
+		PrintCurrentStackFrame();
 	}
 	else if (compare(sToken, t_csz("bp")))
 	{
 		PrintBreakPoints();
 	}
-	else if (compare(sToken, t_csz("sf")))
+	else if (compare(sToken, t_csz("ports")))
 	{
-		PrintCurrentStackFrame();
+		PrintPortsInfo();
 	}
 	else if (compare(sToken, t_csz("code")))
 	{
@@ -800,19 +788,26 @@ void CCommander::cmd_print(CCmdParser& oParser)
 
 void CCommander::cmd_watch(CCmdParser& oParser)
 {
-	CheckCPUStatus();
 	t_string sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
+
+	bool isHexadecimal = false;
+	if (compare(sToken, t_csz("hex")))
+	{
+		isHexadecimal = true;
+		sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
+	}
 
 	if (sToken.empty())
 	{
-		PrintWatchList(m_aWatchlist);
+		m_cout << std::endl;
+		PrintWatchList(m_aWatchlist, isHexadecimal);
 	}
 	else if (compare(sToken, t_csz("all")))
 	{
 		m_cout << std::endl;
 		m_cout << "Variables:  --------------------------------------------------------------------------------" << std::endl;
 		for (auto const& tInfo : m_pDebugger->Variables())
-			PrintVariable(tInfo);
+			PrintVariable(tInfo, isHexadecimal);
 	}
 	else if (compare(sToken, t_csz("add")))
 	{
@@ -847,7 +842,8 @@ void CCommander::cmd_watch(CCmdParser& oParser)
 			sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
 		} while (!sToken.empty());
 
-		PrintWatchList(aWatchList);
+		m_cout << std::endl;
+		PrintWatchList(aWatchList, isHexadecimal);
 	}
 }
 
@@ -990,8 +986,7 @@ CValue CCommander::FetchValue(CCmdParser& oParser, EValueType eType, t_count nCo
 	}
 	else
 	{
-		t_char chSeparator = 0;
-
+		t_char const chSeparator = t_char(',');
 		switch (eType)
 		{
 		case EValueType::Byte:
@@ -999,9 +994,8 @@ CValue CCommander::FetchValue(CCmdParser& oParser, EValueType eType, t_count nCo
 			core::t_byte_array aBytes;
 			do
 			{
-				aBytes.push_back(oParser.ParseNumberSafe<core::t_byte, 0>());
-				chSeparator = oParser.GetChar(true);
-			} while (chSeparator == t_char(','));
+				aBytes.push_back(oParser.ParseNumberSafe<core::t_byte, 0>(chSeparator));
+			} while (!oParser.IsFinished(true));
 			oValue = std::move(CValue(std::move(aBytes)));
 			break;
 		}
@@ -1010,9 +1004,8 @@ CValue CCommander::FetchValue(CCmdParser& oParser, EValueType eType, t_count nCo
 			core::t_word_array aWords;
 			do
 			{
-				aWords.push_back(oParser.ParseNumberSafe<core::t_word, 0>());
-				chSeparator = oParser.GetChar(true);
-			} while (chSeparator == t_char(','));
+				aWords.push_back(oParser.ParseNumberSafe<core::t_word, 0>(chSeparator));
+			} while (!oParser.IsFinished(true));
 			oValue = std::move(CValue(std::move(aWords)));
 			break;
 		}
@@ -1021,9 +1014,8 @@ CValue CCommander::FetchValue(CCmdParser& oParser, EValueType eType, t_count nCo
 			core::t_dword_array aDWords;
 			do
 			{
-				aDWords.push_back(oParser.ParseNumberSafe<core::t_dword, 0>());
-				chSeparator = oParser.GetChar(true);
-			} while (chSeparator == t_char(','));
+				aDWords.push_back(oParser.ParseNumberSafe<core::t_dword, 0>(chSeparator));
+			} while (!oParser.IsFinished(true));
 			oValue = std::move(CValue(std::move(aDWords)));
 			break;
 		}
@@ -1032,9 +1024,8 @@ CValue CCommander::FetchValue(CCmdParser& oParser, EValueType eType, t_count nCo
 			core::t_qword_array aQWords;
 			do
 			{
-				aQWords.push_back(oParser.ParseNumberSafe<core::t_qword, 0>());
-				chSeparator = oParser.GetChar(true);
-			} while (chSeparator == t_char(','));
+				aQWords.push_back(oParser.ParseNumberSafe<core::t_qword, 0>(chSeparator));
+			} while (!oParser.IsFinished(true));
 			oValue = std::move(CValue(std::move(aQWords)));
 			break;
 		}
@@ -1047,9 +1038,6 @@ CValue CCommander::FetchValue(CCmdParser& oParser, EValueType eType, t_count nCo
 		default:
 			VASM_THROW_ERROR(t_csz("Can't parse value with unknwon type"));
 		}
-
-		if (chSeparator != t_char('\0'))
-			oParser.RevertPreviousParse();
 	}
 
 	return std::move(oValue);
@@ -1068,7 +1056,6 @@ void CCommander::PrintCurrentState() const
 	}
 
 	os << std::resetiosflags(0);
-	os << std::endl;
 	os << "----------------------------------------------------------------------------------" << std::endl;
 	os << "Processor status flags: ";
 	os << " CF(" << std::dec << tState.oFlags.getCarry() << ")";
@@ -1118,6 +1105,9 @@ void CCommander::PrintCurrentState() const
 		os << std::endl;
 	}
 
+	if (!m_aWatchlist.empty())
+		PrintWatchList(m_aWatchlist, false);
+
 	if (eStatus == vm::CProcessor::EStatus::Finished)
 	{
 		os << "Program execution finished!" << std::endl;
@@ -1127,20 +1117,8 @@ void CCommander::PrintCurrentState() const
 		os << "Command: -------------------------------------------------------------------------" << std::endl;
 
 		CDebugger::SCodeLineInfo tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nCIP);
-		if (tCLInfo.sFuncName != nullptr)
-		{
-			os	<< "Func: " << tCLInfo.sFuncName.str() << "  +0x" << std::hex << std::uppercase
-				<< std::setfill('0') << std::setw(8) << tCLInfo.nRelOffset;
-			if (tCLInfo.sUnitName != nullptr)
-				os << ",  Unit: " << tCLInfo.sUnitName.str() << ",  Line: " << std::setw(0) << std::dec << tCLInfo.nLineNum;
-			os << std::endl;
-		}
-
-		std::string sBinaryCommand;
-		t_address nCmdAddress = tState.nCIP;
-		std::string sCommand = std::move(m_pDebugger->GetDisassembledCommand(nCmdAddress, &sBinaryCommand));
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nCIP << ": "
-			<< sCommand << "  #" << sBinaryCommand << std::endl;
+		PrintCodeInfo(os, tCLInfo, false);
+		PrintCommand(os, tState.nCIP);
 
 		os << "----------------------------------------------------------------------------------" << std::endl;
 		os << m_pDebugger->CPUStatus().oErrorInfo.GetErrorMsg(true);
@@ -1155,47 +1133,19 @@ void CCommander::PrintCurrentState() const
 	}
 	else
 	{
-		std::string sBinaryCommand;
-		t_address nCmdAddress;
-		std::string sCommand;
 		CDebugger::SCodeLineInfo tCLInfo;
-
 		if (tState.nCIP != tState.nIP)
 		{
 			os << "Prev command: --------------------------------------------------------------------" << std::endl;
-
 			tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nCIP);
-			if (tCLInfo.sFuncName != nullptr)
-			{
-				os	<< "Func: " << tCLInfo.sFuncName.str() << "  +0x" << std::hex << std::uppercase
-					<< std::setfill('0') << std::setw(8) << tCLInfo.nRelOffset;
-				if (tCLInfo.sUnitName != nullptr)
-					os << ",  Unit: " << tCLInfo.sUnitName.str() << ",  Line: " << std::setw(0) << std::dec << tCLInfo.nLineNum;
-				os << std::endl;
-			}
-
-			nCmdAddress = tState.nCIP;
-			sCommand = std::move(m_pDebugger->GetDisassembledCommand(nCmdAddress, &sBinaryCommand));
-			os	<< std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nCIP << ": "
-				<< sCommand << "  #" << sBinaryCommand << std::endl;
+			PrintCodeInfo(os, tCLInfo, false);
+			PrintCommand(os, tState.nCIP);
 		}
 
 		os << "Next command: --------------------------------------------------------------------" << std::endl;
-
 		tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nIP);
-		if (tCLInfo.sFuncName != nullptr)
-		{
-			os	<< "Func: " << tCLInfo.sFuncName.str() << "  +0x" << std::hex << std::uppercase
-				<< std::setfill('0') << std::setw(8) << tCLInfo.nRelOffset;
-			if (tCLInfo.sUnitName != nullptr)
-				os << ",  Unit: " << tCLInfo.sUnitName.str() << ",  Line: " << std::setw(0) << std::dec << tCLInfo.nLineNum;
-			os << std::endl;
-		}
-
-		nCmdAddress = tState.nIP;
-		sCommand = std::move(m_pDebugger->GetDisassembledCommand(nCmdAddress, &sBinaryCommand));
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nIP << ": "
-		   << sCommand << "  #" << sBinaryCommand << std::endl;
+		PrintCodeInfo(os, tCLInfo, false);
+		PrintCommand(os, tState.nIP);
 	}
 }
 
@@ -1207,11 +1157,7 @@ void CCommander::PrintStackBacktrace() const
 	m_cout << "Function call stack: ---------------------------------------------------------------------" << std::endl;
 	for (auto const& tInfo : aCodeLines)
 	{
-		m_cout << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << "0x" << tInfo.nAddress << "  ";
-		m_cout << tInfo.sUnitName.str() << " : " << tInfo.sFuncName.str();
-		if (tInfo.nLineNum != g_ciInvalid)
-			m_cout << "  Line: " << std::dec << tInfo.nLineNum;
-		m_cout << std::endl;
+		PrintCodeInfo(m_cout, tInfo, true);
 	}
 }
 
@@ -1249,19 +1195,13 @@ void CCommander::PrintBreakPoints() const
 void CCommander::PrintCode(t_address nBaseAddress, t_size nInstrCount) const
 {
 	CDebugger::SCodeLineInfo tCLInfo = m_pDebugger->GetCodeLineInfo(nBaseAddress);
-	if (tCLInfo.sUnitName != nullptr)
-		m_cout << "Unit: " << tCLInfo.sUnitName.str() << "  Line: " << tCLInfo.nLineNum << std::endl;
-	if (tCLInfo.sFuncName != nullptr)
-		m_cout << "Func: " << tCLInfo.sFuncName.str() << "  +0x: " << std::hex << std::uppercase
-		<< std::setfill('0') << std::setw(8) << tCLInfo.nRelOffset << std::endl;
+	PrintCodeInfo(m_cout, tCLInfo, true);
 
 	t_address nCurrAddress = tCLInfo.nAddress;
 	while (nInstrCount > 0 && nCurrAddress != core::cnInvalidAddress)
 	{
-		std::string sBinaryCommand;
-		std::string sCommand = std::move(m_pDebugger->GetDisassembledCommand(nCurrAddress, &sBinaryCommand));
-		m_cout << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << nCurrAddress << ": "
-				<< sCommand << "  #" << sBinaryCommand << std::endl;
+		nCurrAddress = PrintCommand(m_cout, nCurrAddress);
+		--nInstrCount;
 	}
 }
 
@@ -1276,53 +1216,77 @@ void CCommander::PrintCurrentStackFrame() const
 	t_address nSFRounded = nCurrSF + (nCurrSF % 8 == 0 ? 0 : (8 - nCurrSF % 8));
 
 	std::ostream& os = m_cout;
-	os << std::endl;
 	os << std::hex << std::uppercase << std::setfill('0') << std::setw(8);
 	os << "Current Stack Frame:  " << "SP = " << nCurrSP << "  SF = " << nCurrSF << "  ----------------" << std::endl;
 
 	core::CMemory const& oMemory = m_pDebugger->Memory();
-	for (t_address nSP = nSPRounded; nSP < nSFRounded && nSP < tState.cnStackLBound; ++nSP)
+	for (t_address nSP = nSFRounded - 1; nSP >= nSPRounded && nSP >= tState.cnStackUBound; --nSP)
 	{
-		if (nSP % 8 == 0)
-			os << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << nSP << ":  ";
+		if ((nSP + 1) % 8 == 0)
+			os << "SF -" << std::dec << std::setfill(' ') << std::setw(3) << nCurrSF - (nSP - 7) << ": ";
 
-		if (nSP < nCurrSP || nSP > nCurrSF)
-			os << "   ";
+		if (nSP < nCurrSP || nSP >= nCurrSF)
+			os << ".. ";
 		else
 		{
 			uint8 uValue;
 			oMemory.ReadAt<uint8>(nSP, uValue);
-			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << uValue << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +uValue << " ";
 		}
 
-		if (nSP % 8 == 3)
-			os << "  ";
-		else if (nSP % 8 == 7)
+		if ((nSP + 1) % 8 == 5)
+			os << " ";
+		else if ((nSP + 1) % 8 == 1)
 			os << std::endl;
 	}
 }
 
-void CCommander::PrintWatchList(std::set<t_string> const& aWatchlist) const
+void CCommander::PrintWatchList(std::set<t_string> const& aWatchlist, bool const bHexadecimal) const
 {
-	m_cout << std::endl;
-	m_cout << "Watch:  --------------------------------------------------------------------------------" << std::endl;
+	m_cout << "Watch:  --------------------------------------------------------------------------" << std::endl;
 	for (t_string const& sName : aWatchlist)
 	{
 		auto const& tInfo = m_pDebugger->GetVariableInfo(sName);
-		PrintVariable(tInfo);
+		PrintVariable(tInfo, bHexadecimal);
 	}
 }
 
-void CCommander::PrintVariable(vm::SVariableInfo const& tInfo) const
+void CCommander::PrintVariable(vm::SVariableInfo const& tInfo, bool const bHexadecimal) const
 {
 	std::ostream& os = m_cout;
-	os << core::CValue::TypeToCStr(tInfo.eType) << ' ' << tInfo.sName;
+	os << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tInfo.nAddress;
+	os << ": " << core::CValue::TypeToCStr(tInfo.eType) << ' ' << tInfo.sName;
 	if (tInfo.nSize > 1)
 		os << '(' << std::dec << std::setw(1) << tInfo.nSize << ')';
 
 	core::CMemory const& oMemory = m_pDebugger->Memory();
 	core::CValue oValue = std::move(oMemory.ReadValue(tInfo.nAddress, tInfo.eType, tInfo.nSize));
-	os << ": " << oValue << std::endl;
+	os << " = " << (bHexadecimal ? std::hex : std::dec) << oValue << std::endl;
+}
+
+void CCommander::PrintCodeInfo(
+	std::ostream& os, CDebugger::SCodeLineInfo const& tInfo, bool bIncludeBaseAddress) const
+{
+	if (bIncludeBaseAddress)
+		os << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tInfo.nAddress << ": ";
+	else
+		os << "Func: ";
+	if (tInfo.sFuncName != nullptr)
+		os << tInfo.sFuncName.str() << "  ";
+	os << "+0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tInfo.nRelOffset;
+	if (tInfo.sUnitName != nullptr)
+		os << "  Unit: " << tInfo.sUnitName.str() << ",  Line: " << std::setw(0) << std::dec << tInfo.nLineNum;
+	os << std::endl;
+}
+
+t_address CCommander::PrintCommand(std::ostream& os, t_address const nCmdAddress) const
+{
+	std::string sBinaryCommand;
+	t_address nNextAddress = nCmdAddress;
+	std::string sCommand = std::move(m_pDebugger->GetDisassembledCommand(nNextAddress, &sBinaryCommand));
+	os << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << nCmdAddress << ": "
+		<< sCommand << "  #" << sBinaryCommand << std::endl;
+	return nNextAddress;
 }
 
 void CCommander::CheckMachine() const

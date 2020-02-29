@@ -582,6 +582,8 @@ CDebugger::SCodeLineInfo CDebugger::GetCodeLineInfo(t_address nAddress) const
 	SCodeLineInfo tInfo;
 	if (LookupSource(nAddress, tInfo.sFuncName, tInfo.sUnitName, tInfo.nLineNum, tInfo.nRelOffset))
 		tInfo.nAddress = nAddress;
+	else
+		tInfo.nRelOffset = nAddress;
 	return tInfo;
 }
 
@@ -637,12 +639,13 @@ CDebugger::t_aCodeLineInfos CDebugger::GetFunctionCallStack() const
 	t_index i = 0;
 	for (auto const& tIdx : aCallStack)
 	{
-		auto const& tInfo = m_tPackage.aFunctionTable.at(tIdx.first);
+		auto const& tInfo = m_tPackage.aFunctionTable.at(tIdx.nFuncIdx);
 
-		aCodeLines[i].sUnitName = &tInfo.sSrcUnit;
-		aCodeLines[i].sFuncName = &tInfo.sName;
-		aCodeLines[i].nLineNum = tIdx.second + tInfo.nBaseLine;
-		aCodeLines[i].nAddress = tInfo.nAddress;
+		aCodeLines[i].sUnitName  = &tInfo.sSrcUnit;
+		aCodeLines[i].sFuncName  = &tInfo.sName;
+		aCodeLines[i].nLineNum   = tIdx.nLineNum;
+		aCodeLines[i].nAddress   = tInfo.nAddress;
+		aCodeLines[i].nRelOffset = tIdx.nAddress - tInfo.nAddress;
 		
 		++i;
 	}
@@ -797,7 +800,7 @@ void CDebugger::DumpStack(std::ostream& os, t_size nDepth, bool bText) const
 		if (!bText)
 		{
 			t_index nCounter = 0;
-			t_CallStack aCallStack = ExtractFunctionCallStack();
+			//t_CallStack aCallStack = ExtractFunctionCallStack();
 
 			// Unwind stack
 			do
@@ -1007,18 +1010,36 @@ CDebugger::t_CallStack CDebugger::ExtractFunctionCallStack() const
 	{
 		t_address nCurrIP = m_pCPU->State().nIP;
 		t_address nCurrSF = m_pCPU->State().nSF;
+		t_address nRetIP = m_pCPU->State().nRIP;
 		t_uoffset const cnStackBottom = m_pCPU->State().cnStackLBound - 2 * sizeof(t_address);
 
 		t_index	nFuncIdx;
 		uint	nLineNumber;
 
-		while (nCurrSF <= cnStackBottom && LookupSource(nCurrIP, nFuncIdx, nLineNumber))
+		if (LookupSource(nCurrIP, nFuncIdx, nLineNumber))
 		{
-			aCallStack.push_back({nFuncIdx, nLineNumber});
+			aCallStack.push_back({nFuncIdx, nLineNumber, nCurrIP});
+			nCurrIP = nRetIP;
 
-			// Extract next IP & SF
-			Memory().ReadAt<t_address>(nCurrSF + sizeof(t_address), nCurrIP);
-			Memory().ReadAt<t_address>(nCurrSF, nCurrSF);
+			if (nCurrSF <= cnStackBottom)
+			{
+				// Check if stack frame created (RIP == RIP Image means there is stack frame)
+				Memory().ReadAt<t_address>(nCurrSF + sizeof(t_address), nRetIP);
+				if (nRetIP == nCurrIP)
+					Memory().ReadAt<t_address>(nCurrSF, nCurrSF);
+			}
+			
+			while (LookupSource(nCurrIP, nFuncIdx, nLineNumber))
+			{
+				aCallStack.push_back({nFuncIdx, nLineNumber, nCurrIP});
+
+				if (nCurrSF > cnStackBottom)
+					break;
+
+				// Unwind to next IP & SF
+				Memory().ReadAt<t_address>(nCurrSF + sizeof(t_address), nCurrIP);
+				Memory().ReadAt<t_address>(nCurrSF, nCurrSF);
+			}
 		}
 	}
 	return aCallStack;

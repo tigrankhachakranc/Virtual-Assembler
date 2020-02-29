@@ -266,8 +266,8 @@ public:
 	inline TStringRef& operator=(TString const*);
 	inline TStringRef& operator=(TStringRef const&) = default;
 
-	inline bool operator==(nullptr_t);
-	inline bool operator!=(nullptr_t);
+	inline bool operator==(nullptr_t) const;
+	inline bool operator!=(nullptr_t) const;
 
 	inline operator TString const&() const;
 
@@ -358,13 +358,13 @@ inline TStringRef<TString>& TStringRef<TString>::operator=(TString const* pstr)
 }
 
 template <typename TString>
-inline bool TStringRef<TString>::operator==(nullptr_t)
+inline bool TStringRef<TString>::operator==(nullptr_t) const
 {
 	return (m_str.empty());
 }
 
 template <typename TString>
-inline bool TStringRef<TString>::operator!=(nullptr_t)
+inline bool TStringRef<TString>::operator!=(nullptr_t) const
 {
 	return (!m_str.empty());
 }

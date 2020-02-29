@@ -312,9 +312,13 @@ t_csz CValue::TypeToCStr(EValueType eType, bool bLongVersion) noexcept
 //
 std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 {
+	bool const isHex = os.flags() & std::ios::hex;
 	vasm::t_size nCount = oValue.GetCount();
 	if (nCount == 1)
 	{
+		if (isHex)
+			os << "0x";
+
 		switch (oValue.GetType())
 		{
 		case vasm::core::EValueType::Byte:
@@ -330,8 +334,13 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 			os << +static_cast<vasm::core::t_qword>(oValue);
 			break;
 		case vasm::core::EValueType::Char:
-			os << static_cast<vasm::t_char>(oValue);
+		{
+			if (isHex)
+				os << +static_cast<vasm::t_char>(oValue);
+			else
+				os << '\'' << static_cast<vasm::t_char>(oValue) << '\'';
 			break;
+		}
 		default:
 			break;
 		}
@@ -347,6 +356,8 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 			{
 				if (i > 0)
 					os << ", ";
+				if (isHex)
+					os << "0x";
 				os << +(*(&static_cast<vasm::core::t_byte const&>(oValue) + i));
 			}
 			os << "}";
@@ -359,6 +370,8 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 			{
 				if (i > 0)
 					os << ", ";
+				if (isHex)
+					os << "0x";
 				os << +(*(&static_cast<vasm::core::t_word const&>(oValue) + i));
 			}
 			os << "}";
@@ -371,6 +384,8 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 			{
 				if (i > 0)
 					os << ", ";
+				if (isHex)
+					os << "0x";
 				os << +(*(&static_cast<vasm::core::t_dword const&>(oValue) + i));
 			}
 			os << "}";
@@ -383,6 +398,8 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 			{
 				if (i > 0)
 					os << ", ";
+				if (isHex)
+					os << "0x";
 				os << +(*(&static_cast<vasm::core::t_qword const&>(oValue) + i));
 			}
 			os << "}";
@@ -390,7 +407,19 @@ std::ostream& operator<<(std::ostream& os, vasm::core::CValue const& oValue)
 		}
 		case vasm::core::EValueType::Char:
 		{
-			os << '"' << static_cast<vasm::t_csz>(oValue) << '"';
+			if (!isHex)
+				os << '"' << static_cast<vasm::t_csz>(oValue) << '"';
+			else
+			{
+				os << "0x {";
+				for (vasm::t_index i = 0; i < nCount; ++i)
+				{
+					if (i > 0)
+						os << " ";
+					os << +(*(&static_cast<vasm::t_char const&>(oValue) + i));
+				}
+				os << "}";
+			}
 			break;
 		}
 		default:

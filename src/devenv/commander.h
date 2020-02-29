@@ -131,8 +131,10 @@ protected:
 	void PrintBreakPoints() const;
 	void PrintCode(t_address nBaseAddress, t_size nIstrCount) const;
 	void PrintCurrentStackFrame() const;
-	void PrintWatchList(std::set<t_string> const&) const;
-	void PrintVariable(vm::SVariableInfo const& tVarInfo) const;
+	void PrintWatchList(std::set<t_string> const&, bool const bHexadecimal) const;
+	void PrintVariable(vm::SVariableInfo const& tVarInfo, bool const bHexadecimal) const;
+	void PrintCodeInfo(std::ostream& os, CDebugger::SCodeLineInfo const& tInfo, bool const bIncludeBaseAddress) const;
+	t_address PrintCommand(std::ostream& os, t_address const nCmdAddress) const; // Returns next commands address
 
 	void CheckMachine() const;
 	void CheckCPUStatus(bool bCheckForReady = true) const;

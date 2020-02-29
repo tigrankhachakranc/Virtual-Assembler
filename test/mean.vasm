@@ -1,4 +1,7 @@
 .data
+CHAR str1[] = "Hello World!"
+CHAR ch1 = 'A'
+
 DWORD adwNums[5] = 106, 202, 56, 72, 94
 DWORD dwCount = 5
 DWORD dwAnswer
@@ -21,6 +24,11 @@ Func Start:
 EndF
 
 Func CalculateMean:
+	PUSH R40
+	PUSHSF
+	PUSH R32
+	PUSH A0
+	PUSH W R0, 13 
 	CMP R32, R0
 	JEQ Finished
 	MOV R44, R32
@@ -37,6 +45,8 @@ NextNum:
 	ADC R36, R0
 	MOV R32, R36
 Finished:
+	POPSF
+	POP R40
 	RET
 EndF
 

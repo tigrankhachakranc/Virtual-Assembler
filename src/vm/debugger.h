@@ -162,7 +162,13 @@ protected:
 	using t_AddrssToSymbolMap = core::CAddressRecovery::t_AddrssToSymbolMap;
 
 	// Function call stack (array of function index, relative line number pairs
-	using t_CallStack = std::vector<std::pair<t_index, t_index> >;
+	struct SCallStackItem
+	{
+		t_index		nFuncIdx;
+		t_index		nLineNum;
+		t_address	nAddress;
+	};
+	using t_CallStack = std::vector<SCallStackItem>;
 
 protected:
 	//

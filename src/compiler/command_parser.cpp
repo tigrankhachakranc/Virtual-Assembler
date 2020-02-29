@@ -854,8 +854,7 @@ void CCommandParser::Parse(SCommand& tCommand)
 	}
 
 	// Special handling for the PUSH/POP commands
-	if ((tCommand.eOpCode == EOpCode::PUSH || tCommand.eOpCode == EOpCode::POP) &&
-		tCommand.nArgCount == 1 && tCommand.aArguments[EOprIdx::First].eType == EArgType::GR)
+	if ((tCommand.eOpCode == EOpCode::PUSH || tCommand.eOpCode == EOpCode::POP) && tCommand.nArgCount == 1)
 	{
 		// Push Rx command has default second argument Count = 0, complete it
 		tCommand.nArgCount = 2;
