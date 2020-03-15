@@ -21,13 +21,15 @@ namespace base {
 //	CParser::CError Implementation
 //
 ////////////////////////////////////////////////////////////////////////////////
+t_csz const CParser::CError::s_FixedError = t_csz("Parser error");
+
 CParser::CError::~CError() = default;
 
-t_string CParser::CError::GetErrorMsg(bool bDetailed) const
+t_string CParser::CError::FormatErrorMsg(bool bFinal) const
 {
 	t_string sError;
 
-	if (bDetailed)
+	if (bFinal)
 	{
 		std::stringstream oBuff(std::ios_base::out);
 		oBuff << "Parsing error: ";
@@ -43,17 +45,17 @@ t_string CParser::CError::GetErrorMsg(bool bDetailed) const
 		else
 			oBuff << ".";
 
-		if (m_nPosition != g_ciInvalid)
-			oBuff << "  Position: " << m_nPosition;
-		if (!m_sToken.empty())
-			oBuff << "  Token: " << m_sToken;
+		if (m_cnPosition != g_ciInvalid)
+			oBuff << "  Position: " << m_cnPosition;
+		if (!m_csToken.empty())
+			oBuff << "  Token: " << m_csToken;
 
 		oBuff << std::endl;
 		sError = oBuff.str();
 	}
 	else
 	{
-		sError = m_sErrorMsg.empty() ? Base::what() : m_sErrorMsg;
+		sError = std::move(Base::FormatErrorMsg(false));
 	}
 
 	return std::move(sError);
@@ -202,7 +204,7 @@ TNumType CParser::ParseNumberInternal(int nRadix, t_char const chDelimiter, t_st
 		nNumber = (TNumType) ui64Number;
 	}
 
-	SetCurrentPos(nPos + (pchLastPos - pchStartPos));
+	SetCurrentPos(t_index(nPos + (pchLastPos - pchStartPos)));
 
 	if (chDelimiter != 0)
 	{	// Ensure for delimiter
@@ -277,7 +279,7 @@ t_char CParser::ParseCharacter(t_char const chDelimiter)
 			nNumber < std::numeric_limits<char>::min())
 			throw CError(t_csz("Invalid character value"), GetCurrentPos());
 
-		SetCurrentPos(nPos + (pchLastPos - pchStartPos));
+		SetCurrentPos(t_index(nPos + (pchLastPos - pchStartPos)));
 
 		chValue = (t_char) nNumber;
 	}
@@ -317,11 +319,16 @@ t_string CParser::ParseString(
 
 	FixCurrentPos();
 	t_string sLiteral;
-	while (true)
+	while (!IsFinished())
 	{
-		chCurr = GetChar(false);
+		chCurr = PeekChar();
+		++m_nPos;
+
 		if (chCurr == '\\') // Escaper
-			chCurr = GetChar(false); // skip symbol
+		{
+			chCurr = PeekChar(); // skip symbol
+			++m_nPos;
+		}
 		else if (bEnclosed && chCurr == chClosingQuote)
 			break;
 		else if (!bEnclosed && IsSpace(chCurr))
@@ -332,6 +339,9 @@ t_string CParser::ParseString(
 
 		sLiteral.push_back(chCurr);
 	}
+
+	if (bEnclosed && chClosingQuote != 0)
+		throw CError(base::toStr("Expecting string literal closing quote %1", t_string(1, chClosingQuote)), GetCurrentPos());
 
 	return std::move(sLiteral);
 }

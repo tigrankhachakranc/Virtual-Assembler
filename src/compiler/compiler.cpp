@@ -28,75 +28,97 @@ namespace cl {
 //
 //	Error
 //
-class CError : public base::CException
+class CError : public base::CError
 {
-	typedef base::CException Base;
+	using Base = base::CError;
 public:
-	CError(t_csz psErrMsg);
+	CError(t_csz const pcszErrMsg);
+	CError(t_string const& sErrMsg);
 	CError(t_string const& sUnitName, CAsmParser::CError const& err);
 	CError(t_string const& sUnitName, CEncoder::CError const& err);
 	CError(CLinker::CError const& err);
-	inline ~CError() = default;
+	~CError() = default;
 
-	inline CError(CError const&) = default;
-	inline CError(CError&&) = default;
+	CError(CError const&) = default;
+	CError(CError&&) = default;
 
-	t_string GetErrorMsg(bool = false) const override;
+	void operator=(CError const&) = delete;
+	void operator=(CError&&) = delete;
+
+protected:
+	t_string FormatErrorMsg(bool bFinal) const override;
+
+	static t_csz const s_CompilerError;
+	static t_csz const s_BuilderError;
+	static t_csz const s_LinkerError;
 };
 
-CError::CError(t_csz psErrMsg) :
-	Base("Compiler error", VASM_SRC_LINE)
+t_csz const CError::s_CompilerError = t_csz("Compiler error");
+t_csz const CError::s_BuilderError = t_csz("Builder error");
+t_csz const CError::s_LinkerError = t_csz("Linker error");
+
+CError::CError(t_csz pcszErrMsg) :
+	Base(pcszErrMsg, Reserved, VASM_ERR_INFO(s_CompilerError))
 {
 	std::stringstream oBuff(std::ios_base::out);
-	oBuff << "Compiler error: ";
-	oBuff << psErrMsg << ".";
+	oBuff << Info().cszFixedErrorMsg << ":";
+	oBuff << pcszErrMsg << ".";
+	m_sErrorMsg = oBuff.str();
+}
+
+CError::CError(t_string const& sErrMsg) :
+	Base(t_string(), Reserved, VASM_ERR_INFO(s_CompilerError))
+{
+	std::stringstream oBuff(std::ios_base::out);
+	oBuff << Info().cszFixedErrorMsg << ":";
+	oBuff << sErrMsg << ".";
 	m_sErrorMsg = oBuff.str();
 }
 
 CError::CError(t_string const& sUnitName, CAsmParser::CError const& err) :
-	Base("Compiler error", VASM_SRC_LINE)
+	Base(t_string(), Reserved, VASM_ERR_INFO(s_CompilerError))
 {
 	std::stringstream oBuff(std::ios_base::out);
 
-	oBuff << "Compiler error: ";
+	oBuff << Info().cszFixedErrorMsg << ":";
 	oBuff << err.ErrorMsg() << "." << std::endl;
 
 	if (err.LineNumber() != g_ciInvalid)
-		oBuff << sUnitName << ":  line #" << err.LineNumber() << "  pos #" << err.Position()
-		<< "  token '" << err.Token() << "'." << std::endl;
+		oBuff << "File: '" << sUnitName << "'  Line: " << err.LineNumber() 
+		<< "  Pos: " << err.Position() << "  Token '" << err.Token() << "'.";
 
 	m_sErrorMsg = oBuff.str();
 }
 
 CError::CError(t_string const& sUnitName, CEncoder::CError const& err) :
-	Base("Compiler error", VASM_SRC_LINE)
+	Base(t_string(), Reserved, VASM_ERR_INFO(s_BuilderError))
 {
 	t_string sError;
 	std::stringstream oBuff(std::ios_base::out);
 
-	oBuff << "Builder error: ";
+	oBuff << Info().cszFixedErrorMsg << ":";
 	oBuff << err.ErrorMsg() << "." << std::endl;
 
 	if (err.LineNumber() != g_ciInvalid)
-		oBuff << sUnitName << ":  line #" << err.LineNumber()
-		<< "  command '" << err.CommandName() << "'." << std::endl;
+		oBuff << "File: '" << sUnitName << "'  Line: " << err.LineNumber()
+		<< "  Command: '" << err.CommandName() << "'.";
 
 	m_sErrorMsg = oBuff.str();
 }
 
 CError::CError(CLinker::CError const& err) :
-	Base("Compiler error", VASM_SRC_LINE)
+	Base(t_string(), Reserved, VASM_ERR_INFO(s_LinkerError))
 {
 	std::stringstream oBuff(std::ios_base::out);
 
-	oBuff << "Linker error: ";
+	oBuff << Info().cszFixedErrorMsg << ":";
 	oBuff << err.ErrorMsg() << ".";
-	oBuff << "  Making" << err.Package() << std::endl;
+	oBuff << "  Making package: '" << err.Package() << "'.";
 
 	m_sErrorMsg = oBuff.str();
 }
 
-t_string CError::GetErrorMsg(bool) const
+t_string CError::FormatErrorMsg(bool) const
 {
 	return m_sErrorMsg;
 }
@@ -171,7 +193,7 @@ void CCompiler::Build(
 	// Open output file
 	std::ofstream oOutFile(sOutputFile, std::ios::out | std::ios::binary | std::ios::trunc);
 	if (oOutFile.fail())
-		VASM_THROW_ERROR(base::toStr("Failed to open output file '%1'", sOutputFile));
+		throw CError(base::toStr("Failed to open output file '%1'", sOutputFile));
 
 	Build(aSrcFiles, sOutputFile, oOutFile);
 }
@@ -185,7 +207,7 @@ void CCompiler::Build(
 		t_size nStartPos = (t_size) sPath.find_last_of(t_csz("/\\"), t_string::npos, 2);
 		if (nStartPos == t_string::npos)
 			nStartPos = 0;
-		t_size nLength = sPath.size() - nStartPos;
+		t_size nLength = t_size(sPath.size() - nStartPos);
 		if (base::EndsWith(sPath, t_csz(".vasm.bin")))
 			nLength -= 9;
 		else if (base::EndsWith(sPath, t_csz(".vasm")))
@@ -207,7 +229,7 @@ void CCompiler::Build(
 	{
 		std::ifstream oSrcFile(sFilePath, std::ios::in);
 		if (oSrcFile.fail())
-			VASM_THROW_ERROR(base::toStr("Failed to open source file '%1'", sFilePath));
+			throw CError(base::toStr("Failed to open source file '%1'", sFilePath));
 
 		// Find out unit name
 		std::string sUnitName = std::move(fnPureName(sFilePath));

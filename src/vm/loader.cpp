@@ -51,9 +51,9 @@ void CLoader::Load(std::istream& is, CMemoryPtr pMemory, SPackageInfo& tPkgInfo)
 
 	// Check signature and version
 	if (std::strcmp(tPkgHdr.cszSignatue, t_csz("TK.VASM.PKG")) != 0)
-		VASM_THROW_ERROR(t_csz("Invalid package signature"));
+		throw base::CError(t_csz("Invalid package signature"));
 	if (tPkgHdr.cnVersion != SPackageHeader::CurrentVersion)
-		VASM_THROW_ERROR(base::toStr("Invalid package version: %1", tPkgHdr.cnVersion));
+		throw base::CError(base::toStr("Invalid package version: %1", tPkgHdr.cnVersion));
 
 	SSectionInfo tCodeSection(SSectionInfo::EType::Code);
 	SSectionInfo tDataSection(SSectionInfo::EType::Data);
@@ -122,15 +122,15 @@ void CLoader::Load(std::istream& is, CMemoryPtr pMemory, SPackageInfo& tPkgInfo)
 	
 	if (tCodeSection.nBase == 0 || tCodeSection.nSize == 0)
 		VASM_THROW_ERROR(t_csz("Invalid package: Code is missing"));
-	VASM_CHECK(tPkgInfo.nCodeBase % 16 == 0); // Alignment check
+	VASM_CHECK(tPkgInfo.nCodeBase % core::cnGranul == 0); // Alignment check
 	tPkgInfo.nCodeSize = tCodeSection.nSize;
 	//
 	nMemorySize = tPkgInfo.nCodeBase + tPkgInfo.nCodeSize;
 	
 	// Align to 64 byte boundary
-	uint nReminder = nMemorySize % 16;
+	uint nReminder = nMemorySize % core::cnGranul;
 	if (nReminder > 0)
-		nMemorySize += 16 - nReminder;
+		nMemorySize += core::cnGranul - nReminder;
 
 	if (tDataSection.nBase > 0 && tDataSection.nSize > 0)
 	{
@@ -140,7 +140,7 @@ void CLoader::Load(std::istream& is, CMemoryPtr pMemory, SPackageInfo& tPkgInfo)
 			VASM_THROW_ERROR(t_csz("Invalid package: Data section base conflict"));
 		else
 		{
-			VASM_CHECK(tPkgInfo.nDataBase % 16 == 0); // Alignment check
+			VASM_CHECK(tPkgInfo.nDataBase % core::cnGranul == 0); // Alignment check
 			nMemorySize = tPkgInfo.nDataBase;
 		}
 
@@ -148,9 +148,9 @@ void CLoader::Load(std::istream& is, CMemoryPtr pMemory, SPackageInfo& tPkgInfo)
 		tPkgInfo.nDataSize = tDataSection.nSize;
 
 		// Align to 64 byte boundary
-		nReminder = nMemorySize % 16;
+		nReminder = nMemorySize % core::cnGranul;
 		if (nReminder > 0)
-			nMemorySize += 16 - nReminder;
+			nMemorySize += core::cnGranul - nReminder;
 	}
 	else
 	{
@@ -220,14 +220,15 @@ void CLoader::LoadSymbols(
 	{
 		SSymbolTableSection::SEntry const& tEntry = tSymbols.aEntries[i];
 		// Read symbol name
-		VASM_CHECK_X(tEntry.nNamePos > 0 && tEntry.nNameSize > 0, base::toStr("Loader: Invalid symbol entry at index %1", i));
+		if (tEntry.nNamePos == 0 || tEntry.nNameSize == 0)
+			throw base::CError(base::toStr("Loader: Invalid symbol entry at index %1", i));
 		t_string sSymbolName( (t_csz) &aSymbolsBuffer[tEntry.nNamePos], (t_string::size_type) tEntry.nNameSize);
 
 		if (tEntry.isFunc)
 		{
 			// Keep Main symbol index
 			if (i == tSymbols.nMainIndex)
-				tPkgInfo.nMainFuncIndex = tPkgInfo.aFunctionTable.size();
+				tPkgInfo.nMainFuncIndex = t_index(tPkgInfo.aFunctionTable.size());
 			
 			m_aSymbolToPackageFuncIdx[i] = (t_index) tPkgInfo.aFunctionTable.size();
 			tPkgInfo.aFunctionTable.push_back(SFunctionInfo(
@@ -289,8 +290,8 @@ void CLoader::LoadDebuginfo(
 				SDebugInfoSection::SLabelEntry const& tLblEntry = aLblEntries[j];
 
 				// Read label name
-				VASM_CHECK_X(tLblEntry.nNamePos > 0 && tLblEntry.nNameSize > 0,
-							 base::toStr("Loader: Invalid function label entry at index (%1, %2)", i, j));
+				if (tLblEntry.nNamePos == 0 || tLblEntry.nNameSize == 0)
+					throw base::CError(base::toStr("Loader: Invalid function label entry at index (%1, %2)", i, j));
 				t_string sLblName( (t_csz) &aDbgBuffer[tLblEntry.nNamePos], (t_string::size_type) tLblEntry.nNameSize);
 				tFuncInfo.aLabels.push_back(SSymbolInfo(std::move(sLblName), tFuncInfo.nAddress + tLblEntry.nOffset));
 			}
@@ -301,7 +302,7 @@ void CLoader::LoadDebuginfo(
 		{
 			tFuncInfo.aCodeTbl.resize(tEntry.nSizeLine, 0);
 
-			t_size nCodeTblSize = sizeof(t_uoffset) * (tFuncInfo.aCodeTbl.size());
+			t_size nCodeTblSize = t_size(sizeof(t_uoffset) * (tFuncInfo.aCodeTbl.size()));
 			std::memcpy(tFuncInfo.aCodeTbl.data(), &aDbgBuffer[tEntry.nCodeTblPos], nCodeTblSize);
 
 			// Adjust addresses
@@ -315,9 +316,11 @@ void CLoader::LoadIntoMemory(
 	std::istream& is, CMemoryPtr pMemory, SSectionInfo const& tSection, t_address nBase)
 {
 	is.seekg((std::istream::pos_type) tSection.nBase);
-	VASM_CHECK_X(is.good(), base::toStr("Loader: Section %1 could not be loaded", int(tSection.eType)));
+	if (!is.good())
+		throw base::CError(base::toStr("Loader: Section %1 could not be loaded", int(tSection.eType)));
 	is.read( (char*) pMemory->Buffer(nBase), tSection.nSize);
-	VASM_CHECK_X(is.good(), base::toStr("Loader: Section %1 could not be loaded", int(tSection.eType)));
+	if (!is.good())
+		throw base::CError(base::toStr("Loader: Section %1 could not be loaded", int(tSection.eType)));
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

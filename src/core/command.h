@@ -524,7 +524,7 @@ inline CCommandBase::SInstructionInfo::SInstructionInfo() :
 
 inline t_size CCommandBase::GetInstructionCount() const
 {
-	return m_aInstructions.size();
+	return t_size(m_aInstructions.size());
 }
 
 inline IAddressRecoveryPtr CCommandBase::GetAddressRecovery() const

@@ -67,6 +67,7 @@ const CAsmParser::t_mapVariableKeywords CAsmParser::ms_mapVariableKeywords {
 	std::make_pair(t_string("CHAR"), EValueType::Char),
 };
 
+t_csz const CAsmParser::CError::s_FixedError = t_csz("ASM Parser error");
 
 //
 //	C_Tors
@@ -77,6 +78,8 @@ CAsmParser::CAsmParser(CInput& oInput, SUnit& tUnit) :
 }
 
 CAsmParser::~CAsmParser() = default;
+CAsmParser::CError::~CError() = default;
+
 
 //
 //	Parsing routines
@@ -464,7 +467,7 @@ void CAsmParser::ParseVariables()
 		if (itVar == m_mapVariableTable.end())
 		{	// Define/Declare variable
 			oUnit.aVariables.push_back({std::move(sVarName), std::move(oValue)});
-			m_mapVariableTable.insert({&oUnit.aVariables.back().sName, oUnit.aVariables.size() - 1});
+			m_mapVariableTable.insert({&oUnit.aVariables.back().sName, t_index(oUnit.aVariables.size() - 1)});
 		}
 		else
 		{
@@ -516,7 +519,7 @@ void CAsmParser::ParseFnctions()
 			nFuncLocation = it->second;
 		else
 		{
-			nFuncLocation = oUnit.aFunctions.size();
+			nFuncLocation = t_index(oUnit.aFunctions.size());
 			oUnit.aFunctions.push_back({std::move(sToken)});
 			m_mapFunctionTable.insert({&oUnit.aFunctions.back().sName, nFuncLocation});
 		}
@@ -587,7 +590,7 @@ void CAsmParser::ParseFunctionBody(SFunction& tFunction)
 			tLabel.sName = std::move(sToken);
 			tLabel.nIndex = (t_index) aRawCommands.size();
 			tFunction.aLabels.push_back(std::move(tLabel));
-			mapLabelTable.insert({&tFunction.aLabels.back().sName, tFunction.aLabels.size() - 1});
+			mapLabelTable.insert({&tFunction.aLabels.back().sName, t_index(tFunction.aLabels.size() - 1)});
 
 			// Skip label
 			oParser.GetChar();

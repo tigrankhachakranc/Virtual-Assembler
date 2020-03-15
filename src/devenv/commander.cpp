@@ -67,6 +67,10 @@ CCommander::t_mapCmdHandlers CCommander::ms_mapCmdHandlers = {
 	{"load",	&CCommander::cmd_load},
 	{"o",		&CCommander::cmd_open},
 	{"open",	&CCommander::cmd_open},
+	{"rl",		&CCommander::cmd_reload},
+	{"reload",	&CCommander::cmd_reload},
+	{"ro",		&CCommander::cmd_reopen},
+	{"reopen",	&CCommander::cmd_reopen},
 	{"x",		&CCommander::cmd_exit},
 	{"exit",	&CCommander::cmd_exit}
 };
@@ -131,16 +135,9 @@ void CCommander::Start()
 			fnCmdHandler pfn = it->second;
 			pfn(this, oParser);
 		}
-		catch (CParserError const& err)
-		{
-			m_cout << err.GetErrorMsg(true);
-		}
 		catch (base::CException const& err)
 		{
-			if (err.Component() == nullptr)
-				m_cout << err.GetErrorMsg(false);
-			else
-				m_cout << err.GetErrorMsg(true);
+			m_cout << err.GetErrorMsg();
 		}
 		catch (std::exception const& err)
 		{
@@ -156,10 +153,12 @@ void CCommander::Load(t_string sExecPath)
 
 	std::ifstream oBinFile(sExecPath, std::ios::in | std::ios::binary);
 	if (oBinFile.fail())
-		VASM_THROW_ERROR(base::toStr("Failed to open binary file '%1'", sExecPath));
+		throw CError(base::toStr("Failed to open binary file '%1'", sExecPath));
 
 	m_pMachine->Init(oBinFile);
-	m_sProgram = sExecPath;
+	
+	m_sProgram = std::move(sExecPath);
+	m_aSourceCodes.clear();
 }
 
 void CCommander::Open(t_string sProgramSource)
@@ -179,11 +178,8 @@ void CCommander::Open(std::vector<t_string> aSourceCodeNames)
 
 	m_pMachine->Init(oBinaryOutput);
 
-	std::stringstream oTemp;
-	oTemp << t_csz("Compiled from:");
-	for (auto const& temp : aSourceCodeNames)
-		oTemp << " '" << temp << "'";
-	m_sProgram = oTemp.str();
+	m_sProgram.clear();
+	m_aSourceCodes = std::move(aSourceCodeNames);
 }
 
 
@@ -196,51 +192,61 @@ void CCommander::cmd_help(CCmdParser&)
 	m_cout << "?|h|help                                      Supported commands listing"										<< std::endl;
 	m_cout << "i|info                                        Prints information about curent state and program being debugged"	<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "r|run         [-dbg yes|no]                   Runs program from curent IP (either in debug or nondebug mode)"	<< std::endl;
-	m_cout << "              [-from line_num|label|0xAddress]"																	<< std::endl;
-	m_cout << "              [-to line_num|label|0xAddress]"																	<< std::endl;
-	m_cout << "              [async]"																							<< std::endl;
-	m_cout << "t|trace       [Num=1]                         Step In, executes Num instructions"								<< std::endl;
+	m_cout << "r|run         [-dbg yes|no]                   Runs program from curent IP (in debug (default) or nondebug mode)"	<< std::endl;
+	m_cout << "              [-from location]                Sets current IP to specified source location and runs program"		<< std::endl;
+	m_cout << "              [-to location]                  Stops execution when cotrol reaches to the specied source location"<< std::endl;
+	m_cout << "              location format: [src:]line_num | func_name | [func_name.]label | 0xAddress"						<< std::endl;
+	m_cout << ""																												<< std::endl;
+	m_cout << "t|trace       [Num=1]                         Step In, executes Num (default=1) instructions and stops"			<< std::endl;
 	m_cout << "n|next        [Num=1]                         Step Over, executes Num instructions by overcoming function calls"	<< std::endl;
-	m_cout << "so|stepout                                    Step Out, Executes until current function will return"				<< std::endl;
+	m_cout << "so|stepout                                    Step Out, executes until current function will return"				<< std::endl;
 	m_cout << "pause                                         Pauses curent execution"											<< std::endl;
 	m_cout << "reset                                         Resets CPU to initial state"										<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "bp            [src:line_num|label|func_name]  Sets debug break point at specified position"						<< std::endl;
-	m_cout << "rbp           [src:line_num|label|func_name]  Removes specified breakpoint"										<< std::endl;
-	m_cout << "              [all]"																								<< std::endl;
+	m_cout << "bp            location                        Sets debug break point at specified source location"				<< std::endl;
+	m_cout << "rbp           location                        Removes breakpoint (if any) from specifed source location"			<< std::endl;
+	m_cout << "              see 'run' above for location format details"														<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "set           [IP src:line|label|func_name]   Sets specified value to the specified register"					<< std::endl;
-	m_cout << "              [A(idx) src:line|label|func_name|var_name|0xAddress]"												<< std::endl;
-	m_cout << "              [R(idx) [B|W|DW|QW|CH] +/-num|0xValue]"															<< std::endl;
-	m_cout << "              [CF|ZF|SF|OF 0|1]"																					<< std::endl;
+	m_cout << "set           IP location                     Sets IP to the specified source code location, see run for details"<< std::endl;
+	m_cout << "              A(idx) location|variable        Sets An to the specified source code location or variable address"	<< std::endl;
+	m_cout << "              R(idx) [B|W|DW|QW|CH] value     Sets specified register to the specified numeric value"			<< std::endl;
+	m_cout << "              CF|ZF|SF|OF 0|1                 Sets or clears specifeid flag in ther status Flags register"		<< std::endl;
+	m_cout << "              Location format: [src:]line_num | func_name | [func_name.]label | 0xAddress"						<< std::endl;
+	m_cout << "              Variable format: var_name | 0xAddress"																<< std::endl;
+	m_cout << "              Value format: +/-DecimalNum | 0xHexValue  Register index should be aligned with the value size"	<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "a|assign      [var_name +/-num|0xValue[,...]  Assigns value to the specified variable or memory location"		<< std::endl;
-	m_cout << "w|watch       [var_name [...]]                Prints current value of the specified variable(s)"					<< std::endl;
-	m_cout << "        add   var_name                        Ads specified variable to the watch list"							<< std::endl;
-	m_cout << "        rem   var_name                        Removes specified variable from the watch list"					<< std::endl;
-	m_cout << "        all                                   Prints values of all (defined) variables"							<< std::endl;
+	m_cout << "a|assign      variable value [, ...]          Assigns value(s) to the specified variable or memory location"		<< std::endl;
+	m_cout << "w|watch       [hex]                           Prints the watch list (variables and values)"						<< std::endl;
+	m_cout << "              [hex] var_name [, ...]          Prints current value of the specified variable(s)"					<< std::endl;
+	m_cout << "        add   var_name [, ...]                Adds specified variable(s) to the watch list"						<< std::endl;
+	m_cout << "        rem   var_name [, ...]                Removes specified variable(s) from the watch list"					<< std::endl;
+	m_cout << "        all   [hex]                           Prints values of all (defined) variables"							<< std::endl;
+	m_cout << "              If 'hex' modifier is specifeid then all values are printed in the hexadecimal format"				<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "p|print [state]                               Prints CPU current state"											<< std::endl;
+	m_cout << "p|print       [dec]                           Prints CPU current state.   (If 'dec' is specified then values"	<< std::endl;
+	m_cout << "        state [dec]                           Prints CPU current state.    will be printed in decimal form)"		<< std::endl;
 	m_cout << "        cstack                                Prints function call stack (same as bt)"							<< std::endl;
-	m_cout << "        sf                                    Prints current stack frame"										<< std::endl;
+	m_cout << "        sf    [+arg_offset] [-locals_offset]  Prints current stack frame within (SF - SP] range (by default)"	<< std::endl;
 	m_cout << "        bp                                    Prints Break points list"											<< std::endl;
+	m_cout << "        code  [-at An|location]               Prints code started from the current IP or specifieid location"	<< std::endl;
+	m_cout << "              [-c|count instruction_count]    Specifies exact number of instructions to be printed"				<< std::endl;
+	m_cout << "        memory -at An|0xAddress -sz Rn|count] Prints memory content at specified Address with Count bytes length"<< std::endl;
+	m_cout << "                                              Address or Count could be specifed directly or through Register"	<< std::endl;
 	m_cout << "        ports                                 Prints I/O Devices and Port ranges occupied by them"				<< std::endl;
-	m_cout << "        code  [-sz|size instruction_count]    Prints code started from the current IP or specifieid address"		<< std::endl;
-	m_cout << "              [-at srs:line|label|func_name|0xAddress]"															<< std::endl;
 	m_cout << "bt                                            Prints function call stack (backtrace), see also 'print cstack'"	<< std::endl;
 	m_cout << ""																												<< std::endl;
-	m_cout << "d|dump        -f|file file_path               Dumps entire memory content or part of it"							<< std::endl;
+	m_cout << "d|dump        -f|file file_path               Dumps entire memory content or part of it into specified file"		<< std::endl;
 	m_cout << "              -format text|bin"																					<< std::endl;
 	m_cout << "       memory [-at 0xAddress]"																					<< std::endl;
 	m_cout << "              [-sz|size byte_count]"																				<< std::endl;
-	m_cout << "       code   [-at src:line|label|func_name]  Dumps only code started from beginning or specified address"		<< std::endl;
-	m_cout << "              [-sz|size byte_count]"																				<< std::endl;
-	m_cout << "       data                                   Dumps data content only"											<< std::endl;
-	m_cout << "       stack  [-depth Num=MAX]                Dumps the content of the stack with specified call depth"			<< std::endl;
+	m_cout << "       code                                   Dumps content of the code section"									<< std::endl;
+	m_cout << "       data                                   Dumps content of the data section"									<< std::endl;
+	m_cout << "       stack  [-l|depth Num]                  Dumps content of the stack with specified call depth (level)"		<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "l|load        exec_file_path                  Opens specified binary exectuavle file and loads into memory"		<< std::endl;
 	m_cout << "o|open        source_file_name[,...]          Opens specifeid source file(s), compiles & loads them into memory"	<< std::endl;
+	m_cout << "rl|reload                                     Reloads current binary exectuavle file into memroy and resets CPU" << std::endl;
+	m_cout << "ro|reopen                                     Reopens current source file(s), recompiles & reloads into memory"	<< std::endl;
 	m_cout << "x|exit                                        Exits the program"													<< std::endl;
 }
 
@@ -254,30 +260,45 @@ void CCommander::cmd_info(CCmdParser& oParser)
 		m_cout << std::endl << "Machine is not initialized, no binary executable." << std::endl;
 	else
 	{
-		m_cout << "Current program: " << m_sProgram << std::endl;
+		if (!m_sProgram.empty())
+		{
+			m_cout << "Loaded from a precompiled binary executable" << std::endl;
+			m_cout << "Current program: " << m_sProgram << std::endl;
+		}
+		else if (!m_aSourceCodes.empty())
+		{
+			m_cout << "Opened and compiled from source code(s):" << std::endl;
+			for (auto const& sSrc : m_aSourceCodes)
+				m_cout << "\t" << sSrc << std::endl;
+		}
+		else
+		{
+			m_cout << "No program or sources!" << std::endl;
+		}
+
 		switch (m_pDebugger->CPUStatus().eStatus)
 		{
 		case vm::CProcessor::EStatus::NotInitialized:
-			m_cout << "VM is not initialized" << std::endl;
+			m_cout << "VM status: Not initialized" << std::endl;
 			break;
 		case vm::CProcessor::EStatus::Ready:
-			m_cout << "VM is Ready" << std::endl;
+			m_cout << "VM status: Ready" << std::endl;
 			break;
 		case vm::CProcessor::EStatus::Break:
-			m_cout << "VM hit breakpoint" << std::endl;
+			m_cout << "VM status: Hit at breakpoint" << std::endl;
 			break;
 		case vm::CProcessor::EStatus::Stopped:
-			m_cout << "VM stopped" << std::endl;
+			m_cout << "VM status: Stopped" << std::endl;
 			break;
 		case vm::CProcessor::EStatus::Failed:
-			m_cout << "VM is failed" << std::endl;
-			m_cout << "Fail reason: " << m_pDebugger->CPUStatus().oErrorInfo.GetErrorMsg() << std::endl;
+			m_cout << "VM status: Failed" << std::endl;
+			m_cout << "Fail reason: " << m_pDebugger->CPUStatus().oErrorInfo.sErrorMessage << std::endl;
 			break;
 		case vm::CProcessor::EStatus::Running:
-			m_cout << "VM currently is running" << std::endl;
+			m_cout << "VM status: Running" << std::endl;
 			break;
 		case vm::CProcessor::EStatus::Finished:
-			m_cout << "VM is finished" << std::endl;
+			m_cout << "VM status: Finished" << std::endl;
 			break;
 		};
 	}
@@ -307,11 +328,11 @@ void CCommander::cmd_run(CCmdParser& oParser)
 		}
 		else if (compare(sToken, t_csz("-from")))
 		{
-			nAddressFrom = FetchAddress(oParser, true);
+			nAddressFrom = FetchAddress(oParser, EAddressHint::Code);
 		}
 		else if (compare(sToken, t_csz("-to")))
 		{
-			nAddressTo = FetchAddress(oParser, true);
+			nAddressTo = FetchAddress(oParser, EAddressHint::Code);
 		}
 		else
 		{
@@ -421,7 +442,8 @@ void CCommander::cmd_reset(CCmdParser& oParser)
 
 void CCommander::cmd_bp_set(CCmdParser& oParser)
 {
-	t_address nAddress = FetchAddress(oParser, true);
+	CheckCPUStatus(false);
+	t_address nAddress = FetchAddress(oParser, EAddressHint::Code);
 	m_pDebugger->SetBreakPoint(nAddress);
 
 	t_string sToken = std::move(oParser.ParseToken());
@@ -431,6 +453,7 @@ void CCommander::cmd_bp_set(CCmdParser& oParser)
 
 void CCommander::cmd_bp_remove(CCmdParser& oParser)
 {
+	CheckCPUStatus(false);
 	t_string sToken = std::move(oParser.ParseToken(base::CParser::IsSpace));
 	if (compare(sToken, t_csz("all")))
 	{
@@ -445,7 +468,7 @@ void CCommander::cmd_bp_remove(CCmdParser& oParser)
 	{
 		oParser.RevertPreviousParse();
 
-		t_address nAddress = FetchAddress(oParser, true);
+		t_address nAddress = FetchAddress(oParser, EAddressHint::Code);
 		m_pDebugger->RemoveBreakPoint(nAddress);
 	}
 
@@ -456,12 +479,12 @@ void CCommander::cmd_bp_remove(CCmdParser& oParser)
 
 void CCommander::cmd_set(CCmdParser& oParser)
 {
-	CheckCPUStatus();
+	CheckCPUStatus(true);
 	t_string sToken = std::move(oParser.ParseName());
 
 	if (compare(sToken, t_csz("IP")))
 	{
-		t_address nAddress = FetchAddress(oParser, true);
+		t_address nAddress = FetchAddress(oParser, EAddressHint::Code);
 		if (!m_pDebugger->ChangeIP(nAddress))
 			VASM_THROW_ERROR(t_csz("Failed to change IP Register"));
 	}
@@ -501,7 +524,7 @@ void CCommander::cmd_set(CCmdParser& oParser)
 		if (nPos != sToken.size() || nRegIdx >= core::SCPUStateBase::eAddressRegistersPoolSize)
 			throw CParserError(t_csz("Invalid address register index"), oParser.GetPreviousPos(), sToken);
 
-		t_address nAddress = FetchAddress(oParser, false);
+		t_address nAddress = FetchAddress(oParser, EAddressHint::CodeAndData);
 		m_pDebugger->ChangeRegister(CDebugger::ERegType::ADR, nRegIdx, {nAddress});
 	}
 	else
@@ -600,7 +623,7 @@ void CCommander::cmd_set(CCmdParser& oParser)
 
 void CCommander::cmd_assign(CCmdParser& oParser)
 {
-	CheckCPUStatus();
+	CheckCPUStatus(false);
 	t_string sName = std::move(oParser.ParseName());
 
 	vm::SVariableInfo tVarInfo = m_pDebugger->GetVariableInfo(sName);
@@ -618,7 +641,7 @@ void CCommander::cmd_assign(CCmdParser& oParser)
 
 void CCommander::cmd_backtrace(CCmdParser& oParser)
 {
-	CheckCPUStatus();
+	CheckCPUStatus(true);
 	t_string sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
 		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
@@ -626,23 +649,260 @@ void CCommander::cmd_backtrace(CCmdParser& oParser)
 	PrintStackBacktrace();
 }
 
+
+void CCommander::cmd_watch(CCmdParser& oParser)
+{
+	CheckCPUStatus(false);
+	t_string sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
+
+	bool isHexadecimal = false;
+	if (sToken.empty())
+	{
+		m_cout << std::endl;
+		PrintWatchList(m_aWatchlist, isHexadecimal);
+	}
+	else if (compare(sToken, t_csz("all")))
+	{
+		sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
+		if (compare(sToken, t_csz("hex")))
+			isHexadecimal = true;
+		else if (!sToken.empty())
+			throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+
+		m_cout << std::endl;
+		m_cout << "Variables:  --------------------------------------------------------------------------------" << std::endl;
+		for (auto const& tInfo : m_pDebugger->Variables())
+			PrintVariable(tInfo, isHexadecimal);
+	}
+	else if (compare(sToken, t_csz("add")))
+	{
+		if (oParser.IsFinished(true))
+			throw CParserError(t_csz("Expecting variable name(s)"), oParser.GetCurrentPos(), {});
+
+		do
+		{
+			sToken = std::move(oParser.ParseName());
+			// Check variable name
+			auto const& tInfo = m_pDebugger->GetVariableInfo(sToken);
+			VASM_UNUSED(tInfo);
+			m_aWatchlist.insert(std::move(sToken));
+		} while (!oParser.IsFinished(true));
+	}
+	else if (compare(sToken, t_csz("rem")))
+	{
+		if (oParser.IsFinished(true))
+			throw CParserError(t_csz("Expecting variable name(s)"), oParser.GetCurrentPos(), {});
+
+		do
+		{
+			sToken = std::move(oParser.ParseName());
+			m_aWatchlist.erase(sToken);
+			// Check variable name
+			auto const& tInfo = m_pDebugger->GetVariableInfo(sToken);
+			VASM_UNUSED(tInfo);
+		} while (!oParser.IsFinished(true));
+	}
+	else if (compare(sToken, t_csz("hex")))
+	{
+		isHexadecimal = true;
+
+		m_cout << std::endl;
+		if (oParser.IsFinished(true))
+			PrintWatchList(m_aWatchlist, isHexadecimal);
+		else
+		{
+			std::set<t_string> aWatchList;
+			do
+			{
+				sToken = std::move(oParser.ParseName());
+				aWatchList.insert(std::move(sToken));
+			} while (!oParser.IsFinished(true));
+			PrintWatchList(aWatchList, isHexadecimal);
+		}
+	}
+	else
+	{
+		std::set<t_string> aWatchList;
+		do
+		{
+			aWatchList.insert(std::move(sToken));
+			sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
+		} while (!sToken.empty());
+
+		m_cout << std::endl;
+		PrintWatchList(aWatchList, isHexadecimal);
+	}
+}
+void CCommander::cmd_print(CCmdParser& oParser)
+{
+	CheckCPUStatus(false);
+	t_string sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
+
+	if (sToken.empty())
+	{
+		PrintCurrentState(true);
+	}
+	else if (compare(sToken, t_csz("dec")))
+	{
+		if (!oParser.IsFinished(true))
+			throw CParserError(t_csz("Unexpected token"), oParser.GetCurrentPos(), oParser.ParseToken());
+
+		PrintCurrentState(false);
+	}
+	else if (compare(sToken, t_csz("state")))
+	{
+		bool bDecimal = false;
+		sToken = std::move(oParser.ParseToken());
+		if (compare(sToken, t_csz("dec")))
+			bDecimal = true;
+		if (!oParser.IsFinished(true))
+			throw CParserError(t_csz("Unexpected token"), oParser.GetCurrentPos(), oParser.ParseToken());
+
+		PrintCurrentState(!bDecimal);
+	}
+	else if (compare(sToken, t_csz("cstack")))
+	{
+		if (!oParser.IsFinished(true))
+			throw CParserError(t_csz("Unexpected token"), oParser.GetCurrentPos(), oParser.ParseToken());
+
+		CheckCPUStatus(true);
+		PrintStackBacktrace();
+	}
+	else if (compare(sToken, t_csz("sf")))
+	{
+		CheckCPUStatus(true);
+
+		// Parse stack frame boundary specifiers 
+		core::t_uoffset nArgsumentsOffset = 0;
+		core::t_uoffset nStackFrameOffset = 0;
+		while (!oParser.IsFinished(true))
+		{
+			t_char chSign = oParser.GetChar();
+			if (chSign == t_char('-'))
+			{
+				if (nStackFrameOffset != 0)
+					throw CError(t_csz("Error: Stack frame offset specified twice"));
+				nStackFrameOffset = oParser.ParseNumber<core::t_word>();
+			}
+			else if (chSign == t_char('+'))
+			{
+				if (nArgsumentsOffset != 0)
+					throw CError(t_csz("Error: Arguments offset specified twice"));
+				nArgsumentsOffset = oParser.ParseNumber<core::t_word>();
+			}
+			else
+			{
+				oParser.RevertPreviousParse();
+				throw CParserError(t_csz("Unexpected token"),
+								   oParser.GetCurrentPos(), std::move(oParser.ParseToken()));
+			}
+		}
+
+		PrintCurrentStackFrame(nArgsumentsOffset, nStackFrameOffset);
+	}
+	else if (compare(sToken, t_csz("bp")))
+	{
+		if (!oParser.IsFinished(true))
+			throw CParserError(t_csz("Unexpected token"), oParser.GetCurrentPos(), oParser.ParseToken());
+
+		PrintBreakPoints();
+	}
+	else if (compare(sToken, t_csz("code")) ||
+			 compare(sToken, t_csz("memory")) || compare(sToken, t_csz("mem")))
+	{
+		bool const isCode = compare(sToken, t_csz("code"));
+		t_address nAddress = core::cnInvalidAddress;
+		t_count nCount = 0;
+
+		oParser.SkipWhiteSpaces();
+		while (!oParser.IsFinished(true))
+		{
+			sToken = std::move(oParser.ParseToken(base::CParser::IsSpace));
+			if (compare(sToken, t_csz("-at")))
+			{
+				if (nAddress != core::cnInvalidAddress)
+					throw CParserError(t_csz("Multiple starting addresses specified"), oParser.GetPreviousPos(), sToken);
+				nAddress = FetchAddress(oParser, isCode ? EAddressHint::Code : EAddressHint::Memory, true);
+				if (nAddress == core::cnInvalidAddress)
+					throw CParserError(t_csz("Invalid code location"), oParser.GetPreviousPos(), sToken);
+			}
+			else if (compare(sToken, t_csz("-c")) || compare(sToken, t_csz("-count")) ||
+					 compare(sToken, t_csz("-sz")) || compare(sToken, t_csz("-size")))
+			{
+				if (nCount != 0)
+					throw CParserError(t_csz("Multiple counts specified"), oParser.GetPreviousPos(), sToken);
+
+				sToken = std::move(oParser.ParseToken(base::CParser::IsSpace));
+				if (sToken.empty())
+					throw CParserError(t_csz("Expecting count specifier: numeric value [1..255] or non zero Register"), oParser.GetCurrentPos(), sToken);
+
+				if (sToken.at(0) == t_char('R'))
+				{
+					for (t_index i = 0; i < core::SCPUStateBase::eRegisterPoolSize; ++i)
+					{
+						if (compare(sToken, toStr("R%1", i)))
+						{	// Take count from register
+							nCount = t_count(m_pDebugger->CPUState().reg<core::t_byte>(i));
+							break;
+						}
+					}
+				}
+				else
+				{
+					oParser.RevertPreviousParse();
+					nCount = t_count(oParser.ParseNumber<core::t_word, 0>());
+				}
+
+				if (nCount == 0)
+					throw CParserError(t_csz("Invalid count specified: expecting numeric value [1..255] or non zero Register"), oParser.GetPreviousPos(), sToken);
+			}
+			else
+				throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+		}
+
+		if (isCode && nAddress == core::cnInvalidAddress)
+			nAddress = m_pDebugger->CPUState().nIP; // Take current IP
+
+		if (nAddress == core::cnInvalidAddress)
+			throw CError(t_csz("Starting address is not specified"));
+		if (!isCode && nCount == 0)
+			throw CError(t_csz("Meory size is not specified"));
+
+		if (isCode)
+			PrintCode(nAddress, nCount);
+		else
+			PrintMemory(nAddress, nCount);
+	}
+	else if (compare(sToken, t_csz("ports")))
+	{
+		if (!oParser.IsFinished(true))
+			throw CParserError(t_csz("Unexpected token"), oParser.GetCurrentPos(), oParser.ParseToken());
+
+		PrintPortsInfo();
+	}
+	else
+		throw CParserError(t_csz("Unrecognized option"), oParser.GetPreviousPos(), sToken);
+}
+
 void CCommander::cmd_dump(CCmdParser& oParser)
 {
-	CheckCPUStatus();
+	CheckCPUStatus(false);
 
 	t_string sToken;
 	t_string sFilePath;
 
-	uint nSection = 0; // 0 - all 1 - memory, 2 - code, 3 - data, 4 - stack
-	uint nFormat = 0;  // 0 - binary, 1 - text
-	t_address nAddress = 0;
+	uint nSection = 0; // 0 - all, 1 - memory, 2 - code, 3 - data, 4 - stack
+	bool bFormat = 1;  // 0 - binary, 1 - text
+	t_address nAddress = core::cnInvalidAddress;
 	t_size nSize = 0;
 
 	oParser.SkipWhiteSpaces();
 	if (oParser.PeekChar() != t_char('-'))
-		sToken = std::move(oParser.ParseName());
+		sToken = std::move(oParser.ParseToken());
 
-	if (compare(sToken, t_csz("memory")))
+	if (sToken.empty() || compare(sToken, t_csz("all")))
+		nSection = 0;
+	else if (compare(sToken, t_csz("memory")) || compare(sToken, t_csz("mem")))
 		nSection = 1;
 	else if (compare(sToken, t_csz("code")))
 		nSection = 2;
@@ -659,40 +919,62 @@ void CCommander::cmd_dump(CCmdParser& oParser)
 		sToken = std::move(oParser.ParseToken(base::CParser::IsSpace));
 		if (compare(sToken, t_csz("-f")) || compare(sToken, t_csz("-file")))
 		{
+			if (!sFilePath.empty())
+				throw CParserError(t_csz("Multiple files specified"), oParser.GetPreviousPos(), sToken);
 			sFilePath = oParser.ParseString(false);
 		}
 		else if (compare(sToken, t_csz("-format")))
 		{
 			sToken = std::move(oParser.ParseName());
 			if (compare(sToken, t_csz("bin")))
-				nFormat = 0;
+				bFormat = 0;
 			else if (compare(sToken, t_csz("text")))
-				nFormat = 1;
+				bFormat = 1;
 			else
 				throw CError(toStr("Error: Unknown format specifier '%1'", sToken));
 		}
 		else if (compare(sToken, t_csz("-at")))
 		{
-			if (nSection == 1 || nSection == 3)
-				nAddress = oParser.ParseNumber<t_address, 16>();
-			else if (nSection == 2)
-				nAddress = FetchAddress(oParser, false);
-			else
+			t_csz pszAddressType = nullptr;
+			if (nAddress != core::cnInvalidAddress)
+				throw CParserError(t_csz("Multiple addresses specified"), oParser.GetPreviousPos(), sToken);
+			switch (nSection)
+			{
+			case 1: 
+				nAddress = FetchAddress(oParser, EAddressHint::Memory);
+				pszAddressType = t_csz("memory");
+				break;
+			//case 2:
+			//	nAddress = FetchAddress(oParser, EAddressHint::Code);
+			//	pszAddressType = t_csz("code");
+			//	break;
+			//case 3:
+			//	nAddress = FetchAddress(oParser, EAddressHint::Data);
+			//	pszAddressType = t_csz("data");
+			//	break;
+			default:
 				throw CError(toStr("Invalid use of the argument '%1'", sToken));
+			}
+			if (nAddress == core::cnInvalidAddress)
+				throw CParserError(base::toStr("Invalid %1 addresses specified", pszAddressType), oParser.GetPreviousPos(), sToken);
 		}
 		else if (compare(sToken, t_csz("-sz")) || compare(sToken, t_csz("-size")))
 		{
-			if (nSection > 0 && nSection < 4)
+			if (nSection == 1)
 				nSize = oParser.ParseNumber<t_size, 0>();
 			else
 				throw CError(toStr("Error: Invalid use of the argument '%1'", sToken));
+			if (nSize == 0)
+				throw CParserError(t_csz("Invalid memory size specified"), oParser.GetPreviousPos(), sToken);
 		}
-		else if (compare(sToken, t_csz("-depth")))
+		else if (compare(sToken, t_csz("-l")) || compare(sToken, t_csz("-depth")))
 		{
 			if (nSection == 4)
 				nSize = oParser.ParseNumber<t_size>();
 			else
 				throw CError(toStr("Invalid use of the argument '%1'", sToken));
+			if (nSize == 0)
+				throw CParserError(t_csz("Invalid stack depth specified"), oParser.GetPreviousPos(), sToken);
 		}
 		else
 		{
@@ -701,150 +983,51 @@ void CCommander::cmd_dump(CCmdParser& oParser)
 	}
 
 	if (sFilePath.empty())
-		throw CError(t_csz("Error: File specifier is missing"));
+		sFilePath = t_csz("dump.txt"); 
+	if (nAddress == core::cnInvalidAddress)
+		nAddress = 0; // Bu default start from the neginning
 
 	sToken = std::move(oParser.ParseToken());
 	if (!sToken.empty())
 		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
 
 	// Open file
-	std::ofstream oDumpFile(sFilePath, (nFormat == 0) ? (std::ios_base::out | std::ios::binary | std::ios::trunc) : (std::ios_base::out));
+	std::ofstream oDumpFile(sFilePath, bFormat ? (std::ios_base::out | std::ios::binary | std::ios::trunc) : (std::ios_base::out));
 	if (oDumpFile.fail())
-		VASM_THROW_ERROR(base::toStr("Failed to open output dump file '%1'", sFilePath));
+		throw CError(base::toStr("Failed to open output dump file '%1'", sFilePath));
+
+	if (!m_sProgram.empty())
+		oDumpFile << "VASM " << (nSection == 1 ? "Memory " : "") << "Dump, Unit: " << m_sProgram << std::endl << std::endl;
+	else if (!m_aSourceCodes.empty())
+	{
+		oDumpFile << "VASM " << (nSection == 1 ? "Memory " : "") << "Dump, Sources: ";
+		for (auto const& sSrcName : m_aSourceCodes)
+			oDumpFile << '\'' << sSrcName << "' ";
+		oDumpFile << std::endl << std::endl;
+	}
 
 	switch (nSection)
 	{
 	case 0:
-		m_pDebugger->Dump(oDumpFile, nFormat);
+		m_pDebugger->Dump(oDumpFile, bFormat);
+		break;
 	case 1:
-		m_pDebugger->DumpMemory(oDumpFile, nAddress, nSize, nFormat);
+		m_pDebugger->DumpMemory(oDumpFile, nAddress, nSize, bFormat);
 		break;
 	case 2:
-		m_pDebugger->DumpCode(oDumpFile, nAddress, nSize, nFormat);
+		m_pDebugger->DumpCode(oDumpFile, 0, 0, bFormat);
 		break;
 	case 3:
-		m_pDebugger->DumpData(oDumpFile, nAddress, nSize, nFormat);
+		m_pDebugger->DumpData(oDumpFile, nAddress, nSize, bFormat);
 		break;
 	case 4:
-		m_pDebugger->DumpStack(oDumpFile, nSize, nFormat);
+		m_pDebugger->DumpStack(oDumpFile, nSize, bFormat);
 		break;
 	default:
-		VASM_ASSERT(false);
-	}
-}
-
-void CCommander::cmd_print(CCmdParser& oParser)
-{
-	t_string sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
-
-	if (sToken.empty() || compare(sToken, t_csz("state")))
-	{
-		PrintCurrentState();
-	}
-	else if (compare(sToken, t_csz("cstack")))
-	{
-		CheckCPUStatus();
-		PrintStackBacktrace();
-	}
-	else if (compare(sToken, t_csz("sf")))
-	{
-		CheckCPUStatus();
-		PrintCurrentStackFrame();
-	}
-	else if (compare(sToken, t_csz("bp")))
-	{
-		PrintBreakPoints();
-	}
-	else if (compare(sToken, t_csz("ports")))
-	{
-		PrintPortsInfo();
-	}
-	else if (compare(sToken, t_csz("code")))
-	{
-		t_address nAddress = 0;
-		t_size nSize = 0;
-
-		oParser.SkipWhiteSpaces();
-		while (!oParser.IsFinished())
-		{
-			sToken = std::move(oParser.ParseToken(base::CParser::IsSpace));
-			if (compare(sToken, t_csz("-at")))
-				nAddress = FetchAddress(oParser, true);
-			else if (compare(sToken, t_csz("-sz")) || compare(sToken, t_csz("-size")))
-				nSize = oParser.ParseNumber<t_size, 0>();
-			else
-				throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
-		}
-
-		PrintCode(nAddress, nSize);
-	}
-	else
-		throw CParserError(t_csz("Unknwon section"), oParser.GetPreviousPos(), sToken);
-
-	sToken = std::move(oParser.ParseToken());
-	if (!sToken.empty())
-		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
-}
-
-void CCommander::cmd_watch(CCmdParser& oParser)
-{
-	t_string sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
-
-	bool isHexadecimal = false;
-	if (compare(sToken, t_csz("hex")))
-	{
-		isHexadecimal = true;
-		sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
+		VASM_CHECK(false);
 	}
 
-	if (sToken.empty())
-	{
-		m_cout << std::endl;
-		PrintWatchList(m_aWatchlist, isHexadecimal);
-	}
-	else if (compare(sToken, t_csz("all")))
-	{
-		m_cout << std::endl;
-		m_cout << "Variables:  --------------------------------------------------------------------------------" << std::endl;
-		for (auto const& tInfo : m_pDebugger->Variables())
-			PrintVariable(tInfo, isHexadecimal);
-	}
-	else if (compare(sToken, t_csz("add")))
-	{
-		sToken = std::move(oParser.ParseName());
-		if (sToken.empty())
-			throw CParserError(t_csz("Expecting variable name"), oParser.GetCurrentPos(), sToken);
-
-		// Check variable name
-		auto const& tInfo = m_pDebugger->GetVariableInfo(sToken);
-		VASM_UNUSED(tInfo);
-
-		m_aWatchlist.insert(std::move(sToken));
-	}
-	else if (compare(sToken, t_csz("rem")))
-	{
-		sToken = std::move(oParser.ParseName());
-		if (sToken.empty())
-			throw CParserError(t_csz("Expecting variable name"), oParser.GetCurrentPos(), sToken);
-
-		// Check variable name
-		auto const& tInfo = m_pDebugger->GetVariableInfo(sToken);
-		VASM_UNUSED(tInfo);
-
-		m_aWatchlist.erase(sToken);
-	}
-	else
-	{
-		std::set<t_string> aWatchList;
-		do
-		{
-			aWatchList.insert(std::move(sToken));
-			sToken = std::move(oParser.IsFinished(true) ? t_string() : oParser.ParseName());
-		} while (!sToken.empty());
-
-		m_cout << std::endl;
-		PrintWatchList(aWatchList, isHexadecimal);
-	}
+	m_cout << "Content successfully dumped to file: '" << sFilePath << "'";
 }
 
 void CCommander::cmd_load(CCmdParser& oParser)
@@ -852,7 +1035,11 @@ void CCommander::cmd_load(CCmdParser& oParser)
 	t_string sPath = std::move(oParser.ParseString(false));
 	if (sPath.empty())
 		throw CParserError(t_csz("Expecting binary executable path"), oParser.GetCurrentPos(), sPath);
+	if (!oParser.IsFinished(true))
+		throw CParserError(t_csz("Unexpected token"), oParser.GetCurrentPos(), oParser.ParseToken());
+
 	Load(sPath);
+	m_cout << std::endl << "Program successfully loaded!" << std::endl;
 }
 
 void CCommander::cmd_open(CCmdParser& oParser)
@@ -866,15 +1053,40 @@ void CCommander::cmd_open(CCmdParser& oParser)
 		aSourceCodeNames.push_back(std::move(sPath));
 	} while (oParser.GetChar(true) == t_char(','));
 
-	t_string sToken = std::move(oParser.ParseToken());
-	if (!sToken.empty())
-		throw CParserError(t_csz("Unexpected token"), oParser.GetPreviousPos(), sToken);
+	if (!oParser.IsFinished(true))
+		throw CParserError(t_csz("Unexpected token"), oParser.GetCurrentPos(), oParser.ParseToken());
 
 	Open(std::move(aSourceCodeNames));
+	m_cout << std::endl << "Program successfully opened!" << std::endl;
 }
 
-void CCommander::cmd_exit(CCmdParser&)
+void CCommander::cmd_reload(CCmdParser& oParser)
 {
+	if (!oParser.IsFinished(true))
+		throw CParserError(t_csz("Unexpected token"), oParser.GetCurrentPos(), oParser.ParseToken());
+	if (m_sProgram.empty())
+		throw CError(t_csz("Unable to reload: Current binary executable path is empty"));
+
+	Load(m_sProgram);
+	m_cout << std::endl << "Program successfully reloaded!" << std::endl;
+}
+
+void CCommander::cmd_reopen(CCmdParser& oParser)
+{
+	if (!oParser.IsFinished(true))
+		throw CParserError(t_csz("Unexpected token"), oParser.GetCurrentPos(), oParser.ParseToken());
+	if (m_aSourceCodes.empty())
+		throw CError(t_csz("Unable to reopen: No source codes available"));
+
+	Open(m_aSourceCodes);
+	m_cout << std::endl << "Program successfully reopened!" << std::endl;
+}
+
+void CCommander::cmd_exit(CCmdParser& oParser)
+{
+	if (!oParser.IsFinished(true))
+		throw CParserError(t_csz("Unexpected token"), oParser.GetCurrentPos(), oParser.ParseToken());
+
 	m_cout << std::endl << "Good Bye!" << std::endl;
 	m_bProcessing = false;
 }
@@ -884,11 +1096,14 @@ void CCommander::cmd_exit(CCmdParser&)
 //	Internal routines
 //
 
-t_address CCommander::FetchAddress(CCmdParser& oParser, bool bCodeOnly)
+t_address CCommander::FetchAddress(
+	CCmdParser& oParser, EAddressHint eHint, bool bFromRegister)
 {
 	t_address nAddress = core::cnInvalidAddress;
 
-	oParser.SkipWhiteSpaces();
+	if (oParser.IsFinished(true))
+		throw CError(t_csz("Error: expecting code location specifier. See help for details."));
+
 	t_char ch = oParser.PeekChar();
 	if (CCmdParser::IsAlpha(ch))
 	{
@@ -896,6 +1111,9 @@ t_address CCommander::FetchAddress(CCmdParser& oParser, bool bCodeOnly)
 		t_char chNext = oParser.GetChar(true);
 		if (chNext == ':')
 		{
+			if (eHint == EAddressHint::Data)
+				throw CError(t_csz("Error: Code addresses specifier is not allowed in this case"));
+
 			t_string sSrcUnit = std::move(sToken);
 			t_index nLineNum = oParser.ParseNumber<t_address>(0, &sToken);
 			nAddress = m_pDebugger->ResolveAddressFromSource(nLineNum, sSrcUnit);
@@ -904,6 +1122,9 @@ t_address CCommander::FetchAddress(CCmdParser& oParser, bool bCodeOnly)
 		}
 		else if (chNext == '.')
 		{
+			if (eHint == EAddressHint::Data)
+				throw CError(t_csz("Error: Code addresses specifier is not allowed in this case"));
+
 			t_string sFuncName = std::move(sToken);
 			sToken = std::move(oParser.ParseName());
 			nAddress = m_pDebugger->ResolveAddressFromFunction(sFuncName, sToken);
@@ -913,15 +1134,43 @@ t_address CCommander::FetchAddress(CCmdParser& oParser, bool bCodeOnly)
 		else
 		{
 			oParser.RevertPreviousParse();
-			nAddress = m_pDebugger->ResolveAddressFromLabel(sToken);
-			if (nAddress == core::cnInvalidAddress)
-				// Try function name
-				nAddress = m_pDebugger->ResolveAddressFromFunction(sToken);
-			if (nAddress == core::cnInvalidAddress && !bCodeOnly)
-				// Try cariable name
-				nAddress = m_pDebugger->ResolveAddressFromVariable(sToken);
 
-			if (nAddress == core::cnInvalidAddress && bCodeOnly)
+			if (bFromRegister)
+			{
+				if (compare(sToken, t_csz("RIP")))
+				{	// Take address from the RIP
+					if (eHint == EAddressHint::Data)
+						throw CError(t_csz("Error: Code addresses specifier is not allowed in this case"));
+
+					nAddress = m_pDebugger->CPUState().nRIP;
+				}
+				else for (t_index i = core::SCPUStateBase::eARBaseIndex; i < core::SCPUStateBase::eAddressRegistersPoolSize; ++i)
+				{
+					if (compare(sToken, toStr("A%1", i - core::SCPUStateBase::eARBaseIndex)))
+					{	// Take address from Address register
+						nAddress = m_pDebugger->CPUState().rega<t_address>(i);
+						break;
+					}
+				}
+			}
+
+			if (eHint != EAddressHint::Data)
+			{
+				if (nAddress == core::cnInvalidAddress)
+					// Try label name
+					nAddress = m_pDebugger->ResolveAddressFromLabel(sToken);
+				if (nAddress == core::cnInvalidAddress)
+					// Try function name
+					nAddress = m_pDebugger->ResolveAddressFromFunction(sToken);
+			}
+			if (eHint != EAddressHint::Code)
+			{
+				if (nAddress == core::cnInvalidAddress)
+					// Try variable name
+					nAddress = m_pDebugger->ResolveAddressFromVariable(sToken);
+			}
+
+			if (nAddress == core::cnInvalidAddress && eHint == EAddressHint::Code)
 				throw CError(toStr("Error: Invalid label or function name '%1'", sToken));
 			else if (nAddress == core::cnInvalidAddress)
 				throw CError(toStr("Error: Invalid label, function or variable name '%1'", sToken));
@@ -931,17 +1180,19 @@ t_address CCommander::FetchAddress(CCmdParser& oParser, bool bCodeOnly)
 	{
 		t_string sToken;
 		nAddress = oParser.ParseNumber<t_address, 0>(0, &sToken);
-		if (!m_pDebugger->CheckCodeAddress(nAddress) &&
-			(bCodeOnly || !m_pDebugger->CheckVariableAddress(nAddress)))
-		{
-			if (bCodeOnly)
-				throw CError(toStr("Error: Invalid code address '%1'", sToken));
-			else
-				throw CError(toStr("Error: Invalid code or variable address '%1'", sToken));
-		}
+		if (eHint == EAddressHint::Code && !m_pDebugger->CheckCodeAddress(nAddress))
+			throw CError(toStr("Error: Invalid code address '%1'", sToken));
+		else if (eHint == EAddressHint::Data && !m_pDebugger->CheckVariableAddress(nAddress))
+			throw CError(toStr("Error: Invalid variable address '%1'", sToken));
+		else if (eHint == EAddressHint::CodeAndData && !m_pDebugger->CheckCodeAddress(nAddress) &&
+				 !m_pDebugger->CheckVariableAddress(nAddress))
+			throw CError(toStr("Error: Invalid code or variable address '%1'", sToken));
 	}
 	else if (CCmdParser::IsNum(ch))
 	{
+		if (eHint == EAddressHint::Data)
+			throw CError(t_csz("Error: Code addresses specifier is not allowed in this case"));
+
 		t_string sToken;
 		t_index nLineNum = oParser.ParseNumber<t_address>(0, &sToken);
 		nAddress = m_pDebugger->ResolveAddressFromSource(nLineNum, {});
@@ -1043,7 +1294,7 @@ CValue CCommander::FetchValue(CCmdParser& oParser, EValueType eType, t_count nCo
 	return std::move(oValue);
 }
 
-void CCommander::PrintCurrentState() const
+void CCommander::PrintCurrentState(bool const bHexadecimal) const
 {
 	std::ostream& os = m_cout;
 	vm::CProcessor::SState const& tState = m_pDebugger->CPUState();
@@ -1055,58 +1306,10 @@ void CCommander::PrintCurrentState() const
 		return;
 	}
 
-	os << std::resetiosflags(0);
-	os << "----------------------------------------------------------------------------------" << std::endl;
-	os << "Processor status flags: ";
-	os << " CF(" << std::dec << tState.oFlags.getCarry() << ")";
-	os << " ZF(" << std::dec << tState.oFlags.getZero() << ")";
-	os << " SF(" << std::dec << tState.oFlags.getSign() << ")";
-	os << " OF(" << std::dec << tState.oFlags.getOverflow() << ")";
-
-	os << std::endl;
-	os << "Address registers (0x): ----------------------------------------------------------" << std::endl;
-	os << "IP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nIP  << "  ";
-	//os << "CIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nCIP << "  ";
-	os << "RIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nRIP << "  ";
-	os << std::endl;
-	os << "SP = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nSP << "  ";
-	os << " SF = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nSF << "  ";
-	os << std::endl;
-	os << "A0 = "   << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 0) << "  ";
-	os << " A1 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 1) << "  ";
-	os << std::endl;
-	os << "A2 = "   << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 2) << "  ";
-	os << " A3 = "  << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 3) << "  ";
-
-	os << std::endl;
-	os << "General purpose registers (0x): --------------------------------------------------" << std::endl;
-	for (uint nRIdx = 0 /*core::SCPUStateBase::eGPRBaseIndex*/; nRIdx < core::SCPUStateBase::eRegisterPoolSize; nRIdx += 16)
-	{
-		os << "R" << std::dec << nRIdx + 15 << "-" << std::setfill('0') << std::setw(2) << nRIdx << ": ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 15) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 14) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 13) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 12) << " ";
-		os << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 11) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 10) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 9) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 8) << " ";
-		os << "  ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 7) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 6) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 5) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 4) << " ";
-		os << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 3) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 2) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 1) << " ";
-		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 0) << " ";
-		os << std::endl;
-	}
+	m_pDebugger->DumpState(os, bHexadecimal);
 
 	if (!m_aWatchlist.empty())
-		PrintWatchList(m_aWatchlist, false);
+		PrintWatchList(m_aWatchlist, bHexadecimal);
 
 	if (eStatus == vm::CProcessor::EStatus::Finished)
 	{
@@ -1117,11 +1320,11 @@ void CCommander::PrintCurrentState() const
 		os << "Command: -------------------------------------------------------------------------" << std::endl;
 
 		CDebugger::SCodeLineInfo tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nCIP);
-		PrintCodeInfo(os, tCLInfo, false);
+		PrintCodeInfo(os, tCLInfo, false, true);
 		PrintCommand(os, tState.nCIP);
 
 		os << "----------------------------------------------------------------------------------" << std::endl;
-		os << m_pDebugger->CPUStatus().oErrorInfo.GetErrorMsg(true);
+		os << m_pDebugger->CPUStatus().oErrorInfo.sErrorMessage;
 	}
 	else if (!bool(uint(eStatus) & uint(vm::CProcessor::EStatus::Ready)))
 	{
@@ -1138,13 +1341,13 @@ void CCommander::PrintCurrentState() const
 		{
 			os << "Prev command: --------------------------------------------------------------------" << std::endl;
 			tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nCIP);
-			PrintCodeInfo(os, tCLInfo, false);
+			PrintCodeInfo(os, tCLInfo, false, true);
 			PrintCommand(os, tState.nCIP);
 		}
 
 		os << "Next command: --------------------------------------------------------------------" << std::endl;
 		tCLInfo = m_pDebugger->GetCodeLineInfo(tState.nIP);
-		PrintCodeInfo(os, tCLInfo, false);
+		PrintCodeInfo(os, tCLInfo, false, true);
 		PrintCommand(os, tState.nIP);
 	}
 }
@@ -1154,10 +1357,10 @@ void CCommander::PrintStackBacktrace() const
 	auto aCodeLines = std::move(m_pDebugger->GetFunctionCallStack());
 
 	m_cout << std::resetiosflags(0);
-	m_cout << "Function call stack: ---------------------------------------------------------------------" << std::endl;
+	m_cout << "Function call stack: --------------------------------------------------------------" << std::endl;
 	for (auto const& tInfo : aCodeLines)
 	{
-		PrintCodeInfo(m_cout, tInfo, true);
+		PrintCodeInfo(m_cout, tInfo, true, true);
 	}
 }
 
@@ -1166,11 +1369,11 @@ void CCommander::PrintPortsInfo() const
 	auto aPortsInfo = std::move(m_pDebugger->GetPortsInfo());
 
 	m_cout << std::resetiosflags(0);
-	m_cout << "Port Ranges: -----------------------------------------------------------------------------" << std::endl;
-	m_cout << std::setfill('0') << std::setw(3);
+	m_cout << "Port Ranges: ---------------------------------------------------------------------" << std::endl;
 	for (auto const& tInfo : aPortsInfo)
 	{
-		m_cout << "[" << tInfo.first.first << " - " << tInfo.first.second << "] ";
+		m_cout << "[" << std::setfill('0') << std::setw(3) << tInfo.first.first;
+		m_cout << " - " << std::setfill('0') << std::setw(3) << tInfo.first.second << "] ";
 		m_cout << tInfo.second << std::endl;
 	}
 }
@@ -1181,45 +1384,123 @@ void CCommander::PrintBreakPoints() const
 
 	m_cout << std::resetiosflags(0);
 	m_cout << "Break Points: ----------------------------------------------------------------------------" << std::endl;
-	m_cout << std::hex << std::uppercase << std::setfill('0') << std::setw(8);
 	for (auto const& tInfo : aCodeLines)
 	{
-		m_cout << "0x" << tInfo.nAddress << "  ";
-		m_cout << tInfo.sUnitName.str() << " : " << tInfo.sFuncName.str();
-		if (tInfo.nLineNum != g_ciInvalid)
-			m_cout << "  Line: " << std::dec << tInfo.nLineNum;
-		m_cout << std::endl;
+		PrintCodeInfo(m_cout, tInfo, true, true);
 	}
 }
 
-void CCommander::PrintCode(t_address nBaseAddress, t_size nInstrCount) const
+void CCommander::PrintCode(t_address const nBaseAddress, t_count nInstrCount) const
 {
 	CDebugger::SCodeLineInfo tCLInfo = m_pDebugger->GetCodeLineInfo(nBaseAddress);
-	PrintCodeInfo(m_cout, tCLInfo, true);
+	PrintCodeInfo(m_cout, tCLInfo, false, false);
+	if (tCLInfo.nAddress == core::cnInvalidAddress)
+		return; // No valid code
 
-	t_address nCurrAddress = tCLInfo.nAddress;
-	while (nInstrCount > 0 && nCurrAddress != core::cnInvalidAddress)
+	t_address nCurrAddress = tCLInfo.nAddress; // Take validated address
+	if (nInstrCount == 0)
+	{	// Determine instructions count automatically
+		auto nEndAddress = core::cnInvalidAddress;
+		if (tCLInfo.nFuncSize > 0)
+			// Take current function last line as the end address
+			nEndAddress = tCLInfo.nAddress - tCLInfo.nRelOffset + tCLInfo.nFuncSize;
+
+		// Starting from unknown location, go while instructions are valid 
+		while (nCurrAddress != core::cnInvalidAddress && nCurrAddress < nEndAddress)
+		{
+			++nInstrCount;
+			nCurrAddress = m_pDebugger->NextCodeAddress(nCurrAddress);
+		}
+		if (nCurrAddress == core::cnInvalidAddress)
+			--nInstrCount; // Exclude last invalid command
+	}
+
+	// Start from validated address
+	nCurrAddress = tCLInfo.nAddress;
+	// Break at function boundaries to print code info
+	auto nBreakAddress = tCLInfo.nAddress - tCLInfo.nRelOffset + tCLInfo.nFuncSize;
+	while (nInstrCount > 0 && nCurrAddress != core::cnInvalidAddress &&
+		   nCurrAddress < m_pDebugger->CPUState().cnCodeSize)
 	{
+		if (nCurrAddress >= nBreakAddress && nCurrAddress > tCLInfo.nAddress)
+		{
+			tCLInfo = m_pDebugger->GetCodeLineInfo(nCurrAddress);
+			if (tCLInfo.nFuncSize > 0)
+				PrintCodeInfo(m_cout, tCLInfo, false, false);
+			nBreakAddress = tCLInfo.nAddress - tCLInfo.nRelOffset + tCLInfo.nFuncSize;
+		}
+
 		nCurrAddress = PrintCommand(m_cout, nCurrAddress);
 		--nInstrCount;
 	}
 }
 
-void CCommander::PrintCurrentStackFrame() const
+void CCommander::PrintMemory(t_address const nBaseAddress, t_count nSizeInBytes) const
+{
+	m_cout << "Memory (0x): ---------------------------------------------------------------------" << std::endl;
+	m_pDebugger->DumpMemory(m_cout, nBaseAddress, nSizeInBytes, true);
+}
+
+void CCommander::PrintCurrentStackFrame(
+	core::t_uoffset nArgumentsOffset, core::t_uoffset nStackFrameOffset) const
 {
 	auto const& tState = m_pDebugger->CPUState();
-	t_address nCurrSP = tState.nSP;
+	t_address nCurrSP = (nStackFrameOffset) == 0 ? tState.nSP : tState.nSF - nStackFrameOffset;
 	t_address nCurrSF = tState.nSF;
+	auto tReturnLinkImage = m_pDebugger->GetReturnLinkFromStackFrame();
 
 	// Round to 8 byte boundaries
 	t_address nSPRounded = nCurrSP - nCurrSP % 8;
 	t_address nSFRounded = nCurrSF + (nCurrSF % 8 == 0 ? 0 : (8 - nCurrSF % 8));
 
 	std::ostream& os = m_cout;
-	os << std::hex << std::uppercase << std::setfill('0') << std::setw(8);
-	os << "Current Stack Frame:  " << "SP = " << nCurrSP << "  SF = " << nCurrSF << "  ----------------" << std::endl;
+	os << "Current Stack Frame:  allocated space (SF - SP) = " << std::dec << (tState.nSF - tState.nSP) << "  ----------------------------" << std::endl;
+	os << "SP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << nCurrSP;
+	if (tReturnLinkImage.first == core::cnInvalidAddress)
+		os << "   Ret IP = (unavailable)";
+	else
+		os << "   Ret IP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tReturnLinkImage.first;
+	os << std::endl;
+	os << "SF = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << nCurrSF;
+	if (tReturnLinkImage.first == core::cnInvalidAddress)
+		os << "   Ret SF = (unavailable)";
+	else
+		os << "   Ret SF = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tReturnLinkImage.second;
+	os << std::endl;
 
 	core::CMemory const& oMemory = m_pDebugger->Memory();
+
+	if (nArgumentsOffset != 0)
+	{
+		t_address nArgBegin = nCurrSF + 2 * sizeof(t_address);
+		t_address nArgEnd = nArgBegin + nArgumentsOffset;;
+		t_address nArgBeginRounded = nArgBegin - (nArgBegin % 8 == 0 ? 0 : (nArgBegin % 8));
+		t_address nArgEndRounded = nArgEnd + (nArgEnd % 8 == 0 ? 0 : (8 - nArgEnd % 8));
+		os << "Arguments   ----------------------------------------------------------------------" << std::endl;
+		for (t_address nSP = nArgBeginRounded; nSP < nArgEndRounded && nSP < tState.cnStackLBound; nSP += 8)
+		{
+			os << "SF +" << std::dec << std::setfill(' ') << std::setw(3) << nSP - nCurrSF << ": ";
+			for (auto i = 8; i > 0; --i)
+			{
+				t_address nCurr = nSP + t_address(i - 1);
+				if (nCurr >= nArgEnd || nCurr < nArgBegin)
+					os << ".. ";
+				else
+				{
+					uint8 uValue;
+					oMemory.ReadAt<uint8>(nCurr, uValue);
+					os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +uValue << " ";
+				}
+
+				if (i == 5)
+					os << " ";
+			}
+			os << std::endl;
+		}
+
+	}
+
+	os << "Local Variables   ----------------------------------------------------------------" << std::endl;
 	for (t_address nSP = nSFRounded - 1; nSP >= nSPRounded && nSP >= tState.cnStackUBound; --nSP)
 	{
 		if ((nSP + 1) % 8 == 0)
@@ -1265,15 +1546,19 @@ void CCommander::PrintVariable(vm::SVariableInfo const& tInfo, bool const bHexad
 }
 
 void CCommander::PrintCodeInfo(
-	std::ostream& os, CDebugger::SCodeLineInfo const& tInfo, bool bIncludeBaseAddress) const
+	std::ostream& os, CDebugger::SCodeLineInfo const& tInfo,
+	bool const bIncludeBaseAddress, bool const bIncludeOffset) const
 {
 	if (bIncludeBaseAddress)
 		os << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tInfo.nAddress << ": ";
-	else
+	else if (!tInfo.sFuncName.str().empty())
 		os << "Func: ";
+	else
+		os << ": ";
 	if (tInfo.sFuncName != nullptr)
 		os << tInfo.sFuncName.str() << "  ";
-	os << "+0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tInfo.nRelOffset;
+	if (bIncludeOffset)
+		os << "+0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tInfo.nRelOffset;
 	if (tInfo.sUnitName != nullptr)
 		os << "  Unit: " << tInfo.sUnitName.str() << ",  Line: " << std::setw(0) << std::dec << tInfo.nLineNum;
 	os << std::endl;
@@ -1285,7 +1570,7 @@ t_address CCommander::PrintCommand(std::ostream& os, t_address const nCmdAddress
 	t_address nNextAddress = nCmdAddress;
 	std::string sCommand = std::move(m_pDebugger->GetDisassembledCommand(nNextAddress, &sBinaryCommand));
 	os << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << nCmdAddress << ": "
-		<< sCommand << "  #" << sBinaryCommand << std::endl;
+		<< sCommand << t_csz("  \t# ") << sBinaryCommand << std::endl;
 	return nNextAddress;
 }
 

@@ -103,7 +103,7 @@ void CProcessor::Init(
 
 	// Now processor is ready to Run!
 	m_tStatus.eStatus = EStatus::Ready;
-	m_tStatus.oErrorInfo = base::CException();
+	m_tStatus.oErrorInfo = {};
 }
 
 void CProcessor::Reinit(t_address nProgramStart)
@@ -130,7 +130,7 @@ CProcessor::EStatus CProcessor::Run(bool bOnce)
 	// Start running
 	m_tState.bRun = !bOnce;
 	m_tStatus.eStatus = EStatus::Running;
-	m_tStatus.oErrorInfo.Clear();
+	m_tStatus.oErrorInfo = {};
 
 	SCommandContextEx& tCurrentCommand = CurrentCommandContext();
 
@@ -152,22 +152,29 @@ CProcessor::EStatus CProcessor::Run(bool bOnce)
 			// Execute current command
 			Execute(tCurrentCommand);
 		}
-		catch (base::CException const& e)
+		catch (base::CError const& err)
 		{
 			m_tStatus.eStatus = EStatus::Failed;
-			m_tStatus.oErrorInfo = e;
+			m_tStatus.oErrorInfo = err.GetInfo(true);
+			m_tState.bRun = false;
+		}
+		catch (base::CException const& ex)
+		{
+			m_tStatus.eStatus = EStatus::Failed;
+			m_tStatus.oErrorInfo = {ex.Info()};
 			m_tState.bRun = false;
 		}
 		catch (std::exception const& se)
 		{
 			m_tStatus.eStatus = EStatus::Failed;
-			m_tStatus.oErrorInfo = se;
+			m_tStatus.oErrorInfo = {};
+			m_tStatus.oErrorInfo.cszFixedErrorMsg = se.what();
 			m_tState.bRun = false;
 		}
 		catch (...)
 		{
 			m_tStatus.eStatus = EStatus::Failed;
-			m_tStatus.oErrorInfo = base::CException(t_csz("CPU: Unknown exception caught in Run"), VASM_SRC_LINE);
+			m_tStatus.oErrorInfo = {VASM_ERR_INFO("CPU: Unknown exception caught in Run")};
 			m_tState.bRun = false;
 		}
 	} while (m_tState.bRun);
@@ -229,7 +236,7 @@ void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)
 			// Multiply Reg idx with OprSize to align with OpSize
 			uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCmdInfo.anRegIdx[eOprIdx]), tCmdInfo.eOprSize);
 			if (nRegIdx + OperandSize(tCmdInfo.eOprSize) > SState::eRegisterPoolSize)
-				VASM_THROW_ERROR(base::toStr("CPU: Invalid GP register index #%1", int(nRegIdx)));
+				throw base::CError(base::toStr("CPU: Invalid GP register index #%1", int(nRegIdx)));
 			tCmdCtxt.apOperands[eOprIdx] = &m_tState.aui8RPool[nRegIdx];
 		}
 		else if (eOprType == EOprType::Imv || (eOprType == EOprType::RegImv && tCmdInfo.eOprSwitch == EOprSwitch::Imv))

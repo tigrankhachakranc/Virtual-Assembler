@@ -32,6 +32,9 @@ using SCommandMetaInfo = core::SCommandMetaInfo;
 //	CEncoder implementations
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+t_csz const CEncoder::CError::s_FixedError = t_csz("Encoder error");
+
+CEncoder::CError::~CError() = default;
 
 CEncoder::CEncoder(t_aCode& aCodeBuffer,
 				   t_aRelocTable& aSymblRelocTbl,
@@ -190,7 +193,7 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 			// Write variable's symbol index for now, actual address will be resolved later by the linker
 			std::memcpy(pCode, &nSymbolIdx, sizeof(t_address));
 			// Keep lbl offset in the relocation table to complete with correct address later
-			m_aSymblRelocTbl.push_back(nCodeOffset + (pCode - pCodeBase));
+			m_aSymblRelocTbl.push_back(t_dword(nCodeOffset + (pCode - pCodeBase)));
 			pCode += sizeof(t_address); // Move to next byte
 			break;
 		}
@@ -208,7 +211,7 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 			// Write function's symbol index for now, actual address will be resolved later by the linker
 			std::memcpy(pCode, &nSymbolIdx, sizeof(t_address));
 			// Keep lbl offset in the relocation table to complete with correct address later
-			m_aSymblRelocTbl.push_back(nCodeOffset + (pCode - pCodeBase));
+			m_aSymblRelocTbl.push_back(t_dword(nCodeOffset + (pCode - pCodeBase)));
 			pCode += sizeof(t_address); // Move to next byte
 			break;
 		}
@@ -223,7 +226,7 @@ t_uoffset CEncoder::Encode(SCommand const& tCmd, t_uoffset nCodeOffset)
 			// Write lbl index for now, actual address will be resolved later by the linker
 			*reinterpret_cast<t_word*>(pCode) = (t_word) tArg.nIdx;
 			// Keep lbl offset in the relocation table to complete with correct address later
-			m_aLblRelocTbl.push_back(nCodeOffset + (pCode - pCodeBase));
+			m_aLblRelocTbl.push_back(t_dword(nCodeOffset + (pCode - pCodeBase)));
 			pCode += sizeof(t_word); // Move to next byte
 			break;
 		}

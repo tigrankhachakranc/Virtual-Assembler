@@ -40,24 +40,29 @@ public:
 	//
 	//	Linker Error
 	//
-	class CError : public base::CException
+	class CError : public base::CError
 	{
-		typedef base::CException Base;
+		using Base = base::CError;
 	public:
-		CError() = default;
-		CError(t_csz psErrMsg, t_string const& sPackage);
+		CError(t_csz const pcszErrMsg, t_string const& sPackage);
 		CError(t_string const& sErrMsg, t_string const& sPackage);
-		~CError() = default;
+		CError(t_string&& sErrMsg, t_string const& sPackage);
+		~CError() override;
 
 		inline CError(CError const&) = default;
 		inline CError(CError&&) = default;
+
+		void operator=(CError const&) = delete;
+		void operator=(CError&&) = delete;
 
 	public:
 		inline t_string const& ErrorMsg() const;
 		inline t_string const& Package() const;
 
 	private:
-		t_string	m_sPkgName;
+		t_string const	m_csPkgName;
+
+		static t_csz const s_FixedError;
 	};
 
 public:
@@ -85,8 +90,6 @@ private:
 	//
 	t_mapSymbolTable	m_mapSymbols;
 	CCommandLibraryPtr	m_pCmdLib;
-
-	static const t_uoffset s_cnGranul = 16;
 };
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -100,14 +103,23 @@ private:
 //	CLinker::CError
 //
 inline CLinker::CError::CError(
-	t_csz psErrMsg, t_string const& sPkgName) :
-	Base(t_string(psErrMsg)), m_sPkgName(sPkgName)
+	t_csz const pcszErrMsg, t_string const& sPkgName) :
+	Base(pcszErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_csPkgName(sPkgName)
 {
 }
 
 inline CLinker::CError::CError(
 	t_string const& sErrMsg, t_string const& sPkgName) :
-	Base(sErrMsg), m_sPkgName(sPkgName)
+	Base(sErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_csPkgName(sPkgName)
+{
+}
+
+inline CLinker::CError::CError(
+	t_string&& sErrMsg, t_string const& sPkgName) :
+	Base(sErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_csPkgName(sPkgName)
 {
 }
 
@@ -118,7 +130,7 @@ inline t_string const& CLinker::CError::ErrorMsg() const
 
 inline t_string const& CLinker::CError::Package() const
 {
-	return m_sPkgName;
+	return m_csPkgName;
 }
 ////////////////////////////////////////////////////////////////////////////////
 

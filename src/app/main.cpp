@@ -13,6 +13,7 @@
 #include <fstream>
 
 using namespace vasm;
+using CError = vasm::base::CError;
 
 CStringComparator<EComparisonType::Equal_CI> compare;
 
@@ -43,14 +44,14 @@ int main(int argc, char* argv[])
 			if (compare(sFirstArg, t_csz("compile")))
 			{
 				if (argc < 4)
-					VASM_THROW_ERROR(t_csz("Invalid usage: Incomplete compilation arguments"));
+					throw CError(t_csz("Invalid usage: Incomplete compilation arguments"), CError::BadArguments);
 
 				// Get output file
 				t_string sExecutableName(argv[argc-1]);
 				if (!base::EndsWith(sExecutableName, sBinExtension))
 				{
 					if (base::EndsWith(sExecutableName, sExtension))
-						VASM_THROW_ERROR(t_csz("Invalid usage: Output name is missing"));
+						throw CError(t_csz("Invalid usage: Output name is missing"), CError::BadArguments);
 					sExecutableName += sBinExtension;
 				}
 
@@ -75,14 +76,14 @@ int main(int argc, char* argv[])
 			else if (compare(sFirstArg, t_csz("disasm")))
 			{
 				if (argc != 4)
-					VASM_THROW_ERROR(t_csz("Invalid usage: Incomplete disassembly arguments"));
+					throw CError(t_csz("Invalid usage: Incomplete disassembly arguments"), CError::BadArguments);
 
 				// Get input file
 				t_string sExecutableName(argv[2]);
 				if (!base::EndsWith(sExecutableName, sBinExtension))
 				{
 					if (base::EndsWith(sExecutableName, sExtension))
-						VASM_THROW_ERROR(t_csz("Invalid usage: Invalid input file name"));
+						throw CError(t_csz("Invalid usage: Invalid input file name"), CError::BadArguments);
 					sExecutableName += sBinExtension;
 				}
 
@@ -101,7 +102,7 @@ int main(int argc, char* argv[])
 			else if (compare(sFirstArg, t_csz("test")))
 			{
 				if (argc != 4)
-					VASM_THROW_ERROR(t_csz("Invalid usage: Incomplete test arguments"));
+					throw CError(t_csz("Invalid usage: Incomplete test arguments"), CError::BadArguments);
 
 				// Get input file
 				t_string sTxt(".txt");
@@ -117,9 +118,9 @@ int main(int argc, char* argv[])
 				std::ofstream oTestOutput(sTestName, std::ios_base::out);
 
 				if (oTestInput.fail())
-					VASM_THROW_ERROR(base::toStr("Failed to open the test '%1'", sTestName));
+					throw CError(base::toStr("Failed to open the test '%1'", sTestName), CError::FileOpen);
 				if (oTestOutput.fail())
-					VASM_THROW_ERROR(base::toStr("Failed to open test output '%1'", sOutputName));
+					throw CError(base::toStr("Failed to open test output '%1'", sOutputName), CError::FileOpen);
 
 				// Instantiate command handler
 				dev::CCommanderUPtr pCommander(new dev::CCommander(oTestInput, oTestOutput));
@@ -170,7 +171,7 @@ int main(int argc, char* argv[])
 	catch (base::CException& e)
 	{
 		nRetCode = -1;
-		std::cout << std::endl << e.GetErrorMsg(true) << std::endl;
+		std::cout << std::endl << e.GetErrorMsg() << std::endl;
 		if (e.Component() != nullptr)
 			std::cout << base::toStr("Program exited due to %1 error!", e.Component()) << std::endl;
 		else

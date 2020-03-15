@@ -76,8 +76,8 @@ void CCodeGenerator::MakeData(SUnit const& tUnit, SPackage& tPackage)
 		tEntry.nBase = core::cnInvalidAddress; 
 		
 		// Keep symbol index
-		m_mapSymbolTable.insert({&tEntry.sName, tPackage.oSymbolTbl.aEntries.size() - 1});
-		m_aVarToSymblIdxMapping.push_back(tPackage.oSymbolTbl.aEntries.size() - 1);
+		m_mapSymbolTable.insert({&tEntry.sName, t_index(tPackage.oSymbolTbl.aEntries.size() - 1)});
+		m_aVarToSymblIdxMapping.push_back(t_dword(tPackage.oSymbolTbl.aEntries.size() - 1));
 		
 		if (tVar.tValue.IsNull())
 		{	// Variable declared without definition (forward declaration)
@@ -101,6 +101,15 @@ void CCodeGenerator::MakeData(SUnit const& tUnit, SPackage& tPackage)
 		// Increase Data marker
 		nDataMarker += nVarSize;
 	}
+
+	// Take care about section size granularity
+	if (nDataMarker != 0 && nDataMarker % core::cnGranul != 0)
+	{
+		auto const nReminder = core::cnGranul - nDataMarker % core::cnGranul;
+		tPackage.aData.resize(nDataMarker + nReminder);
+		std::memset(&tPackage.aData[nDataMarker], 0, nReminder);
+		nDataMarker += nReminder;
+	}
 }
 
 void CCodeGenerator::MakeCode(SUnit const& tUnit, SPackage& tPackage, bool bIncludeDebugInfo)
@@ -114,7 +123,7 @@ void CCodeGenerator::MakeCode(SUnit const& tUnit, SPackage& tPackage, bool bIncl
 
 		// Define symbol,
 		// make entry for the variable in the package level symbol table
-		t_index nSymbolIdx = tPackage.oSymbolTbl.aEntries.size();
+		t_index nSymbolIdx = t_index(tPackage.oSymbolTbl.aEntries.size());
 		tPackage.oSymbolTbl.aEntries.push_back({});
 		SSymbolTable::SEntry& tEntry = tPackage.oSymbolTbl.aEntries.back();
 		tEntry.sName = tFunc.sName;
@@ -144,7 +153,7 @@ void CCodeGenerator::MakeCode(SUnit const& tUnit, SPackage& tPackage, bool bIncl
 			tPackage.oDebugInfo.aEntries.push_back({});
 			pDbgEntry = &tPackage.oDebugInfo.aEntries.back();
 
-			pDbgEntry->nSymbolIndex = tPackage.oSymbolTbl.aEntries.size() - 1;
+			pDbgEntry->nSymbolIndex = t_index(tPackage.oSymbolTbl.aEntries.size() - 1);
 			pDbgEntry->sSrcUnitName = tUnit.sName;
 			pDbgEntry->nBaseLine = tFunc.nBaseLine;
 			pDbgEntry->nSizeLine = tFunc.nSizeLine;
@@ -213,6 +222,17 @@ void CCodeGenerator::MakeFunc(
 
 		nCodeMarker += oEncoder.Encode(tCmd, nCodeMarker);
 	}
+
+	// Take care about function size granularity
+	if (nCodeMarker > nCodeMarkerBase && nCodeMarker % core::cnGranul != 0)
+	{
+		auto const nReminder = core::cnGranul - nCodeMarker % core::cnGranul;
+		if (tPackage.aCode.size() < nCodeMarker + nReminder)
+			tPackage.aCode.resize(nCodeMarker + nReminder);
+		std::memset(&tPackage.aCode[nCodeMarker], 0, nReminder);
+		nCodeMarker += nReminder;
+	}
+
 
 	// Once function body is encoded, it is the right time to adjust function labels with relative offsets
 	for (t_uoffset nCodeOffset : aLabelRelocationTbl)

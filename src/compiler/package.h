@@ -4,8 +4,10 @@
 //
 // Includes
 //
-#include "core_definitions.h"
-#include "core_value.h"
+#include <core_definitions.h>
+#include <core_value.h>
+#include <core_package_info.h>
+
 
 // STL
 #include <string>

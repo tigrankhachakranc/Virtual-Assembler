@@ -7,7 +7,6 @@
 //	Includes
 //
 #include "io_controller.h"
-#include <base_exception.h>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 namespace vasm {
@@ -54,7 +53,7 @@ void CIOController::Register(IDevicePtr pDevice)
 		t_PortRange pr(tInfo.nBase, (t_port) (tInfo.nBase + t_port(SizeOfValueType(tInfo.eType)) - 1));
 		auto it = m_mapPorts.find(pr);
 		if (it != m_mapPorts.end())
-			VASM_THROW_ERROR(base::toStr(t_csz("Failed to register Device '%1': Port #%2 already occupied"), pDevice->GetName(), tInfo.nBase));
+			throw base::CError(base::toStr(t_csz("Failed to register Device '%1': Port #%2 already occupied"), pDevice->GetName(), tInfo.nBase));
 	
 		tInfo.nSlot = i;
 		tInfo.pDevice = pDevice;
@@ -98,13 +97,13 @@ CIOController::SSlotInfo const& CIOController::Lookup(
 	t_PortRange pr(nPort, (t_port) (nPort + t_port(eType) - 1));
 	auto it = m_mapPorts.find(pr);
 	if (it == m_mapPorts.end())
-		VASM_THROW_ERROR(base::toStr(t_csz("IO Controller: Port #%1 not found"), nPort));
+		throw base::CError(base::toStr(t_csz("IO Controller: Port #%1 not found"), nPort));
 
 	SSlotInfo const& tSlot = it->second;
 	if (nPort != tSlot.nBase)
-		VASM_THROW_ERROR(base::toStr(t_csz("IO Controller: Port #%1 doesn't matches to the target"), nPort));
+		throw base::CError(base::toStr(t_csz("IO Controller: Port #%1 doesn't matches to the target"), nPort));
 	if (SizeOfValueType(eType) > SizeOfValueType(tSlot.eType))
-		VASM_THROW_ERROR(base::toStr(t_csz("IO Controller: Port #%1 data type doesn't matches to the target data type"), nPort));
+		throw base::CError(base::toStr(t_csz("IO Controller: Port #%1 data type doesn't matches to the target data type"), nPort));
 
 	return tSlot;
 }

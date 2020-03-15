@@ -47,17 +47,20 @@ public:
 	//
 	//	Error
 	//
-	class CError : public base::CException
+	class CError : public base::CError
 	{
-		typedef base::CException Base;
+		using Base = base::CError;
 	public:
-		inline CError();
-		inline CError(t_csz psErrMsg, t_index nLine, t_csz pszCommandName);
-		inline CError(t_string const& sErrMsg, t_index nPos, t_csz pszCommandName);
-		inline ~CError() = default;
+		inline CError(t_csz const pcszErrMsg, t_index const cnLine, t_csz const pcszCommandName);
+		inline CError(t_string const& sErrMsg, t_index const cnPos, t_csz const pcszCommandName);
+		inline CError(t_string&& sErrMsg, t_index const cnPos, t_csz const pcszCommandName);
+		~CError() override;
 
 		inline CError(CError const&) = default;
 		inline CError(CError&&) = default;
+
+		void operator=(CError const&) = delete;
+		void operator=(CError&&) = delete;
 
 	public:
 		inline t_index LineNumber() const;
@@ -65,8 +68,10 @@ public:
 		inline t_string const& ErrorMsg() const;
 
 	private:
-		t_index	m_nLineNumber;
-		t_csz	m_pszCommandName;
+		t_index const	m_cnLineNumber;
+		t_csz const		m_pcszCommandName;
+		
+		static t_csz const s_FixedError;
 	};
 
 public:
@@ -103,31 +108,35 @@ using CEncoderUPtr = std::unique_ptr<CEncoder>;
 //
 //	CEncoder::CError
 //
-inline CEncoder::CError::CError() :
-	Base(), m_nLineNumber(g_ciInvalid), m_pszCommandName(nullptr)
+inline CEncoder::CError::CError(
+	t_csz const pcszErrMsg, t_index const cnLine, t_csz const pcszCommandName) :
+	Base(pcszErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_cnLineNumber(cnLine), m_pcszCommandName(pcszCommandName)
 {
 }
 
 inline CEncoder::CError::CError(
-	t_csz psErrMsg, t_index nLine, t_csz pszCommandName) :
-	Base(t_string(psErrMsg)), m_nLineNumber(nLine), m_pszCommandName(pszCommandName)
+	t_string const& sErrMsg, t_index const cnLine, t_csz const pcszCommandName) :
+	Base(sErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_cnLineNumber(cnLine), m_pcszCommandName(pcszCommandName)
 {
 }
 
 inline CEncoder::CError::CError(
-	t_string const& sErrMsg, t_index nLine, t_csz pszCommandName) :
-	Base(sErrMsg), m_nLineNumber(nLine), m_pszCommandName(pszCommandName)
+	t_string&& sErrMsg, t_index const cnLine, t_csz const pcszCommandName) :
+	Base(sErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_cnLineNumber(cnLine), m_pcszCommandName(pcszCommandName)
 {
 }
 
 inline t_index CEncoder::CError::LineNumber() const
 {
-	return m_nLineNumber;
+	return m_cnLineNumber;
 }
 
 inline t_csz CEncoder::CError::CommandName() const
 {
-	return m_pszCommandName;
+	return m_pcszCommandName;
 }
 
 inline t_string const& CEncoder::CError::ErrorMsg() const

@@ -67,7 +67,7 @@ using t_VariableTable = std::vector<SVariableInfo>;
 //
 struct SFunctionInfo : SSymbolInfo
 {
-	EValueType		eType;		// Function retur value type
+	EValueType		eType;		// Function return value type
 	t_uoffset		nSize;		// Function size in bytes
 	
 	t_SymbolTable	aLabels;	// Local labels table declared within the function

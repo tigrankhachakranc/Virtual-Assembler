@@ -1,7 +1,4 @@
 .data
-CHAR str1[] = "Hello World!"
-CHAR ch1 = 'A'
-
 DWORD adwNums[5] = 106, 202, 56, 72, 94
 DWORD dwCount = 5
 DWORD dwAnswer
@@ -10,8 +7,8 @@ DWORD dwAnswer
 
 Func CalculateMean; 
 
-Func Start:
-	PUSHSF 
+Func Main:
+	PUSHSF
     MVI	A0, dwCount
 	LOD	R32, A0
 	MVI A0, adwNums
@@ -23,12 +20,12 @@ Func Start:
 	RET
 EndF
 
+# Calculates arithmetical mean
+# Arg1: DW R32 (Elements count)
+# Arg2: A0 (Elements array pointer)
+# Ret:  DW 32 (Airithmetic mean)
 Func CalculateMean:
-	PUSH R40
 	PUSHSF
-	PUSH R32
-	PUSH A0
-	PUSH W R0, 13 
 	CMP R32, R0
 	JEQ Finished
 	MOV R44, R32
@@ -46,8 +43,7 @@ NextNum:
 	MOV R32, R36
 Finished:
 	POPSF
-	POP R40
 	RET
 EndF
 
-.main = Start
+.main = Main

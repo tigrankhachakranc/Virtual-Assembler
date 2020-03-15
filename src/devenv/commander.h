@@ -72,7 +72,7 @@ public:
 	//
 	using CCmdParser = base::CParser;
 	using CParserError = CCmdParser::CError;
-	using CError = base::CException;
+	using CError = base::CError;
 
 protected:
 	//
@@ -116,28 +116,33 @@ protected:
 
 	virtual void cmd_load(CCmdParser& oParser);			// l|load	exec_file_name
 	virtual void cmd_open(CCmdParser& oParser);			// o|open	source_file_name[,...]
+	virtual void cmd_reload(CCmdParser& oParser);		// rl|reload
+	virtual void cmd_reopen(CCmdParser& oParser);		// ro|reopen
 	virtual void cmd_exit(CCmdParser& oParser);			// x|exit
 
 protected:
 	//
 	//	Implementation
 	//
-	t_address FetchAddress(CCmdParser& oParser, bool bCodeOnly);
+	enum class EAddressHint { Memory, Code, Data, CodeAndData };
+	t_address FetchAddress(CCmdParser& oParser, EAddressHint eHint, bool bFromRegister = false);
 	CValue FetchValue(CCmdParser& oParser, EValueType eType, t_count nCount = 1);
 	
-	void PrintCurrentState() const;
+	void PrintCurrentState(bool const bHexadecimal = true) const;
 	void PrintStackBacktrace() const;
-	void PrintPortsInfo() const;
+	void PrintCurrentStackFrame(core::t_uoffset nArgumentsOffset = 0, core::t_uoffset nStackFrameOffset = 0) const;
 	void PrintBreakPoints() const;
-	void PrintCode(t_address nBaseAddress, t_size nIstrCount) const;
-	void PrintCurrentStackFrame() const;
 	void PrintWatchList(std::set<t_string> const&, bool const bHexadecimal) const;
+	void PrintPortsInfo() const;
+	void PrintCode(t_address const nBaseAddress, t_count nIstrCount) const;
+	void PrintMemory(t_address const nBaseAddress, t_count nSizeInBytes) const;
 	void PrintVariable(vm::SVariableInfo const& tVarInfo, bool const bHexadecimal) const;
-	void PrintCodeInfo(std::ostream& os, CDebugger::SCodeLineInfo const& tInfo, bool const bIncludeBaseAddress) const;
+	void PrintCodeInfo(std::ostream& os, CDebugger::SCodeLineInfo const& tInfo,
+					   bool const bIncludeBaseAddress, bool const bIncludeOffset) const;
 	t_address PrintCommand(std::ostream& os, t_address const nCmdAddress) const; // Returns next commands address
 
 	void CheckMachine() const;
-	void CheckCPUStatus(bool bCheckForReady = true) const;
+	void CheckCPUStatus(bool bCheckForReady) const;
 
 private:
 	//
@@ -151,8 +156,9 @@ private:
 
 	std::set<t_string>	m_aWatchlist;
 
-	bool			m_bProcessing;
-	t_string		m_sProgram;
+	bool					m_bProcessing;
+	t_string				m_sProgram;
+	std::vector<t_string>	m_aSourceCodes;
 
 	using fnCmdHandler		= std::function<void(CCommander*, CCmdParser&)>;
 	using t_mapCmdHandlers	= std::unordered_map<t_string, fnCmdHandler>;

@@ -82,7 +82,7 @@ void CDisassembler::InitAddressRecovery()
 	t_AddrssToSymbolMap mapSymbols;
 
 	// Init variables
-	t_size nCount = m_tPackage.aVariableTable.size();
+	t_size nCount = t_size(m_tPackage.aVariableTable.size());
 	for (t_index idx = 0; idx < nCount; ++idx)
 	{
 		vm::SVariableInfo const& tVarInfo = m_tPackage.aVariableTable.at(idx);
@@ -90,7 +90,7 @@ void CDisassembler::InitAddressRecovery()
 	}
 
 	// Init functions
-	nCount = m_tPackage.aFunctionTable.size();
+	nCount = t_size(m_tPackage.aFunctionTable.size());
 	for (t_index idx = 0; idx < nCount; ++idx)
 	{
 		vm::SFunctionInfo const& tFuncInfo = m_tPackage.aFunctionTable.at(idx);
@@ -308,12 +308,12 @@ void CDisassembler::Disassemble(t_string const& sBinaryFile, t_string const& sOu
 	// Open input file
 	std::ifstream oBinFile(sBinaryFile, std::ios::in | std::ios::binary);
 	if (oBinFile.fail())
-		VASM_THROW_ERROR(base::toStr("Failed to open input file '%1'", sBinaryFile));
+		throw base::CError(base::toStr("Failed to open input file '%1'", sBinaryFile));
 
 	// Open output file
 	std::ofstream oOutFile(sOutputFile, std::ios_base::out);
 	if (oOutFile.fail())
-		VASM_THROW_ERROR(base::toStr("Failed to open output file '%1'", sOutputFile));
+		throw base::CError(base::toStr("Failed to open output file '%1'", sOutputFile));
 
 	try
 	{

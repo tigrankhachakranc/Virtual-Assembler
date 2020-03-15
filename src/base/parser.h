@@ -28,28 +28,34 @@ public:
 	//
 	//	Parser Error
 	//
-	class CError : public base::CException
+	class CError : public base::CError
 	{
-		typedef base::CException Base;
+		using Base = base::CError;
 	public:
-		inline CError();
-		inline CError(t_csz psErrMsg, t_index nPos, t_string const& sToken = t_string());
-		inline CError(t_string const& sErrMsg, t_index nPos, t_string const& sToken = t_string());
+		inline CError(t_csz const psErrMsg, t_index const cnPos, t_string const& sToken = t_string());
+		inline CError(t_string const& sErrMsg, t_index const cnPos, t_string const& sToken = t_string());
+		inline CError(t_string&& sErrMsg, t_index const cnPos, t_string const& sToken = t_string());
 		~CError() override;
 
 		inline CError(CError const&) = default;
 		inline CError(CError&&) = default;
+
+		void operator=(CError const&) = delete;
+		void operator=(CError&&) = delete;
 
 	public:
 		inline t_index Position() const;
 		inline t_string const& Token() const;
 		inline t_string const& ErrorMsg() const;
 
-		t_string GetErrorMsg(bool bDetailed = false) const override;
+	protected:
+		t_string FormatErrorMsg(bool bFinal) const override;
 
 	private:
-		t_index		m_nPosition;
-		t_string	m_sToken;
+		t_index const	m_cnPosition;
+		t_string const	m_csToken;
+
+		static t_csz const s_FixedError;
 	};
 
 public:
@@ -242,31 +248,35 @@ inline bool CParser::IsHexNum(t_char const ch)
 //
 //	CError
 //
-inline CParser::CError::CError() :
-	m_nPosition(g_ciInvalid)
+inline CParser::CError::CError(
+	t_csz const pcszErrMsg, t_index const cnPos, t_string const& sToken) :
+	Base(t_string(pcszErrMsg), Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_cnPosition(cnPos), m_csToken(sToken)
 {
 }
 
 inline CParser::CError::CError(
-	t_csz psErrMsg, t_index nPos, t_string const& sToken) :
-	Base(t_string(psErrMsg)), m_nPosition(nPos), m_sToken(sToken)
+	t_string const& sErrMsg, t_index const cnPos, t_string const& sToken) :
+	Base(sErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_cnPosition(cnPos), m_csToken(sToken)
 {
 }
 
 inline CParser::CError::CError(
-	t_string const& sErrMsg, t_index nPos, t_string const& sToken) :
-	Base(sErrMsg), m_nPosition(nPos), m_sToken(sToken)
+	t_string&& sErrMsg, t_index const cnPos, t_string const& sToken) :
+	Base(sErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_cnPosition(cnPos), m_csToken(sToken)
 {
 }
 
 inline t_index CParser::CError::Position() const
 {
-	return m_nPosition;
+	return m_cnPosition;
 }
 
 inline t_string const& CParser::CError::Token() const
 {
-	return m_sToken;
+	return m_csToken;
 }
 
 inline t_string const& CParser::CError::ErrorMsg() const

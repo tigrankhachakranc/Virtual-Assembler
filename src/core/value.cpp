@@ -121,7 +121,7 @@ CValue::CValue(t_char chData) noexcept
 }
 
 CValue::CValue(t_byte_array abData)
-	: m_eType(EValueType::Byte), m_nCount(abData.size())
+	: m_eType(EValueType::Byte), m_nCount(t_size(abData.size()))
 {
 	m_tData.qw = 0;
 	if (m_nCount == 1)
@@ -136,7 +136,7 @@ CValue::CValue(t_byte_array abData)
 }
 
 CValue::CValue(t_word_array awData)
-	: m_eType(EValueType::Word), m_nCount(awData.size())
+	: m_eType(EValueType::Word), m_nCount(t_size(awData.size()))
 {
 	m_tData.qw = 0;
 	if (m_nCount == 1)
@@ -151,7 +151,7 @@ CValue::CValue(t_word_array awData)
 }
 
 CValue::CValue(t_dword_array adwData)
-	: m_eType(EValueType::DWord), m_nCount(adwData.size())
+	: m_eType(EValueType::DWord), m_nCount(t_size(adwData.size()))
 {
 	m_tData.qw = 0;
 	if (m_nCount == 1)
@@ -166,7 +166,7 @@ CValue::CValue(t_dword_array adwData)
 }
 
 CValue::CValue(t_qword_array aqwData)
-	: m_eType(EValueType::QWord), m_nCount(aqwData.size())
+	: m_eType(EValueType::QWord), m_nCount(t_size(aqwData.size()))
 {
 	m_tData.qw = 0;
 	if (m_nCount == 1)
@@ -181,7 +181,7 @@ CValue::CValue(t_qword_array aqwData)
 }
 
 CValue::CValue(t_string sData)
-	: CValue(sData.data(), sData.size())
+	: CValue(sData.data(), t_size(sData.size()))
 {
 }
 

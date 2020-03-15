@@ -1194,7 +1194,7 @@ void CBasicCommands::MulB(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of MUL command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of MUL command is double sized"));
 
 	uint8* pDst = tCtxt.operand<uint8>(EOprIdx::First);
 	uint8* pSrc = tCtxt.operand<uint8>(EOprIdx::Second);
@@ -1208,7 +1208,7 @@ void CBasicCommands::MulW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of MUL command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of MUL command is double sized"));
 
 	uint16* pDst = tCtxt.operand<uint16>(EOprIdx::First);
 	uint16* pSrc = tCtxt.operand<uint16>(EOprIdx::Second);
@@ -1222,7 +1222,7 @@ void CBasicCommands::MulDW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of MUL command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of MUL command is double sized"));
 
 	uint32* pDst = tCtxt.operand<uint32>(EOprIdx::First);
 	uint32* pSrc = tCtxt.operand<uint32>(EOprIdx::Second);
@@ -1236,7 +1236,7 @@ void CBasicCommands::MulQW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of MUL command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of MUL command is double sized"));
 
 	uint64* pDst = tCtxt.operand<uint64>(EOprIdx::First);
 	uint64* pSrc = tCtxt.operand<uint64>(EOprIdx::Second);
@@ -1252,7 +1252,7 @@ void CBasicCommands::DivB(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of DIV command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of DIV command is double sized"));
 
 	uint8* pDst = tCtxt.operand<uint8>(EOprIdx::First);
 	uint8* pSrc = tCtxt.operand<uint8>(EOprIdx::Second);
@@ -1266,7 +1266,7 @@ void CBasicCommands::DivW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of DIV command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of DIV command is double sized"));
 
 	uint16* pDst = tCtxt.operand<uint16>(EOprIdx::First);
 	uint16* pSrc = tCtxt.operand<uint16>(EOprIdx::Second);
@@ -1280,7 +1280,7 @@ void CBasicCommands::DivDW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of DIV command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of DIV command is double sized"));
 
 	uint32* pDst = tCtxt.operand<uint32>(EOprIdx::First);
 	uint32* pSrc = tCtxt.operand<uint32>(EOprIdx::Second);
@@ -1294,7 +1294,7 @@ void CBasicCommands::DivQW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of DIV command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of DIV command is double sized"));
 
 	uint64* pDst = tCtxt.operand<uint64>(EOprIdx::First);
 	uint64* pSrc = tCtxt.operand<uint64>(EOprIdx::Second);
@@ -1310,7 +1310,7 @@ void CBasicCommands::IMulB(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of IMUL command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of IMUL command is double sized"));
 
 	uint8* pDst = tCtxt.operand<uint8>(EOprIdx::First);
 	uint8* pSrc = tCtxt.operand<uint8>(EOprIdx::Second);
@@ -1324,7 +1324,7 @@ void CBasicCommands::IMulW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of IMUL command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of IMUL command is double sized"));
 
 	uint16* pDst = tCtxt.operand<uint16>(EOprIdx::First);
 	uint16* pSrc = tCtxt.operand<uint16>(EOprIdx::Second);
@@ -1338,7 +1338,7 @@ void CBasicCommands::IMulDW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of IMUL command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of IMUL command is double sized"));
 
 	uint32* pDst = tCtxt.operand<uint32>(EOprIdx::First);
 	uint32* pSrc = tCtxt.operand<uint32>(EOprIdx::Second);
@@ -1352,7 +1352,7 @@ void CBasicCommands::IMulQW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of IMUL command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of IMUL command is double sized"));
 
 	uint64* pDst = tCtxt.operand<uint64>(EOprIdx::First);
 	uint64* pSrc = tCtxt.operand<uint64>(EOprIdx::Second);
@@ -1368,7 +1368,7 @@ void CBasicCommands::IDivB(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of IDIV command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of IDIV command is double sized"));
 
 	uint8* pDst = tCtxt.operand<uint8>(EOprIdx::First);
 	uint8* pSrc = tCtxt.operand<uint8>(EOprIdx::Second);
@@ -1382,7 +1382,7 @@ void CBasicCommands::IDivW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of IDIV command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of IDIV command is double sized"));
 
 	uint16* pDst = tCtxt.operand<uint16>(EOprIdx::First);
 	uint16* pSrc = tCtxt.operand<uint16>(EOprIdx::Second);
@@ -1396,7 +1396,7 @@ void CBasicCommands::IDivDW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of IDIV command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of IDIV command is double sized"));
 
 	uint32* pDst = tCtxt.operand<uint32>(EOprIdx::First);
 	uint32* pSrc = tCtxt.operand<uint32>(EOprIdx::Second);
@@ -1410,7 +1410,7 @@ void CBasicCommands::IDivQW(SCommandContext& tCtxt)
 	// Multiply Reg idx with OprSize to align with OpSize
 	uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCtxt.tInfo.anRegIdx[0]), tCtxt.tInfo.eOprSize);
 	if (nRegIdx + 2 * OperandSize(tCtxt.tInfo.eOprSize) > SCPUStateBase::eRegisterPoolSize)
-		VASM_THROW_ERROR(t_string("CPU: Invalid GP register index 0, first operand of IDIV command is double sized"));
+		throw base::CError(t_csz("CPU: Invalid GP register index 0, first operand of IDIV command is double sized"));
 
 	uint64* pDst = tCtxt.operand<uint64>(EOprIdx::First);
 	uint64* pSrc = tCtxt.operand<uint64>(EOprIdx::Second);

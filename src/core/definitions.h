@@ -25,6 +25,7 @@ constexpr static const t_address cnInvalidAddress = UINT32_MAX;
 constexpr static const uchar cnCmdMinLength = 2;	// Minimum length of the command (in bytes)
 constexpr static const uchar cnCmdMaxLength = 8;	// Maximum possible length of the command (in bytes)
 constexpr static const uchar cnCmdAvrgLength = 4;	// Average length of the command (in bytes)
+constexpr static const t_uoffset cnGranul = 16;		// Code, Data and other sections alignment granularity
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

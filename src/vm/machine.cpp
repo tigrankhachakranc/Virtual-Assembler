@@ -135,7 +135,7 @@ void CMachine::Run(bool bAssynch)
 	else if (m_pProcessor->Status().eStatus == CProcessor::EStatus::Failed)
 		throw base::CException("Machine: CPU is in failed state, reset first");
 
-	m_oLastError.Clear();
+	m_oLastError = {};
 
 	if (bAssynch)
 	{
@@ -160,17 +160,23 @@ void CMachine::RunInternal()
 		m_oLastError = m_pProcessor->Status().oErrorInfo;
 		Finished();
 	}
-	catch (base::CException const& e)
+	catch (base::CError const& err)
 	{
-		m_oLastError = e;
+		m_oLastError = err.GetInfo(true);
+	}
+	catch (base::CException const& ex)
+	{
+		m_oLastError = {ex.Info()};
 	}
 	catch (std::exception const& se)
 	{
-		m_oLastError = se;
+		m_oLastError = {};
+		m_oLastError.cszFixedErrorMsg = se.what();
 	}
 	catch (...)
 	{
-		m_oLastError = base::CException(t_csz("Unknown error"));
+		m_oLastError = {};
+		m_oLastError.cszFixedErrorMsg = t_csz("Unknown error");
 	}
 }
 
@@ -223,7 +229,7 @@ void CMachine::Reset()
 	m_pMemory = nullptr;
 	m_tPackageInfo = SPackageInfo();
 	m_oWorkerThread = std::thread();
-	m_oLastError.Clear();
+	m_oLastError = {};
 
 	CDebuggerPtr pDebugger = m_pDebugger.lock();
 	if (pDebugger != nullptr)

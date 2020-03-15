@@ -66,7 +66,7 @@ public:
 	struct SStatus
 	{
 		EStatus				eStatus = EStatus::NotInitialized;
-		base::CException	oErrorInfo; // In case of fail
+		base::CError::SInfo	oErrorInfo; // In case of fail
 
 		inline SStatus() = default;
 		inline SStatus(SStatus const&) = default;

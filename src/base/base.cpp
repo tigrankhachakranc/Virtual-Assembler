@@ -4,6 +4,7 @@
 #include <base_global.h>
 #include "definitions.h"
 #include "exception.h"
+#include "utility.h"
 
 // STL
 #include <sstream>
@@ -26,52 +27,97 @@ namespace base {
 //	CException Implementation
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+t_csz const CException::s_cszDefaultErrorMsg = t_csz("VASM Base exception");
+
 CException::~CException() = default;
 
-t_string CException::GetErrorMsg(bool bDetailed) const
+char const* CException::what() const
+{
+	return m_tInfo.cszFixedErrorMsg;
+}
+
+t_string CException::FormatErrorMsg(bool bFinal) const
 {
 	t_string sError;
 
-	if (bDetailed)
+	if (bFinal)
 	{
 		std::stringstream oBuff(std::ios_base::out);
 		oBuff << "Error: ";
 
 		std::stringstream::pos_type nStrmPos = oBuff.tellp();
-		if (!m_sErrorMsg.empty())
-			oBuff << m_sErrorMsg;
-		else
-			oBuff << Base::what();
+		if (m_tInfo.cszFixedErrorMsg != nullptr)
+			oBuff << m_tInfo.cszFixedErrorMsg;
 
 		if (oBuff.tellp() == nStrmPos)
 			oBuff << "Unknown." << std::endl;
 		else
 			oBuff << "." << std::endl;
 
-		if (m_cszComponent != nullptr)
-			oBuff << "Component: " << m_cszComponent << "  ";
+		if (m_tInfo.cszComponent != nullptr)
+			oBuff << "Component: " << m_tInfo.cszComponent << "  ";
 
-		if (m_cnLine >= 0 && m_cszFile != nullptr)
-			oBuff << "File: " << m_cszFile << "  Line: " << m_cnLine << std::endl;
+		if (m_tInfo.nLine >= 0 && m_tInfo.cszFile != nullptr)
+			oBuff << "File: " << m_tInfo.cszFile << "  Line: " << m_tInfo.nLine << std::endl;
 
 		sError = oBuff.str();
 	}
 	else
 	{
-		sError = m_sErrorMsg.empty() ? Base::what() : m_sErrorMsg;
+		sError = m_tInfo.cszFixedErrorMsg;
 	}
 
 	return std::move(sError);
 }
-
-char const* CException::what() const
-{
-	if (!m_sErrorMsg.empty())
-		return m_sErrorMsg.c_str();
-	return Base::what();
-}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//	CError Implementation
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+t_csz const CError::s_cszDefaultError = t_csz("Error");
+t_csz const CError::s_cszUserError = t_csz("User fault");
+
+CError::~CError() = default;
+
+t_string CError::FormatErrorMsg(bool bFinal) const
+{
+	t_string sError;
+	if (!m_sErrorMsg.empty())
+	{
+		sError = m_sErrorMsg;
+	}
+	else switch (m_nErrorCode)
+	{
+	case Unspecified:
+		sError = t_csz("Reason unspecified.");
+		break;
+	case BadArguments:
+		sError = t_csz("Bad argument(s) specified.");
+		break;
+	case FileOpen:
+		sError = t_csz("Failed to open file.");
+		break;
+	case FileRead:
+		sError = t_csz("Failed to read from file.");
+		break;
+	case FileWrite:
+		sError = t_csz("Failed to write to file.");
+		break;
+	default:
+		sError = toStr("Reason code: %1.", m_nErrorCode);
+		break;
+	}
+
+	if (bFinal)
+	{
+		sError.insert(0, t_csz("Error: "));
+	}
+
+	return std::move(sError);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 } // namespace base

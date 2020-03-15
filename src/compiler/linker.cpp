@@ -20,6 +20,9 @@ namespace vasm {
 namespace cl {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+t_csz const CLinker::CError::s_FixedError = t_csz("Linker error");
+
+CLinker::CError::~CError() = default;
 
 //
 //	C-Tors
@@ -47,7 +50,7 @@ SPackage CLinker::Build(t_lstPackages const& lstPackages, t_string sProgramName)
 
 	// Fill program entry point
 	if (tFinalPkg.tInfo.nEntryPoint == g_ciInvalid)
-		throw CError(t_csz("Linker: Program entry point not defined"), tFinalPkg.tInfo.sName);
+		throw CError(t_csz("Program entry point not defined"), tFinalPkg.tInfo.sName);
 	t_uoffset nMainJumpOffset = tFinalPkg.oRelocTbl.aAddressLocations.front();
 	t_address nMainFuncSymbolIdx = tFinalPkg.tInfo.nEntryPoint;
 	std::memcpy(&tFinalPkg.aCode[nMainJumpOffset], &nMainFuncSymbolIdx, sizeof(t_address));
@@ -64,7 +67,7 @@ void CLinker::WriteCodeHeader(SPackage& tFinalPkg)
 	std::vector<t_index> aDummyVarIdxMapping;
 	std::vector<t_index> aDummyFuncIdxMapping(1, 0);
 
-	tFinalPkg.aCode.resize(s_cnGranul, 0);
+	tFinalPkg.aCode.resize(core::cnGranul, 0);
 
 	CEncoder oEncoder(tFinalPkg.aCode,
 					  tFinalPkg.oRelocTbl.aAddressLocations,
@@ -104,28 +107,33 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 		tFinalPkg.tInfo.nStackSize = std::max(tFinalPkg.tInfo.nStackSize, tPkg.tInfo.nStackSize);
 
 		// Merge Data sections
-		t_uoffset nLastDataSize = tFinalPkg.aData.size();
-		t_uoffset nCurrSize = tPkg.aData.size();
-		t_uoffset nReminder = nCurrSize % s_cnGranul;
-		t_uoffset nFinalSize = nLastDataSize + nCurrSize + (nReminder == 0 ? 0 : s_cnGranul - nReminder);
-		tFinalPkg.aData.resize(nFinalSize);
-		std::memcpy(&tFinalPkg.aData[nLastDataSize], &tPkg.aData[0], nCurrSize);
-		if (nReminder > 0)
-			std::memset(&tFinalPkg.aData[nLastDataSize + nCurrSize], 0, s_cnGranul - nReminder);
+		t_uoffset nLastDataSize = t_uoffset(tFinalPkg.aData.size());
+		if (!tPkg.aData.empty())
+		{
+			t_uoffset nCurrSize = t_uoffset(tPkg.aData.size());
+			t_uoffset nReminder = nCurrSize % core::cnGranul;
+			t_uoffset nFinalSize = nLastDataSize + nCurrSize + (nReminder == 0 ? 0 : core::cnGranul - nReminder);
+			tFinalPkg.aData.resize(nFinalSize);
+			std::memcpy(&tFinalPkg.aData[nLastDataSize], &tPkg.aData[0], nCurrSize);
+			if (nReminder > 0)
+				std::memset(&tFinalPkg.aData[nLastDataSize + nCurrSize], 0, core::cnGranul - nReminder);
+		}
 
 		// Merge Code sections
-		t_uoffset nLastCodeSize = tFinalPkg.aCode.size();
-		nCurrSize = tPkg.aCode.size();
-		nReminder = nCurrSize % s_cnGranul;
-		nFinalSize = nLastCodeSize + nCurrSize + (nReminder == 0 ? 0 : s_cnGranul - nReminder);
-		tFinalPkg.aCode.resize(nFinalSize);
-		std::memcpy(&tFinalPkg.aCode[nLastCodeSize], &tPkg.aCode[0], nCurrSize);
-		if (nReminder > 0)
-			std::memset(&tFinalPkg.aCode[nLastCodeSize + nCurrSize], 0, s_cnGranul - nReminder);
-
-		std::vector<t_index> aSymbolIndexRemapping(tPkg.oSymbolTbl.aEntries.size());
+		t_uoffset nLastCodeSize = t_uoffset(tFinalPkg.aCode.size());
+		if (!tPkg.aCode.empty())
+		{
+			t_uoffset nCurrSize = t_uoffset(tPkg.aCode.size());
+			t_uoffset nReminder = nCurrSize % core::cnGranul;
+			t_uoffset nFinalSize = nLastCodeSize + nCurrSize + (nReminder == 0 ? 0 : core::cnGranul - nReminder);
+			tFinalPkg.aCode.resize(nFinalSize);
+			std::memcpy(&tFinalPkg.aCode[nLastCodeSize], &tPkg.aCode[0], nCurrSize);
+			if (nReminder > 0)
+				std::memset(&tFinalPkg.aCode[nLastCodeSize + nCurrSize], 0, core::cnGranul - nReminder);
+		}
 
 		// Merge symbol tables
+		std::vector<t_index> aSymbolIndexRemapping(tPkg.oSymbolTbl.aEntries.size());
 		for (t_index nSblIdx = 0; nSblIdx < aSymbolIndexRemapping.size(); ++nSblIdx)
 		{
 			SSymbolTable::SEntry const& tEntry = tPkg.oSymbolTbl.aEntries.at(nSblIdx);
@@ -137,7 +145,7 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 			{
 				SSymbolTable::SEntry tFinalEntry = tEntry;
 				tFinalEntry.nBase += nSizeShift;
-				aSymbolIndexRemapping[nSblIdx] = tFinalPkg.oSymbolTbl.aEntries.size();
+				aSymbolIndexRemapping[nSblIdx] = t_dword(tFinalPkg.oSymbolTbl.aEntries.size());
 				tFinalPkg.oSymbolTbl.aEntries.push_back(std::move(tFinalEntry));
 				m_mapSymbols.insert({&tFinalPkg.oSymbolTbl.aEntries.back().sName, aSymbolIndexRemapping[nSblIdx]});
 			}
@@ -145,9 +153,9 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 			{
 				SSymbolTable::SEntry& tFinalEntry = tFinalPkg.oSymbolTbl.aEntries[it->second];
 				if (tFinalEntry.isFunc = tEntry.isFunc || tFinalEntry.eType != tEntry.eType)
-					throw CError(base::toStr("Linker: Symbol types mismatch '%1'", tEntry.sName), tPkg.tInfo.sName);
+					throw CError(base::toStr("Symbol types mismatch '%1'", tEntry.sName), tPkg.tInfo.sName);
 				if (tFinalEntry.nBase != core::cnInvalidAddress && tEntry.nBase != core::cnInvalidAddress)
-					throw CError(base::toStr("Linker: Symbol redefinition '%1'", tEntry.sName), tPkg.tInfo.sName);
+					throw CError(base::toStr("Symbol redefinition '%1'", tEntry.sName), tPkg.tInfo.sName);
 				if (tEntry.nBase != core::cnInvalidAddress)
 				{
 					tFinalEntry.nBase = tEntry.nBase + nSizeShift;
@@ -181,7 +189,8 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 		};
 
 		// Adjust relocation table
-		fnRelocMerge(tFinalPkg.oRelocTbl.aAddressLocations, tPkg.oRelocTbl.aAddressLocations);
+		if (!tPkg.oRelocTbl.aAddressLocations.empty())
+			fnRelocMerge(tFinalPkg.oRelocTbl.aAddressLocations, tPkg.oRelocTbl.aAddressLocations);
 
 		// Merge debug info
 		for (auto const& tEntry : tPkg.oDebugInfo.aEntries)
@@ -199,7 +208,7 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 			t_index nEntryPoint = aSymbolIndexRemapping[tPkg.tInfo.nEntryPoint];
 			// Only one program entry point is allowed
 			if (tFinalPkg.tInfo.nEntryPoint != g_ciInvalid && tFinalPkg.tInfo.nEntryPoint != nEntryPoint)
-				throw CError(t_csz("Linker: Redefinition of program entry point"), tPkg.tInfo.sName);
+				throw CError(t_csz("Redefinition of program entry point"), tPkg.tInfo.sName);
 			tFinalPkg.tInfo.nEntryPoint = nEntryPoint;
 		}
 	}
@@ -218,10 +227,10 @@ void CLinker::ResolveOffsets(SPackage& tPkg)
 			VASM_CHECK_IDX(nSymbolIndex, tPkg.oSymbolTbl.aEntries.size());
 			SSymbolTable::SEntry const& tSymbol = tPkg.oSymbolTbl.aEntries.at(nSymbolIndex);
 			if (tSymbol.nBase == core::cnInvalidAddress)
-				throw CError(base::toStr("Linker: Undefined referene to '%1'", tSymbol.sName), tPkg.tInfo.sName);
+				throw CError(base::toStr("Undefined referene to '%1'", tSymbol.sName), tPkg.tInfo.sName);
 			t_address nSymbolAddress = tSymbol.nBase;
 			if (!tSymbol.isFunc)
-				nSymbolAddress += tPkg.aCode.size(); // Data starts right after the code
+				nSymbolAddress += t_address(tPkg.aCode.size()); // Data starts right after the code
 			std::memcpy(pAddresPlace, &nSymbolAddress, sizeof(t_address));
 		}
 	};

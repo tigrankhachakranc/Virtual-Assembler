@@ -25,7 +25,7 @@ using t_mapSymbolTable = std::unordered_map<CStringRef, t_index, std::hash<t_str
 //
 class CCommandParser : public base::CParser
 {
-	typedef base::CParser Base;
+	using Base = base::CParser;
 
 public:
 	inline CCommandParser(

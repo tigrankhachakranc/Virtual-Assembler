@@ -48,15 +48,18 @@ public:
 public:
 	struct SCodeLineInfo
 	{
-		t_address	nAddress	= core::cnInvalidAddress;
-		t_uoffset	nRelOffset	= core::cnInvalidAddress; // Function relative offset
-		t_index		nLineNum	= g_ciInvalid;
+		t_address	nAddress		= core::cnInvalidAddress;
+		t_uoffset	nRelOffset		= core::cnInvalidAddress; // Function relative offset
+		t_uoffset	nFuncSize		= 0;			// Function size in bytes
+		t_index		nLineNum		= g_ciInvalid;	// Line number in the unit
+		t_index		nRelLineNum		= g_ciInvalid;	// Function relative line number
+		t_size		nFuncLineCount	= 0;			// Function line count
 		CStringRef	sFuncName;
 		CStringRef	sUnitName;
 	};
 
 	using t_aCodeLineInfos = std::vector<SCodeLineInfo>;
-	using CError = base::CException;
+	using CError = base::CError;
 
 public:
 	//
@@ -115,6 +118,7 @@ public:
 	t_address ResolveAddressFromSource(t_index nLineNumber, t_string const& sSrcUnit) const;
 	bool CheckVariableAddress(t_address const nAddress) const;
 	bool CheckCodeAddress(t_address const nAddress) const;
+	t_address NextCodeAddress(t_address const nAddress) const;
 
 	// Returns src code info fir the specifed code address
 	SCodeLineInfo GetCodeLineInfo(t_address nAddress) const;
@@ -124,16 +128,20 @@ public:
 
 	// Extracts and returns current function call stack
 	t_aCodeLineInfos GetFunctionCallStack() const;
+	// Returns pair of RIP & SF Registers image from current stack, invalid addresses if not available 
+	std::pair<t_address, t_address> GetReturnLinkFromStackFrame() const;
 
 	// Returns registered port ranges and associated device names
 	std::vector<std::pair<core::t_PortRange, t_string>> GetPortsInfo() const;
 
 	// Dumpers
 	void Dump(std::ostream&, bool bText) const;
+	void DumpState(std::ostream&, bool const bHexadecimal) const;
 	void DumpMemory(std::ostream&, t_address nAddress, t_size nSizeBytes, bool bText) const;
 	void DumpCode(std::ostream&, t_address nAddress, t_size nSizeBytes, bool bText) const;
 	void DumpData(std::ostream&, t_address nAddress, t_size nSizeBytes, bool bText) const;
-	void DumpStack(std::ostream&, t_size nDepth, bool bText) const;
+	void DumpStack(std::ostream&, t_size const cnDepth, bool bText) const;
+	void DumpStackBacktrace(std::ostream&) const;
 
 	// Helper Accessors
 	inline t_VariableTable const& Variables() const;
@@ -194,15 +202,12 @@ protected:
 	// Reverse finds corresponding function index & function relative line number for the specified code address
 	// Returns true if found, false otherwise, complexity of this function is O(Log(n))+O(m)
 	bool LookupSource(t_address nCodeAddr, t_index& nFuncIdx, t_index& nLineNumber) const;
-	// Reverse finds corresponding source unit & line number for the specified code address
-	// Returns true if found, false otherwise
-	bool LookupSource(t_address nCodeAddr, CStringRef& sFuncName, CStringRef& sSrcUnit,
-					  t_index& nLineNumber, t_uoffset& nFuncOffset) const;
 
 	// Extracts and returns current function call stack
 	t_CallStack ExtractFunctionCallStack() const;
 
-	static void DumpHelper(std::ostream&, t_address nAddress, t_size nSizeBytes, t_byte const* pMemory);
+	static void DumpHelper(std::ostream&, t_address nAddress, t_size nSizeBytes,
+						   t_byte const* pMemory, bool const bSupplementalText = false);
 
 private:
 	//

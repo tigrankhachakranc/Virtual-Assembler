@@ -35,17 +35,20 @@ public:
 	//
 	//	Parser Error
 	//
-	class CError : public base::CException
+	class CError : public base::CError
 	{
-		typedef base::CException Base;
+		using Base = base::CError;
 	public:
-		inline CError();
-		inline CError(t_csz psErrMsg, t_index nLine, t_index nPos, t_string const& sToken);
-		inline CError(t_string const& sErrMsg, t_index nLine, t_index nPos, t_string const& sToken);
-		inline ~CError() = default;
+		inline CError(t_csz const pcszErrMsg, t_index const cnLine, t_index const cnPos, t_string const& sToken);
+		inline CError(t_string const& sErrMsg, t_index const cnLine, t_index const cnPos, t_string const& sToken);
+		inline CError(t_string&& sErrMsg, t_index const cnLine, t_index const cnPos, t_string const& sToken);
+		~CError() override;
 
 		inline CError(CError const&) = default;
 		inline CError(CError&&) = default;
+
+		void operator=(CError const&) = delete;
+		void operator=(CError&&) = delete;
 
 	public:
 		inline t_index LineNumber() const;
@@ -54,9 +57,11 @@ public:
 		inline t_string const& ErrorMsg() const;
 
 	private:
-		t_index		m_nLineNumber;
-		t_index		m_nPosition;
-		t_string	m_sToken;
+		t_index	const	m_cnLineNumber;
+		t_index	const	m_cnPosition;
+		t_string const	m_csToken;
+
+		static t_csz const s_FixedError;
 	};
 
 public:
@@ -123,36 +128,40 @@ private:
 //
 //	CAsmParser::CError
 //
-inline CAsmParser::CError::CError() :
-	m_nLineNumber(g_ciInvalid), m_nPosition(g_ciInvalid)
+inline CAsmParser::CError::CError(
+	t_csz const pcszErrMsg, t_index const cnLine, t_index const cnPos, t_string const& sToken) :
+	Base(pcszErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_cnLineNumber(cnLine), m_cnPosition(cnPos), m_csToken(sToken)
 {
 }
 
 inline CAsmParser::CError::CError(
-	t_csz psErrMsg, t_index nLine, t_index nPos, t_string const& sToken) :
-	Base(t_string(psErrMsg)), m_nLineNumber(nLine), m_nPosition(nPos), m_sToken(sToken)
+	t_string const& sErrMsg, t_index const cnLine, t_index const cnPos, t_string const& sToken) :
+	Base(sErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_cnLineNumber(cnLine), m_cnPosition(cnPos), m_csToken(sToken)
 {
 }
 
 inline CAsmParser::CError::CError(
-	t_string const& sErrMsg, t_index nLine, t_index nPos, t_string const& sToken) :
-	Base(sErrMsg), m_nLineNumber(nLine), m_nPosition(nPos), m_sToken(sToken)
+	t_string&& sErrMsg, t_index const cnLine, t_index const cnPos, t_string const& sToken) :
+	Base(sErrMsg, Reserved, VASM_ERR_INFO(s_FixedError)),
+	m_cnLineNumber(cnLine), m_cnPosition(cnPos), m_csToken(sToken)
 {
 }
 
 inline t_index CAsmParser::CError::LineNumber() const
 {
-	return m_nLineNumber;
+	return m_cnLineNumber;
 }
 
 inline t_index CAsmParser::CError::Position() const
 {
-	return m_nPosition;
+	return m_cnPosition;
 }
 
 inline t_string const& CAsmParser::CError::Token() const
 {
-	return m_sToken;
+	return m_csToken;
 }
 
 inline t_string const& CAsmParser::CError::ErrorMsg() const

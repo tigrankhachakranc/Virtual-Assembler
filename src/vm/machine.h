@@ -102,7 +102,8 @@ public:
 
 	// Returns most recent error info
 	// This technique is necessary for the asynhronous run to get errors of the working thread
-	inline base::CException GetLastError() const;
+	using SErrorInfo = base::CError::SInfo;
+	inline SErrorInfo GetLastError() const;
 
 protected:
 	//
@@ -113,7 +114,7 @@ protected:
 	inline CIOControllerPtr		GetIOController() const;
 	inline CProcessorPtr		GetProcessor() const;
 
-	inline base::CException&	LastError();
+	inline SErrorInfo&	LastError();
 
 private:
 	//
@@ -138,7 +139,7 @@ private:
 
 	// Worker thread
 	std::thread			m_oWorkerThread;
-	base::CException	m_oLastError;
+	SErrorInfo			m_oLastError;
 };
 
 using CMachinePtr = std::shared_ptr<CMachine>;
@@ -151,12 +152,12 @@ using CMachineUPtr = std::unique_ptr<CMachine>;
 //	Inline Implementations
 //
 ////////////////////////////////////////////////////////////////////////////////
-inline base::CException& CMachine::LastError()
+inline CMachine::SErrorInfo& CMachine::LastError()
 {
 	return m_oLastError;
 }
 
-inline base::CException CMachine::GetLastError() const
+inline CMachine::SErrorInfo CMachine::GetLastError() const
 {
 	return m_oLastError;
 }

@@ -70,7 +70,7 @@ void CDebugger::Init(
 	t_AddrssToSymbolMap mapSymbols;
 
 	// Init variables
-	t_size nCount = m_tPackage.aVariableTable.size();
+	t_size nCount = t_size(m_tPackage.aVariableTable.size());
 	for (t_index idx = 0; idx < nCount; ++idx)
 	{
 		SVariableInfo const& tVarInfo = m_tPackage.aVariableTable.at(idx);
@@ -80,7 +80,7 @@ void CDebugger::Init(
 	}
 
 	// Init functions
-	nCount = m_tPackage.aFunctionTable.size();
+	nCount = t_size(m_tPackage.aFunctionTable.size());
 	for (t_index idx = 0; idx < nCount; ++idx)
 	{
 		SFunctionInfo const& tFuncInfo = m_tPackage.aFunctionTable.at(idx);
@@ -406,8 +406,13 @@ CDebugger::t_aCodeLineInfos CDebugger::GetBreakPoints()
 	for (auto const& tItem : m_mapBreakPoints)
 	{
 		SCodeLineInfo tBP;
-		if (LookupSource(tItem.first, tBP.sFuncName, tBP.sUnitName, tBP.nLineNum, tBP.nRelOffset))
+		t_index nFuncIdx = g_ciInvalid;
+		if (LookupSource(tItem.first, nFuncIdx, tBP.nLineNum))
 		{
+			auto const& tInfo = m_tPackage.aFunctionTable.at(nFuncIdx);
+			tBP.sUnitName = &tInfo.sSrcUnit;
+			tBP.sFuncName = &tInfo.sName;
+			tBP.nRelOffset = tItem.first - tInfo.nAddress;
 			tBP.nAddress = tItem.first;
 			aBPs.push_back(tBP);
 		}
@@ -577,11 +582,48 @@ bool CDebugger::CheckCodeAddress(t_address const nAddress) const
 	return (nAddress != core::cnInvalidAddress && nAddress % 2 == 0 && LookupSource(nAddress, nFunc, nLine));
 }
 
+t_address CDebugger::NextCodeAddress(t_address const nAddress) const
+{
+	t_address nNextAddress = core::cnInvalidAddress;
+	if (nAddress < (m_tPackage.nCodeBase + m_tPackage.nCodeSize))
+	{
+		EOpCode const& eOpCode = Memory().operator[]<EOpCode>(nAddress);
+		CCommandLibrary::SInstructionInfo const& tInfo = (*m_pCmdLib)[eOpCode];
+		if (tInfo.pDisasm != nullptr)
+		{
+			// Decode the command to disasemble
+			core::SCommandInfo tCmdInfo;
+			core::CDecoder oDecoder(m_pCmdLib);
+			oDecoder.Decode((uchar*) &eOpCode, tCmdInfo);
+			nNextAddress = nAddress + tCmdInfo.tMetaInfo.nLength;
+			if (nNextAddress >= m_pCPU->State().cnCodeSize - 1)
+				nNextAddress = core::cnInvalidAddress;
+		}
+	}
+	return nNextAddress;
+}
+
 CDebugger::SCodeLineInfo CDebugger::GetCodeLineInfo(t_address nAddress) const
 {
+	t_index nFuncIdx = g_ciInvalid;
 	SCodeLineInfo tInfo;
-	if (LookupSource(nAddress, tInfo.sFuncName, tInfo.sUnitName, tInfo.nLineNum, tInfo.nRelOffset))
+	if (nAddress >= m_tPackage.nCodeBase && nAddress < (m_tPackage.nCodeBase + core::cnGranul))
+	{	// Exception case, address 0 is the actual program starting point
 		tInfo.nAddress = nAddress;
+		tInfo.nRelOffset = nAddress - m_tPackage.nCodeBase;
+		tInfo.nFuncSize = core::cnGranul;
+	}
+	else if (LookupSource(nAddress, nFuncIdx, tInfo.nLineNum))
+	{
+		auto const& tFuncInfo = m_tPackage.aFunctionTable.at(nFuncIdx);
+		tInfo.nAddress = nAddress;
+		tInfo.nRelOffset = nAddress - tFuncInfo.nAddress;
+		tInfo.nFuncSize = tFuncInfo.nSize;
+		tInfo.nRelLineNum = tInfo.nLineNum - tFuncInfo.nBaseLine;
+		tInfo.nFuncLineCount = tFuncInfo.nSizeLine;
+		tInfo.sFuncName = &tFuncInfo.sName;
+		tInfo.sUnitName = &tFuncInfo.sSrcUnit;
+	}
 	else
 		tInfo.nRelOffset = nAddress;
 	return tInfo;
@@ -602,18 +644,36 @@ t_string CDebugger::GetDisassembledCommand(t_address& nAddress, t_string* pBinar
 
 		if (pBinaryRepresentation)
 		{
-			std::stringstream os;
-			for (uchar i = tInfo.tMetaInfo.nLength; i > 0; --i)
+			if (eOpCode == EOpCode::Invalid)
 			{
-				if (i % 2 == 0)
-					os << " ";
-				os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +(*(pCmd + (i - 1)));
+				*pBinaryRepresentation = t_csz("0000");
 			}
-			*pBinaryRepresentation = os.str();
+			else
+			{
+				std::stringstream os;
+				for (uchar i = tInfo.tMetaInfo.nLength; i > 0; --i)
+				{
+					if (i % 2 == 0 && i < tInfo.tMetaInfo.nLength)
+						os << " ";
+					os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +(*(pCmd + (i - 1)));
+				}
+				*pBinaryRepresentation = os.str();
+			}
 		}
 
 		if (tInfo.pDisasm == nullptr)
-			sCommand = t_csz("Invalid or unknown command");
+		{
+			if (eOpCode == EOpCode::Invalid)
+			{
+				sCommand = t_csz("Invalid command");
+				nAddress += core::cnCmdMinLength;
+			}
+			else
+			{
+				sCommand = t_csz("Invalid or unknown command");
+				nAddress = core::cnInvalidAddress;
+			}
+		}
 		else
 		{
 			// Decode the command to disasemble
@@ -653,6 +713,20 @@ CDebugger::t_aCodeLineInfos CDebugger::GetFunctionCallStack() const
 	return std::move(aCodeLines);
 }
 
+std::pair<t_address, t_address> CDebugger::GetReturnLinkFromStackFrame() const
+{
+	std::pair<t_address, t_address> tReturnLinkImage(core::cnInvalidAddress, core::cnInvalidAddress);
+	t_address nCurrSF = m_pCPU->State().nSF;
+	t_uoffset const cnStackBottom = m_pCPU->State().cnStackLBound - 2 * sizeof(t_address);
+
+	if (nCurrSF <= cnStackBottom)
+	{
+		Memory().ReadAt<t_address>(nCurrSF + sizeof(t_address), tReturnLinkImage.first); // RIP Image
+		Memory().ReadAt<t_address>(nCurrSF, tReturnLinkImage.second); // SF Image
+	}
+	return tReturnLinkImage;
+}
+
 std::vector<std::pair<core::t_PortRange, t_string>> CDebugger::GetPortsInfo() const
 {
 	std::vector<std::pair<core::t_PortRange, t_string>> aPortsInfo;
@@ -673,18 +747,109 @@ void CDebugger::Dump(std::ostream& os, bool bText) const
 {
 	if (bText)
 	{
-		os << ".Code" << std::endl << std::endl;
+		DumpState(os, true);
+		os << std::endl;
+		DumpStackBacktrace(os);
+		os << std::endl;
 		DumpCode(os, m_tPackage.nCodeBase, m_tPackage.nCodeSize, bText);
-
-		os << ".Data" << std::endl << std::endl;
+		os << std::endl;
 		DumpData(os, m_tPackage.nDataBase, m_tPackage.nDataSize, bText);
-
-		os << ".Stack" << std::endl << std::endl;
+		os << std::endl;
 		DumpStack(os, g_ciInvalid, bText);
+		os << std::endl;
 	}
 	else
 	{
 		DumpMemory(os, 0, 0, bText);
+	}
+}
+
+void CDebugger::DumpState(std::ostream& os, bool const bHexadecimal) const
+{
+	CProcessor::SState const& tState = CPUState();
+
+	os << std::resetiosflags(0);
+	os << "Processor status flags: ----------------------------------------------------------" << std::endl;
+	os <<  "CF(" << std::dec << tState.oFlags.getCarry() << ")";
+	os << " ZF(" << std::dec << tState.oFlags.getZero() << ")";
+	os << " SF(" << std::dec << tState.oFlags.getSign() << ")";
+	os << " OF(" << std::dec << tState.oFlags.getOverflow() << ")";
+
+	os << std::endl;
+	if (bHexadecimal)
+	{
+		os << "Address registers (0x): ----------------------------------------------------------" << std::endl;
+		os << "IP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nIP << "  ";
+		//os << "CIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nCIP << "  ";
+		os << "RIP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nRIP << "  ";
+		os << std::endl;
+		os << "SP = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nSP << "  ";
+		os << " SF = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.nSF << "  ";
+		os << std::endl;
+		os << "A0 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 0) << "  ";
+		os << " A1 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 1) << "  ";
+		os << std::endl;
+		os << "A2 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 2) << "  ";
+		os << " A3 = " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 3) << "  ";
+	}
+	else
+	{
+		os << "Address registers: ---------------------------------------------------------------" << std::endl;
+		os << "IP = " << std::dec << std::setfill(' ') << std::setw(10) << tState.nIP << "  ";
+		//os << "CIP = " << std::dec << std::setfill(' ') << std::setw(4) << tState.nCIP << "  ";
+		os << "RIP = " << std::dec << std::setfill(' ') << std::setw(10) << tState.nRIP << "  ";
+		os << std::endl;
+		os << "SP = " << std::dec << std::setfill(' ') << std::setw(10) << tState.nSP << "  ";
+		os << " SF = " << std::dec << std::setfill(' ') << std::setw(10) << tState.nSF << "  ";
+		os << std::endl;
+		os << "A0 = " << std::dec << std::setfill(' ') << std::setw(10) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 0) << "  ";
+		os << " A1 = " << std::dec << std::setfill(' ') << std::setw(10) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 1) << "  ";
+		os << std::endl;
+		os << "A2 = " << std::dec << std::setfill(' ') << std::setw(10) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 2) << "  ";
+		os << " A3 = " << std::dec << std::setfill(' ') << std::setw(10) << tState.rega<t_address>(core::SCPUStateBase::eARBaseIndex + 3) << "  ";
+	}
+
+	os << std::endl;
+	if (bHexadecimal)
+	{
+		os << "General purpose registers (0x): --------------------------------------------------" << std::endl;
+		for (uint nRIdx = 0 /*core::SCPUStateBase::eGPRBaseIndex*/; nRIdx < core::SCPUStateBase::eRegisterPoolSize; nRIdx += 16)
+		{
+			os << "R" << std::dec << nRIdx + 15 << "-" << std::setfill('0') << std::setw(2) << nRIdx << ": ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 15) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 14) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 13) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 12) << " ";
+			os << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 11) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 10) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 9) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 8) << " ";
+			os << "  ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 7) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 6) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 5) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 4) << " ";
+			os << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 3) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 2) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 1) << " ";
+			os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +tState.reg<uint8>(nRIdx + 0) << " ";
+			os << std::endl;
+		}
+	}
+	else
+	{
+		os << "General purpose registers: -------------------------------------------------------" << std::endl;
+		for (uint nRIdx = 0 /*core::SCPUStateBase::eGPRBaseIndex*/; nRIdx < core::SCPUStateBase::eRegisterPoolSize; nRIdx += 16)
+		{
+			os << "R" << std::dec << nRIdx + 15 << "-" << std::setfill('0') << std::setw(2) << nRIdx << ": ";
+			os << std::dec << std::setfill(' ') << std::setw(10) << tState.reg<uint32>(nRIdx + 12) << "  ";
+			os << std::dec << std::setfill(' ') << std::setw(10) << tState.reg<uint32>(nRIdx + 8) << "  ";
+			os << std::dec << std::setfill(' ') << std::setw(10) << tState.reg<uint32>(nRIdx + 4) << "  ";
+			os << std::dec << std::setfill(' ') << std::setw(10) << tState.reg<uint32>(nRIdx + 0) << "  ";
+			os << std::endl;
+		}
 	}
 }
 
@@ -701,9 +866,14 @@ void CDebugger::DumpMemory(std::ostream& os, t_address nBaseAddress, t_size nSiz
 		nSizeBytes = std::min(nSizeBytes, Memory().GetSize() - nBaseAddress);
 
 	if (bText)
-		DumpHelper(os, nBaseAddress, nSizeBytes, &(Memory()[0]));
+	{
+		os << "# Offset: 15 14 13 12  11 10 09 08   07 06 05 04  03 02 01 00\t................" << std::endl;
+		DumpHelper(os, nBaseAddress, nSizeBytes, &(Memory()[0]), true);
+	}
 	else
+	{
 		os.write(&Memory().operator[]<char>(nBaseAddress), nSizeBytes);
+	}
 }
 
 void CDebugger::DumpCode(std::ostream& os, t_address nBaseAddress, t_size nSizeBytes, bool bText) const
@@ -716,7 +886,7 @@ void CDebugger::DumpCode(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 		nBaseAddress = m_tPackage.nCodeBase;
 
 	if (nBaseAddress >= Memory().GetSize() || nBaseAddress < m_tPackage.nCodeBase || nBaseAddress >= nCodeEnd)
-		throw CError(t_csz("Debugger: memory dump for the code failed due to invalid address"));
+		throw CError(t_csz("Debugger: memory dump of code section failed due to invalid address"));
 
 	// Adjust size
 	nCodeEnd = std::min(nCodeEnd, Memory().GetSize());
@@ -727,15 +897,27 @@ void CDebugger::DumpCode(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 
 	if (bText)
 	{
-		for (auto const& tFunc : m_tPackage.aFunctionTable)
+		os << ".code" << std::endl;
+		os << "# Offset: 15 14 13 12  11 10 09 08   07 06 05 04  03 02 01 00" << std::endl;
+		auto nAddress = nBaseAddress;
+		auto const nEndAddress = nBaseAddress + nSizeBytes;
+		while (nAddress < nEndAddress)
 		{
-			if ((tFunc.nAddress + tFunc.nSize) <= nBaseAddress ||
-				tFunc.nAddress >= (nBaseAddress + nSizeBytes))
-				continue;
-			
-			os << "# " << tFunc.sName << " : " << tFunc.sSrcUnit << std::endl;
-			DumpHelper(os, tFunc.nAddress, tFunc.nSize, &(Memory()[0]));
-			os << std::endl;
+			auto itFunc = m_mapFunctions.find({nAddress, nAddress});
+			if (itFunc != m_mapFunctions.end())
+			{
+				auto const& tFunc = m_tPackage.aFunctionTable.at(itFunc->second);
+				os  << "# " << tFunc.sSrcUnit << '.' << tFunc.sName << std::endl;
+
+				auto const nSize = std::min(nEndAddress, tFunc.nAddress + tFunc.nSize) - nAddress;
+				DumpHelper(os, nAddress, nSize, &(Memory()[0]));
+				nAddress += nSize + (nSize % core::cnGranul == 0 ? 0 : core::cnGranul - nSize % core::cnGranul);
+			}
+			else
+			{
+				DumpHelper(os, nAddress, core::cnGranul, &(Memory()[0]));
+				nAddress += core::cnGranul;
+			}
 		}
 	}
 	else
@@ -754,7 +936,7 @@ void CDebugger::DumpData(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 		nBaseAddress = m_tPackage.nDataBase;
 
 	if (nBaseAddress >= Memory().GetSize() || nBaseAddress < m_tPackage.nDataBase || nBaseAddress >= nDataEnd)
-		throw CError(t_csz("Debugger: memory dump for the code failed due to invalid address"));
+		throw CError(t_csz("Debugger: memory dump of data section failed due to invalid address"));
 
 	// Adjust size
 	nDataEnd = std::min(nDataEnd, Memory().GetSize());
@@ -765,6 +947,7 @@ void CDebugger::DumpData(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 
 	if (bText)
 	{
+		os << ".data" << std::endl;
 		for (auto const& tVar : m_tPackage.aVariableTable)
 		{
 			t_size const nVarSize = tVar.nSize * core::SizeOfValueType(tVar.eType);
@@ -772,10 +955,17 @@ void CDebugger::DumpData(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 				tVar.nAddress >= (nBaseAddress + nSizeBytes))
 				continue;
 
-			os << "# " << tVar.sName << " : " << CValue::TypeToCStr(tVar.eType) << std::endl;
-			DumpHelper(os, tVar.nAddress, nVarSize, &(Memory()[0]));
-			os << std::endl;
+			os  << "# " << tVar.sName << " : " << CValue::TypeToCStr(tVar.eType) << ", 0x"
+				<< std::setw(8) << std::hex << std::uppercase << std::setfill('0') << tVar.nAddress;
+			
+			if (tVar.nSize > 1)
+				os << " + " << std::setw(0) << std::dec << +SizeOfValueType(tVar.eType) << "*" << tVar.nSize << std::endl;
+			else
+				os << " + " << std::setw(0) << std::dec << +SizeOfValueType(tVar.eType) << std::endl;
 		}
+
+		os << "# Offset: 15 14 13 12  11 10 09 08   07 06 05 04  03 02 01 00\t................" << std::endl;
+		DumpHelper(os, nBaseAddress, nSizeBytes, &(Memory()[0]), true);
 	}
 	else
 	{
@@ -783,85 +973,136 @@ void CDebugger::DumpData(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 	}
 }
 
-void CDebugger::DumpStack(std::ostream& os, t_size nDepth, bool bText) const
+void CDebugger::DumpStack(std::ostream& os, t_size const cnFixedDepth, bool bText) const
 {
 	VASM_CHECK_PTR(m_pCPU);
 
 	t_address nStackTop = m_pCPU->State().nSP;
-	t_address nStackBase = m_pCPU->State().nSF;
-	t_uoffset const cnStackBottom = m_pCPU->State().cnStackLBound - 2 * sizeof(t_address);
+	t_uoffset nStackBottom = m_pCPU->State().cnStackLBound;
 
-	// Adjust depth
-	if (nDepth == 0)
-		nDepth = g_ciInvalid;
-
-	if (nStackTop < nStackBase)
+	// Find out stack size
+	if (nStackTop < nStackBottom)
 	{
-		if (!bText)
-		{
-			t_index nCounter = 0;
-			//t_CallStack aCallStack = ExtractFunctionCallStack();
-
-			// Unwind stack
-			do
+		constexpr t_size const cnLinkSize = 2 * sizeof(t_address);
+		t_size nDepth = cnFixedDepth;
+		t_size nSize = nStackBottom - nStackTop;
+		if (nDepth > 0)
+		{	// Cals stack size by unwinding the stack
+			t_address nStackBase = m_pCPU->State().nSF;
+			nSize = nStackBase - nStackTop;
+			while (nStackBase < nStackBottom && --nDepth > 0)
 			{
-				auto const& tFunc = m_tPackage.aFunctionTable.at(nCounter);
-				os << "# " << tFunc.sName << " : " << tFunc.sSrcUnit << std::endl;
-				DumpHelper(os, nStackTop, nStackTop - nStackBase, &(Memory()[0]));
-				os << std::endl;
-
 				// Next frame 
-				nStackTop = nStackBase;
-				if (nStackBase <= cnStackBottom)
+				t_address nPrevStackBase = nStackBase;
+				if (nStackBase <= nStackBottom - cnLinkSize)
 					Memory().ReadAt<t_address>(nStackBase, nStackBase);
-				--nDepth;
-				++nCounter;
+				else
+					nStackBase = nStackBottom;
+				if (int64(nStackBase) - int64(nPrevStackBase) < int64(cnLinkSize))
+					throw CError(base::toStr("Stack corruption detected at stack offset %1", nStackBottom - nPrevStackBase));
+				// Update stack size
+				nSize = nStackBase - nStackTop;
+			}
+		}
 
-			} while (nStackTop <= cnStackBottom && nDepth > 0);
+		if (bText)
+		{
+			// Unwind the stack and dump frame info
+			t_address nStackBase = m_pCPU->State().nSF;
+			t_address nCurrentTop = nStackTop;
+			nDepth = 0;
+			os << ".stack" << std::endl;
+			do 
+			{
+				os	<< "# SF(" << nDepth << "): 0x" << std::hex << std::setw(8) << std::setfill('0') << nCurrentTop
+					<< " - 0x" << std::setw(8) << std::setfill('0') << nStackBase << std::endl;
+				t_address nPrevStackBase = nStackBase;
+				if (nStackBase <= nStackBottom - cnLinkSize)
+					Memory().ReadAt<t_address>(nStackBase, nStackBase);
+				else
+					nStackBase = nStackBottom;
+				if (int64(nStackBase) - int64(nPrevStackBase) < int64(cnLinkSize))
+					throw CError(base::toStr("Stack corruption detected at stack offset %1", nStackBottom - nPrevStackBase));
+				nCurrentTop = nPrevStackBase + cnLinkSize;
+				++nDepth;
+			} while (nCurrentTop < nStackBottom);
+
+			os << "# Offset: 15 14 13 12  11 10 09 08   07 06 05 04  03 02 01 00" << std::endl;
+			DumpHelper(os, nStackTop, nSize, &(Memory()[0]), false);
 		}
 		else
 		{
-			// Unwind stack
-			while (nStackBase <= cnStackBottom && --nDepth > 0)
-			{
-				// Next frame 
-				Memory().ReadAt<t_address>(nStackBase, nStackBase);
-			}
-
-			os.write(&Memory().operator[]<char>(nStackTop), nStackTop - nStackBase);
+			os.write(&Memory().operator[]<char>(nStackTop), nSize);
 		}
 	}
 }
 
-void CDebugger::DumpHelper(
-	std::ostream& os, t_address nBaseAddress, t_size nSizeBytes, t_byte const* pMemory)
+void CDebugger::DumpStackBacktrace(std::ostream& os) const
 {
-	t_address nStart = nBaseAddress % 16;
-	t_address nEnd = nBaseAddress + nSizeBytes;
-	t_size nIterationCount = (nEnd - nStart) / 16 + bool((nEnd - nStart) % 16);
+	auto aCodeLines = std::move(GetFunctionCallStack());
 
-	os << std::hex << std::uppercase << std::setfill('0') << std::setw(8);
-
-	t_address nAddress = nStart;
-	for (t_size i = 0; i < nIterationCount; ++i)
+	os << std::resetiosflags(0);
+	os << "Function call stack: --------------------------------------------------------------" << std::endl;
+	for (auto const& tInfo : aCodeLines)
 	{
-		os << nAddress << ":  ";
-		for (t_size j = 0; j < 4; ++j)
-		{
-			for (t_size k = 0; k < 4; ++k)
-			{
-				if (nAddress >= nBaseAddress && nAddress < nEnd)
-				{
-					core::t_byte n = pMemory[nAddress];
-					os << n << " ";
-				}
-				else
-				{
-					os << " ";
-				}
-			}
+		os << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tInfo.nAddress << ": ";
+		if (tInfo.sFuncName != nullptr)
+			os << tInfo.sFuncName.str() << "  ";
+		os << "+0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tInfo.nRelOffset;
+		if (tInfo.sUnitName != nullptr)
+			os << "  Unit: " << tInfo.sUnitName.str() << ",  Line: " << std::setw(0) << std::dec << tInfo.nLineNum;
+		os << std::endl;
+	}
+}
 
-			os << "  ";
+void CDebugger::DumpHelper(
+	std::ostream& os, t_address nBaseAddress, t_size nSizeBytes,
+	t_byte const* pMemory, bool const bSupplementalText)
+{
+	// Round to 16 byte boundaries
+	t_address const nEndAddress = nBaseAddress + nSizeBytes;
+	t_address nStartRounded = nBaseAddress - nBaseAddress % 16;
+	t_address nEndRounded = nEndAddress + (nEndAddress % 16 == 0 ? 0 : (16 - nEndAddress % 16));
+
+	// Loop by 16 bytes
+	for (t_address nAddress = nStartRounded; nAddress < nEndRounded; nAddress += 16)
+	{
+		//if (nAddress > nStartRounded && nAddress % 64 == 0)
+		//	os << std::endl;
+		// Print address
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << nAddress << ": ";
+		// Print memory content
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 15] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 14] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 13] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 12] << " ";
+		os << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 11] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 10] << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 9]  << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 8]  << " ";
+		os << "  ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 7]  << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 6]  << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 5]  << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 4]  << " ";
+		os << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 3]  << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 2]  << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 1]  << " ";
+		os << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << +pMemory[nAddress + 0]  << " ";
+		
+		if (bSupplementalText)
+		{
+			os << "\t";
+			for (auto i = 0; i < 16; ++i)
+			{
+				t_byte n = pMemory[nAddress + i];
+				if (n >= 32 && n < 127)
+					os << n;
+				else
+					os << ' ';
+			}
 		}
 
 		os << std::endl;
@@ -944,7 +1185,7 @@ t_index CDebugger::LookupFunction(t_string const& sFuncName) const
 		SFunctionInfo const& tInfo = *it;
 		if (sFuncName == tInfo.sName)
 		{	// Found
-			iFunc = it - m_tPackage.aFunctionTable.begin();
+			iFunc = t_index(it - m_tPackage.aFunctionTable.begin());
 			break;
 		}
 	}
@@ -979,25 +1220,6 @@ bool CDebugger::LookupSource(t_address nCodeAddr, t_index& nFuncIdx, t_index& nL
 	}
 
 	return (itFunc != m_mapFunctions.end());
-}
-
-bool CDebugger::LookupSource(
-	t_address nCodeAddr, CStringRef& sFuncName,
-	CStringRef& sSrcUnit, t_index& nLineNumber, t_uoffset& nFuncOffset) const
-{
-	t_index nFuncIdx;
-	sFuncName = nullptr;
-	sSrcUnit = nullptr;
-	nFuncOffset = 0;
-	bool bFound = LookupSource(nCodeAddr, nFuncIdx, nLineNumber);
-	if (bFound)
-	{
-		auto const& tInfo = m_tPackage.aFunctionTable.at(nFuncIdx);
-		sSrcUnit = &tInfo.sSrcUnit;
-		sFuncName = &tInfo.sName;
-		nFuncOffset = nCodeAddr - tInfo.nAddress;
-	}
-	return bFound;
 }
 
 CDebugger::t_CallStack CDebugger::ExtractFunctionCallStack() const
