@@ -234,9 +234,19 @@ void CProcessor::Decode(uchar const* pCmd, SCommandContextEx& tCmdCtxt)
 		if (eOprType == EOprType::Reg || (eOprType == EOprType::RegImv && tCmdInfo.eOprSwitch == EOprSwitch::Reg))
 		{
 			// Multiply Reg idx with OprSize to align with OpSize
-			uint nRegIdx = AlignToOperandSize(static_cast<uint>(tCmdInfo.anRegIdx[eOprIdx]), tCmdInfo.eOprSize);
-			if (nRegIdx + OperandSize(tCmdInfo.eOprSize) > SState::eRegisterPoolSize)
-				throw base::CError(base::toStr("CPU: Invalid GP register index #%1", int(nRegIdx)));
+			uint nRegIdx = 0;
+			if (core::CCommandBase::IsOperandAddressRegister(tCmdInfo.tMetaInfo.eOpCode, eOprIdx))
+			{
+				nRegIdx = AlignToOperandSize(static_cast<uint>(tCmdInfo.anRegIdx[eOprIdx]), EOprSize::DWord);
+				if (nRegIdx + OperandSize(EOprSize::DWord) > SState::eRegisterPoolSize)
+					throw base::CError(base::toStr("CPU: Invalid address register index #%1", int(nRegIdx)));
+			}
+			else
+			{
+				nRegIdx = AlignToOperandSize(static_cast<uint>(tCmdInfo.anRegIdx[eOprIdx]), tCmdInfo.eOprSize);
+				if (nRegIdx + OperandSize(tCmdInfo.eOprSize) > SState::eRegisterPoolSize)
+					throw base::CError(base::toStr("CPU: Invalid GP register index #%1", int(nRegIdx)));
+			}
 			tCmdCtxt.apOperands[eOprIdx] = &m_tState.aui8RPool[nRegIdx];
 		}
 		else if (eOprType == EOprType::Imv || (eOprType == EOprType::RegImv && tCmdInfo.eOprSwitch == EOprSwitch::Imv))

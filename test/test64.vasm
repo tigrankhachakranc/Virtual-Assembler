@@ -1,0 +1,16 @@
+# Virtual assembly file
+# Test 64 bit instructions
+
+.CODE
+
+Func Main:
+	MVI 	R32, 1
+	MOV 	R36, R0
+	MVI 	R40, 2
+	MOV 	R44, R0
+	CMP QW	R32, R40
+	RET
+EndF
+
+
+.MAIN = Main

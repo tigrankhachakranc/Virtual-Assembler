@@ -144,7 +144,8 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 			if (it == m_mapSymbols.end())
 			{
 				SSymbolTable::SEntry tFinalEntry = tEntry;
-				tFinalEntry.nBase += nSizeShift;
+				if (tFinalEntry.nBase != core::cnInvalidAddress)
+					tFinalEntry.nBase += nSizeShift; // Adjust base address for valid symbols only
 				aSymbolIndexRemapping[nSblIdx] = t_dword(tFinalPkg.oSymbolTbl.aEntries.size());
 				tFinalPkg.oSymbolTbl.aEntries.push_back(std::move(tFinalEntry));
 				m_mapSymbols.insert({&tFinalPkg.oSymbolTbl.aEntries.back().sName, aSymbolIndexRemapping[nSblIdx]});
@@ -152,7 +153,7 @@ void CLinker::Merge(SPackage& tFinalPkg, t_lstPackages const& lstPackages)
 			else
 			{
 				SSymbolTable::SEntry& tFinalEntry = tFinalPkg.oSymbolTbl.aEntries[it->second];
-				if (tFinalEntry.isFunc = tEntry.isFunc || tFinalEntry.eType != tEntry.eType)
+				if (tFinalEntry.isFunc != tEntry.isFunc || tFinalEntry.eType != tEntry.eType)
 					throw CError(base::toStr("Symbol types mismatch '%1'", tEntry.sName), tPkg.tInfo.sName);
 				if (tFinalEntry.nBase != core::cnInvalidAddress && tEntry.nBase != core::cnInvalidAddress)
 					throw CError(base::toStr("Symbol redefinition '%1'", tEntry.sName), tPkg.tInfo.sName);

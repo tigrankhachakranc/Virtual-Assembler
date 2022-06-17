@@ -146,7 +146,8 @@ void CAsmParser::Parse()
 
 				if (oUnit.nStackSize < t_size(core::CMemory::MinStackSize) ||
 					oUnit.nStackSize > t_size(core::CMemory::MaxStackSize))
-					throw CError("Bad stack size, stack should be in range [256b - 1MB]",
+					throw CError(base::toStr("Bad stack size, stack should be in range [%1b - %2MB]",
+								 core::CMemory::MinStackSize, core::CMemory::MaxStackSize / (1024*1024)),
 								 oInput.GetLineNumber(), oParser.GetCurrentPos(), sToken);
 
 				// Round specified size

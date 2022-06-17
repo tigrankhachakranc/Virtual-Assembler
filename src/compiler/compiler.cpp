@@ -61,7 +61,7 @@ CError::CError(t_csz pcszErrMsg) :
 	Base(pcszErrMsg, Reserved, VASM_ERR_INFO(s_CompilerError))
 {
 	std::stringstream oBuff(std::ios_base::out);
-	oBuff << Info().cszFixedErrorMsg << ":";
+	oBuff << Info().cszFixedErrorMsg << ": ";
 	oBuff << pcszErrMsg << ".";
 	m_sErrorMsg = oBuff.str();
 }
@@ -70,7 +70,7 @@ CError::CError(t_string const& sErrMsg) :
 	Base(t_string(), Reserved, VASM_ERR_INFO(s_CompilerError))
 {
 	std::stringstream oBuff(std::ios_base::out);
-	oBuff << Info().cszFixedErrorMsg << ":";
+	oBuff << Info().cszFixedErrorMsg << ": ";
 	oBuff << sErrMsg << ".";
 	m_sErrorMsg = oBuff.str();
 }
@@ -80,7 +80,7 @@ CError::CError(t_string const& sUnitName, CAsmParser::CError const& err) :
 {
 	std::stringstream oBuff(std::ios_base::out);
 
-	oBuff << Info().cszFixedErrorMsg << ":";
+	oBuff << Info().cszFixedErrorMsg << ": ";
 	oBuff << err.ErrorMsg() << "." << std::endl;
 
 	if (err.LineNumber() != g_ciInvalid)
@@ -96,7 +96,7 @@ CError::CError(t_string const& sUnitName, CEncoder::CError const& err) :
 	t_string sError;
 	std::stringstream oBuff(std::ios_base::out);
 
-	oBuff << Info().cszFixedErrorMsg << ":";
+	oBuff << Info().cszFixedErrorMsg << ": ";
 	oBuff << err.ErrorMsg() << "." << std::endl;
 
 	if (err.LineNumber() != g_ciInvalid)
@@ -111,7 +111,7 @@ CError::CError(CLinker::CError const& err) :
 {
 	std::stringstream oBuff(std::ios_base::out);
 
-	oBuff << Info().cszFixedErrorMsg << ":";
+	oBuff << Info().cszFixedErrorMsg << ": ";
 	oBuff << err.ErrorMsg() << ".";
 	oBuff << "  Making package: '" << err.Package() << "'.";
 
@@ -204,10 +204,10 @@ void CCompiler::Build(
 	// Lambda function to find out pure name
 	auto fnPureName = [](t_string const& sPath) -> t_string
 	{
-		t_size nStartPos = (t_size) sPath.find_last_of(t_csz("/\\"), t_string::npos, 2);
+		auto nStartPos = sPath.find_last_of(t_csz("/\\"), t_string::npos, 2);
 		if (nStartPos == t_string::npos)
 			nStartPos = 0;
-		t_size nLength = t_size(sPath.size() - nStartPos);
+		auto nLength = sPath.size() - nStartPos;
 		if (base::EndsWith(sPath, t_csz(".vasm.bin")))
 			nLength -= 9;
 		else if (base::EndsWith(sPath, t_csz(".vasm")))

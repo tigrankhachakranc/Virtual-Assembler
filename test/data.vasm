@@ -1,0 +1,5 @@
+.data
+DWORD adwNums[] = 78, 65, 66, 82, 22, 61, 54, 14, 92, 42
+DWORD dwCount = 10
+DWORD dwEtalonMean = 58
+DWORD dwEtalonVariance = 639

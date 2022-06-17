@@ -1256,6 +1256,8 @@ void CBasicCommands::DivB(SCommandContext& tCtxt)
 
 	uint8* pDst = tCtxt.operand<uint8>(EOprIdx::First);
 	uint8* pSrc = tCtxt.operand<uint8>(EOprIdx::Second);
+	if (*pSrc == 0)
+		throw base::CError(t_csz("CPU: Integer division by zero"));
 	uint16 nFlags = fnDIV8(pDst, pSrc, pDst, pDst + 1);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
 }
@@ -1270,6 +1272,8 @@ void CBasicCommands::DivW(SCommandContext& tCtxt)
 
 	uint16* pDst = tCtxt.operand<uint16>(EOprIdx::First);
 	uint16* pSrc = tCtxt.operand<uint16>(EOprIdx::Second);
+	if (*pSrc == 0)
+		throw base::CError(t_csz("CPU: Integer division by zero"));
 	uint16  nFlags = fnDIV16(pDst, pSrc, pDst, pDst + 1);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
 }
@@ -1284,6 +1288,8 @@ void CBasicCommands::DivDW(SCommandContext& tCtxt)
 
 	uint32* pDst = tCtxt.operand<uint32>(EOprIdx::First);
 	uint32* pSrc = tCtxt.operand<uint32>(EOprIdx::Second);
+	if (*pSrc == 0)
+		throw base::CError(t_csz("CPU: Integer division by zero"));
 	uint16  nFlags = fnDIV32(pDst, pSrc, pDst, pDst + 1);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
 }
@@ -1298,6 +1304,8 @@ void CBasicCommands::DivQW(SCommandContext& tCtxt)
 
 	uint64* pDst = tCtxt.operand<uint64>(EOprIdx::First);
 	uint64* pSrc = tCtxt.operand<uint64>(EOprIdx::Second);
+	if (*pSrc == 0)
+		throw base::CError(t_csz("CPU: Integer division by zero"));
 	uint16  nFlags = fnDIV64(pDst, pSrc, pDst, pDst + 1);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
 }
@@ -1372,6 +1380,8 @@ void CBasicCommands::IDivB(SCommandContext& tCtxt)
 
 	uint8* pDst = tCtxt.operand<uint8>(EOprIdx::First);
 	uint8* pSrc = tCtxt.operand<uint8>(EOprIdx::Second);
+	if (*pSrc == 0)
+		throw base::CError(t_csz("CPU: Integer division by zero"));
 	uint16 nFlags = fnIDIV8(pDst, pSrc, pDst, pDst + 1);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
 }
@@ -1386,6 +1396,8 @@ void CBasicCommands::IDivW(SCommandContext& tCtxt)
 
 	uint16* pDst = tCtxt.operand<uint16>(EOprIdx::First);
 	uint16* pSrc = tCtxt.operand<uint16>(EOprIdx::Second);
+	if (*pSrc == 0)
+		throw base::CError(t_csz("CPU: Integer division by zero"));
 	uint16  nFlags = fnIDIV16(pDst, pSrc, pDst, pDst + 1);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
 }
@@ -1400,6 +1412,8 @@ void CBasicCommands::IDivDW(SCommandContext& tCtxt)
 
 	uint32* pDst = tCtxt.operand<uint32>(EOprIdx::First);
 	uint32* pSrc = tCtxt.operand<uint32>(EOprIdx::Second);
+	if (*pSrc == 0)
+		throw base::CError(t_csz("CPU: Integer division by zero"));
 	uint16  nFlags = fnIDIV32(pDst, pSrc, pDst, pDst + 1);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
 }
@@ -1414,6 +1428,8 @@ void CBasicCommands::IDivQW(SCommandContext& tCtxt)
 
 	uint64* pDst = tCtxt.operand<uint64>(EOprIdx::First);
 	uint64* pSrc = tCtxt.operand<uint64>(EOprIdx::Second);
+	if (*pSrc == 0)
+		throw base::CError(t_csz("CPU: Integer division by zero"));
 	uint16  nFlags = fnIDIV64(pDst, pSrc, pDst, pDst + 1);
 	tCtxt.tCPUState.oFlags.setFlags(nFlags);
 }

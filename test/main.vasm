@@ -1,0 +1,77 @@
+.stack = 256
+.data
+CHAR	chPass = '1'
+CHAR	chFail = '0'
+DWORD	dwMean
+DWORD	dwVariance
+
+DWORD	adwNums;
+DWORD	dwCount;
+DWORD	dwEtalonMean;
+DWORD	dwEtalonVariance;
+
+.code
+
+Func ArithmeticMean;
+Func SampleVariance;
+Func PrintChar;
+
+Func Main:
+	PUSHSF
+
+	MVI		A0, adwNums
+	MVI		A1, dwCount
+	LOD		R32, A1
+	MVI		A1, ArithmeticMean
+	CALL	A1 # Average -> R32
+	MVI		A1, dwMean
+	STO		R32, A1
+	MVI		A2, dwEtalonMean
+	LOD		R40, A2
+	CMP		R32, R40
+	JNE Failed
+	
+	MVI		A0, adwNums
+	MVI		A1, dwCount
+	LOD		R32, A1
+	MVI		A1, SampleVariance
+	CALL	A1	# VAriance -> R32
+	MVI		A1, dwVariance
+	STO		R32, A1
+	MVI		A2, dwEtalonVariance
+	LOD		R40, A2
+	CMP		R32, R40
+	JNE	Failed
+
+Success:
+	MVI		A0, chPass
+	MOV		R32, R0
+	LOD	B	R32, A0
+	MVI 	A1, PrintChar
+	CALL A1
+	JMP Finished
+
+Failed:
+	MVI		A0, chFail
+	MOV		R32, R0
+	LOD	B	R32, A0
+	MVI 	A1, PrintChar
+	CALL	A1
+	JMP Finished
+	
+Finished:
+	POPSF
+	RET
+EndF
+
+# Prints single character onto the console output
+# Arg: B R32 (Character value)
+Func PrintChar:
+	MVI		R36, 1
+	OUT		R36, 4	# Init console mode
+	OUT	B	R32, 8	# Print one character
+	OUT		R0,  4	# Flush the buffer
+	RET
+EndF
+
+.main = Main

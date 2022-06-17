@@ -22,12 +22,12 @@ CStringComparator<EComparisonType::Equal_CI> compare;
 //
 int main(int argc, char* argv[])
 {
-	std::cout << "VASM Debugger version 2.0" << std::endl;
+	std::cout << "Architecture-2020 Assembler & Debugger version 2.0" << std::endl;
 	std::cout << "Author and developer: Tigran Khachatryan" << std::endl;
 	std::cout << "Is licensed under the 'GNU General Public License v3.0'" << std::endl << std::endl;
-	std::cout << "Usage: VASM compile <program_source>.vasm [...] <binary_program_name>.vasm.bin" << std::endl;
-	std::cout << "Usage: VASM disasm  <binary_program_name>.vasm.bin <output_program_name>.vasm" << std::endl;
-	std::cout << "Usage: VASM [<program_source>.vasm [...]] | [<binary_program_name>.vasm.bin]" << std::endl;
+	std::cout << "Usage: ASM2020 compile <program_source>.vasm [...] <binary_program_name>.vasm.bin" << std::endl;
+	std::cout << "Usage: ASM2020 disasm  <binary_program_name>.vasm.bin <output_program_name>.vasm" << std::endl;
+	std::cout << "Usage: ASM2020 [<program_source>.vasm [...]] | [<binary_program_name>.vasm.bin]" << std::endl;
 	std::cout << "Type ? for the detailed help" << std::endl;
 
 	int nRetCode = 0; char ch;

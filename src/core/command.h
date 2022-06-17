@@ -335,6 +335,8 @@ public:
 
 	void SetAddressRecovery(IAddressRecoveryPtr pAddrRecovery);
 
+	static bool IsOperandAddressRegister(EOpCode eOpCode, t_index nArgIdx);
+
 protected:
 	//
 	//	Methods and Types for derived concrete commands
@@ -415,8 +417,6 @@ protected:
 	virtual t_string DisAsmImv(SCommandInfo const& tCmd, bool bHexadecimal);
 
 	inline IAddressRecoveryPtr GetAddressRecovery() const;
-
-	static bool IsOperandAddressRegister(EOpCode eOpCode, t_index nArgIdx);
 
 private:
 	using t_InstructionInfo = std::tuple<SCommandMetaInfo, IInstructionUPtr, IDisassembleUPtr>;

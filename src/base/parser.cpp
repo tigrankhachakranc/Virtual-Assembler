@@ -68,7 +68,7 @@ t_string CParser::CError::FormatErrorMsg(bool bFinal) const
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-void CParser::Skip(int nCharCount)
+void CParser::Skip(t_size nCharCount)
 {
 	if (m_nPos + nCharCount < m_sInput.size())
 		m_nPos += nCharCount;

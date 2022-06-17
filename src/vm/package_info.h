@@ -174,7 +174,7 @@ inline SVariableInfo::SVariableInfo(
 //	SFunctionInfo
 //
 inline SFunctionInfo::SFunctionInfo() :
-	nSize(0), nBaseLine(0), nSizeLine(0)
+	eType(EValueType::Unknown), nSize(0), nBaseLine(0), nSizeLine(0)
 {
 }
 

@@ -204,11 +204,11 @@ void CCommander::cmd_help(CCmdParser&)
 	m_cout << "reset                                         Resets CPU to initial state"										<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "bp            location                        Sets debug break point at specified source location"				<< std::endl;
-	m_cout << "rbp           location                        Removes breakpoint (if any) from specifed source location"			<< std::endl;
+	m_cout << "rbp           all | location                  Removes breakpoint (if any) from specifed source location"			<< std::endl;
 	m_cout << "              see 'run' above for location format details"														<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "set           IP location                     Sets IP to the specified source code location, see run for details"<< std::endl;
-	m_cout << "              A(idx) location|variable        Sets An to the specified source code location or variable address"	<< std::endl;
+	m_cout << "              A(idx) location | variable      Sets An to the specified source code location or variable address"	<< std::endl;
 	m_cout << "              R(idx) [B|W|DW|QW|CH] value     Sets specified register to the specified numeric value"			<< std::endl;
 	m_cout << "              CF|ZF|SF|OF 0|1                 Sets or clears specifeid flag in ther status Flags register"		<< std::endl;
 	m_cout << "              Location format: [src:]line_num | func_name | [func_name.]label | 0xAddress"						<< std::endl;
@@ -230,13 +230,14 @@ void CCommander::cmd_help(CCmdParser&)
 	m_cout << "        bp                                    Prints Break points list"											<< std::endl;
 	m_cout << "        code  [-at An|location]               Prints code started from the current IP or specifieid location"	<< std::endl;
 	m_cout << "              [-c|count instruction_count]    Specifies exact number of instructions to be printed"				<< std::endl;
+	m_cout << "        data                                  Prints content of the data section"								<< std::endl;
 	m_cout << "        memory -at An|0xAddress -sz Rn|count] Prints memory content at specified Address with Count bytes length"<< std::endl;
 	m_cout << "                                              Address or Count could be specifed directly or through Register"	<< std::endl;
 	m_cout << "        ports                                 Prints I/O Devices and Port ranges occupied by them"				<< std::endl;
 	m_cout << "bt                                            Prints function call stack (backtrace), see also 'print cstack'"	<< std::endl;
 	m_cout << ""																												<< std::endl;
 	m_cout << "d|dump        -f|file file_path               Dumps entire memory content or part of it into specified file"		<< std::endl;
-	m_cout << "              -format text|bin"																					<< std::endl;
+	m_cout << "              -format text | bin"																				<< std::endl;
 	m_cout << "       memory [-at 0xAddress]"																					<< std::endl;
 	m_cout << "              [-sz|size byte_count]"																				<< std::endl;
 	m_cout << "       code                                   Dumps content of the code section"									<< std::endl;
@@ -807,10 +808,11 @@ void CCommander::cmd_print(CCmdParser& oParser)
 
 		PrintBreakPoints();
 	}
-	else if (compare(sToken, t_csz("code")) ||
+	else if (compare(sToken, t_csz("code")) || compare(sToken, t_csz("data")) ||
 			 compare(sToken, t_csz("memory")) || compare(sToken, t_csz("mem")))
 	{
 		bool const isCode = compare(sToken, t_csz("code"));
+		bool const isData = compare(sToken, t_csz("data"));
 		t_address nAddress = core::cnInvalidAddress;
 		t_count nCount = 0;
 
@@ -822,7 +824,12 @@ void CCommander::cmd_print(CCmdParser& oParser)
 			{
 				if (nAddress != core::cnInvalidAddress)
 					throw CParserError(t_csz("Multiple starting addresses specified"), oParser.GetPreviousPos(), sToken);
-				nAddress = FetchAddress(oParser, isCode ? EAddressHint::Code : EAddressHint::Memory, true);
+				if (isCode)
+					nAddress = FetchAddress(oParser, EAddressHint::Code, true);
+				else if (isData)
+					nAddress = FetchAddress(oParser, EAddressHint::Data, true);
+				else
+					nAddress = FetchAddress(oParser, EAddressHint::Memory, true);
 				if (nAddress == core::cnInvalidAddress)
 					throw CParserError(t_csz("Invalid code location"), oParser.GetPreviousPos(), sToken);
 			}
@@ -862,14 +869,18 @@ void CCommander::cmd_print(CCmdParser& oParser)
 
 		if (isCode && nAddress == core::cnInvalidAddress)
 			nAddress = m_pDebugger->CPUState().nIP; // Take current IP
+		else if (isData && nAddress == core::cnInvalidAddress)
+			nAddress = 0; // Means the beginning of data section
 
 		if (nAddress == core::cnInvalidAddress)
 			throw CError(t_csz("Starting address is not specified"));
-		if (!isCode && nCount == 0)
+		if (!isCode && !isData && nCount == 0)
 			throw CError(t_csz("Meory size is not specified"));
 
 		if (isCode)
 			PrintCode(nAddress, nCount);
+		else if (isData)
+			PrintData(nAddress, nCount);
 		else
 			PrintMemory(nAddress, nCount);
 	}
@@ -1357,7 +1368,7 @@ void CCommander::PrintStackBacktrace() const
 	auto aCodeLines = std::move(m_pDebugger->GetFunctionCallStack());
 
 	m_cout << std::resetiosflags(0);
-	m_cout << "Function call stack: --------------------------------------------------------------" << std::endl;
+	m_cout << "Function call stack: -------------------------------------------------------------" << std::endl;
 	for (auto const& tInfo : aCodeLines)
 	{
 		PrintCodeInfo(m_cout, tInfo, true, true);
@@ -1433,6 +1444,12 @@ void CCommander::PrintCode(t_address const nBaseAddress, t_count nInstrCount) co
 		nCurrAddress = PrintCommand(m_cout, nCurrAddress);
 		--nInstrCount;
 	}
+}
+
+void CCommander::PrintData(t_address const nBaseAddress, t_count nSizeInBytes) const
+{
+	m_cout << "Data (0x): -----------------------------------------------------------------------" << std::endl;
+	m_pDebugger->DumpData(m_cout, nBaseAddress, nSizeInBytes, true, false);
 }
 
 void CCommander::PrintMemory(t_address const nBaseAddress, t_count nSizeInBytes) const

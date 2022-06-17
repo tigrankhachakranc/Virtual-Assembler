@@ -1082,7 +1082,7 @@ extern "C" uint16_t __stdcall fnROL64(uint64_t* pOperand, uint8_t* pCount)
 		movzx ECX, BYTE PTR[ESI]
 		and CL, 0x1F
 		pushf
-	while_not_0 :	// Do rotate via looping by putting CF flag
+	while_not_0 :					// Do rotate via looping by putting CF flag
 		test ECX, ECX
 		jz finilize
 		dec ECX
@@ -1165,7 +1165,7 @@ extern "C" uint16_t __stdcall fnROR64(uint64_t* pOperand, uint8_t* pCount)
 		movzx ECX, BYTE PTR[ESI]
 		and CL, 0x1F
 		pushf
-	while_not_0 :	// Do rotate via looping by putting CF flag
+	while_not_0 :					// Do rotate via looping by putting CF flag
 		test ECX, ECX
 		jz finilize
 		dec ECX
@@ -1196,7 +1196,7 @@ extern "C" uint16_t __stdcall fnRCL8(uint8_t* pOperand, uint8_t* pCount, bool bC
 		mov AL, BYTE PTR[EDX]
 		mov CL, BYTE PTR[ESI]
 		and CL, 0x1F
-		BT EBX, 1	// Load carry bit into CF
+		BT EBX, 0					// Load carry bit into CF
 		rcl AL, CL
 		pushf
 		mov BYTE PTR[EDX], AL
@@ -1216,7 +1216,7 @@ extern "C" uint16_t __stdcall fnRCL16(uint16_t* pOperand, uint8_t* pCount, bool 
 		mov AX, WORD PTR[EDX]
 		mov CL, BYTE PTR[ESI]
 		and CL, 0x1F
-		BT EBX, 1	// Load carry bit into CF
+		BT EBX, 0					// Load carry bit into CF
 		rcl AX, CL
 		pushf
 		mov WORD PTR[EDX], AX
@@ -1235,7 +1235,7 @@ extern "C" uint16_t __stdcall fnRCL32(uint32_t* pOperand, uint8_t* pCount, bool 
 		mov EAX, DWORD PTR[EDX]
 		mov CL, BYTE PTR[ESI]
 		and CL, 0x1F
-		BT EBX, 1	// Load carry bit into CF
+		BT EBX, 0					// Load carry bit into CF
 		rcl EAX, CL
 		pushf
 		mov DWORD PTR[EDX], EAX
@@ -1255,18 +1255,18 @@ extern "C" uint16_t __stdcall fnRCL64(uint64_t* pOperand, uint8_t* pCount, bool 
 		mov EDX, DWORD PTR[EDI + 4]
 		movzx ECX, BYTE PTR[ESI]
 		and CL, 0x1F
-		BT EAX, 1	// Load carry bit into CF
+		BT EAX, 0					// Load carry bit into CF
 		pushf
-	while_not_0 :	// Do rotate via looping by putting CF flag
+	while_not_0 :					// Do rotate via looping by putting CF flag
 		test ECX, ECX
 		jz finilize
 		dec ECX
 		pop SI
-		BT EAX, 1	// Load carry bit into CF
+		BT EAX, 0					// Load carry bit into CF
 		rcl EBX, 1
 		rcl EDX, 1
 		pushf
-		lahf		// Save CF into AL
+		lahf						// Save CF into AL
 		mov AL, AH
 		jmp while_not_0
 	finilize :
@@ -1287,7 +1287,7 @@ extern "C" uint16_t __stdcall fnRCR8(uint8_t* pOperand, uint8_t* pCount, bool bC
 		mov AL, BYTE PTR[EDX]
 		mov CL, BYTE PTR[ESI]
 		and CL, 0x1F
-		BT EBX, 1	// Load carry bit into CF
+		BT EBX, 0					// Load carry bit into CF
 		rcr AL, CL
 		pushf
 		mov BYTE PTR[EDX], AL
@@ -1306,7 +1306,7 @@ extern "C" uint16_t __stdcall fnRCR16(uint16_t* pOperand, uint8_t* pCount, bool 
 		mov AX, WORD PTR[EDX]
 		mov CL, BYTE PTR[ESI]
 		and CL, 0x1F
-		BT EBX, 1	// Load carry bit into CF
+		BT EBX, 0					// Load carry bit into CF
 		rcr AX, CL
 		pushf
 		mov WORD PTR[EDX], AX
@@ -1325,7 +1325,7 @@ extern "C" uint16_t __stdcall fnRCR32(uint32_t* pOperand, uint8_t* pCount, bool 
 		mov EAX, DWORD PTR[EDX]
 		mov CL, BYTE PTR[ESI]
 		and CL, 0x1F
-		BT EBX, 1	// Load carry bit into CF
+		BT EBX, 0					// Load carry bit into CF
 		rcr EAX, CL
 		pushf
 		mov DWORD PTR[EDX], EAX
@@ -1345,18 +1345,18 @@ extern "C" uint16_t __stdcall fnRCR64(uint64_t* pOperand, uint8_t* pCount, bool 
 		mov EDX, DWORD PTR[EDI + 4]
 		movzx ECX, BYTE PTR[ESI]
 		and CL, 0x1F
-		BT EAX, 1	// Load carry bit into CF
+		BT EAX, 0					// Load carry bit into CF
 		pushf
-		while_not_0 :	// Do rotate via looping by putting CF flag
-	test ECX, ECX
+	while_not_0 :					// Do rotate via looping by putting CF flag
+		test ECX, ECX
 		jz finilize
 		dec ECX
 		pop SI
-		BT EAX, 1	// Load carry bit into CF
+		BT EAX, 0					// Load carry bit into CF
 		rcr EDX, 1
 		rcr EBX, 1
 		pushf
-		lahf		// Save CF into AL
+		lahf						// Save CF into AL
 		mov AL, AH
 		jmp while_not_0
 	finilize :
@@ -1469,7 +1469,7 @@ extern "C" uint16_t __stdcall fnADC8(uint8_t* pLeft, uint8_t* pRight, uint8_t* p
 		mov EDX, DWORD PTR[pResult]
 		mov AL, BYTE PTR[ESI]
 		mov BL, BYTE PTR[EDI]
-		BT ECX, 1	// Load carry bit into CF
+		BT ECX, 0					// Load carry bit into CF
 		adc AL, BL
 		pushf
 		mov BYTE PTR[EDX], AL
@@ -1488,7 +1488,7 @@ extern "C" uint16_t __stdcall fnADC16(uint16_t* pLeft, uint16_t* pRight, uint16_
 		mov EDX, DWORD PTR[pResult]
 		mov AX, WORD PTR[ESI]
 		mov BX, WORD PTR[EDI]
-		BT ECX, 1	// Load carry bit into CF
+		BT ECX, 0					// Load carry bit into CF
 		adc AX, BX
 		pushf
 		mov WORD PTR[EDX], AX
@@ -1507,7 +1507,7 @@ extern "C" uint16_t __stdcall fnADC32(uint32_t* pLeft, uint32_t* pRight, uint32_
 		mov EDX, DWORD PTR[pResult]
 		mov EAX, DWORD PTR[ESI]
 		mov EBX, DWORD PTR[EDI]
-		BT ECX, 1	// Load carry bit into CF
+		BT ECX, 0					// Load carry bit into CF
 		adc EAX, EBX
 		pushf
 		mov DWORD PTR[EDX], EAX
@@ -1530,7 +1530,7 @@ extern "C" uint16_t __stdcall fnADC64(uint64_t* pLeft, uint64_t* pRight, uint64_
 		mov EDX, DWORD PTR[EDI + 4]	// Load upper half of the second operand into the DX register
 
 		movzx ESI, BYTE PTR[bCarryFlag]
-		BT ESI, 1	// Load carry bit into CF
+		BT ESI, 0					// Load carry bit into CF
 
 		adc EAX, ECX				// Do the operation for the lower half
 		pushf						// Save first intermediatre flags
@@ -1652,7 +1652,7 @@ extern "C" uint16_t __stdcall fnSBB8(uint8_t* pLeft, uint8_t* pRight, uint8_t* p
 		mov EDX, DWORD PTR[pResult]
 		mov AL, BYTE PTR[ESI]
 		mov BL, BYTE PTR[EDI]
-		BT ECX, 1	// Load carry bit into CF
+		BT ECX, 0					// Load carry bit into CF
 		sbb AL, BL
 		pushf
 		mov BYTE PTR[EDX], AL
@@ -1671,7 +1671,7 @@ extern "C" uint16_t __stdcall fnSBB16(uint16_t* pLeft, uint16_t* pRight, uint16_
 		mov EDX, DWORD PTR[pResult]
 		mov AX, WORD PTR[ESI]
 		mov BX, WORD PTR[EDI]
-		BT ECX, 1	// Load carry bit into CF
+		BT ECX, 0					// Load carry bit into CF
 		sbb AX, BX
 		pushf
 		mov WORD PTR[EDX], AX
@@ -1691,7 +1691,7 @@ extern "C" uint16_t __stdcall fnSBB32(uint32_t* pLeft, uint32_t* pRight, uint32_
 		mov EDX, DWORD PTR[pResult]
 		mov EAX, DWORD PTR[ESI]
 		mov EBX, DWORD PTR[EDI]
-		BT ECX, 1	// Load carry bit into CF
+		BT ECX, 0					// Load carry bit into CF
 		sbb EAX, EBX
 		pushf
 		mov DWORD PTR[EDX], EAX
@@ -1715,7 +1715,7 @@ extern "C" uint16_t __stdcall fnSBB64(uint64_t* pLeft, uint64_t* pRight, uint64_
 		mov EDX, DWORD PTR[EDI + 4]	// Load upper half of the second operand into the DX register
 
 		movzx ESI, BYTE PTR[bCarryFlag]
-		BT ESI, 1	// Load carry bit into CF
+		BT ESI, 0					// Load carry bit into CF
 
 		sbb EAX, ECX				// Do the operation for the lower half
 		pushf						// Save first intermediatre flags
@@ -2013,7 +2013,7 @@ extern "C" uint16_t __stdcall fnIMUL16(uint16_t* pLeft, uint16_t* pRight, uint32
 		mov EDI, DWORD PTR[pRight]
 		mov AX, WORD PTR[ESI]
 		mov BX, WORD PTR[EDI]
-		mul BX						// DX:AX <- AX * BX
+		imul BX						// DX:AX <- AX * BX
 		pushf
 		mov EDI, DWORD PTR[pProduct]
 		mov WORD PTR[EDI], AX
@@ -2031,7 +2031,7 @@ extern "C" uint16_t __stdcall fnIMUL32(uint32_t* pLeft, uint32_t* pRight, uint64
 		mov EDI, DWORD PTR[pRight]
 		mov EAX, DWORD PTR[ESI]
 		mov EBX, DWORD PTR[EDI]
-		mul EBX						// EDX:EAX <- EAX * EBX
+		imul EBX					// EDX:EAX <- EAX * EBX
 		pushf
 		mov EDI, DWORD PTR[pProduct]
 		mov DWORD PTR[EDI], EAX
@@ -2047,7 +2047,7 @@ extern "C" uint16_t __stdcall fnIMUL64(uint64_t* pLeft, uint64_t* pRight, uint64
 	// AB * CD = (A*2^32 + B) * (C*2^32 + D) = A*C*2^64 + A*D*2^32 + B*C*2^32 + B*D
 	int64_t const iLeft = *reinterpret_cast<int64_t*>(pLeft);
 	int64_t const iRight = *reinterpret_cast<int64_t*>(pRight);
-	bool const isNegative = (iLeft < 0) || (iRight < 0);		// Determine results sign
+	bool const isNegative = (iLeft < 0) ^ (iRight < 0);		// Determine results sign
 
 	uint64_t const uLeft = static_cast<uint64_t>(std::abs(iLeft));
 	uint64_t const uRight = static_cast<uint64_t>(std::abs(iRight));

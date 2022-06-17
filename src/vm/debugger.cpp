@@ -876,7 +876,9 @@ void CDebugger::DumpMemory(std::ostream& os, t_address nBaseAddress, t_size nSiz
 	}
 }
 
-void CDebugger::DumpCode(std::ostream& os, t_address nBaseAddress, t_size nSizeBytes, bool bText) const
+void CDebugger::DumpCode(
+	std::ostream& os, t_address nBaseAddress, t_size nSizeBytes,
+	bool const cbText, bool const cbHeaderLine) const
 {
 	VASM_CHECK_PTR(m_pCPU);
 
@@ -895,9 +897,10 @@ void CDebugger::DumpCode(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 	else
 		nSizeBytes = std::min(nSizeBytes, nCodeEnd - nBaseAddress);
 
-	if (bText)
+	if (cbText)
 	{
-		os << ".code" << std::endl;
+		if (cbHeaderLine)
+			os << ".code" << std::endl;
 		os << "# Offset: 15 14 13 12  11 10 09 08   07 06 05 04  03 02 01 00" << std::endl;
 		auto nAddress = nBaseAddress;
 		auto const nEndAddress = nBaseAddress + nSizeBytes;
@@ -926,7 +929,9 @@ void CDebugger::DumpCode(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 	}
 }
 
-void CDebugger::DumpData(std::ostream& os, t_address nBaseAddress, t_size nSizeBytes, bool bText) const
+void CDebugger::DumpData(
+	std::ostream& os, t_address nBaseAddress, t_size nSizeBytes,
+	bool const cbText, bool const cbHeaderLine) const
 {
 	VASM_CHECK_PTR(m_pCPU);
 
@@ -945,9 +950,10 @@ void CDebugger::DumpData(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 	else
 		nSizeBytes = std::min(nSizeBytes, nDataEnd - nBaseAddress);
 
-	if (bText)
+	if (cbText)
 	{
-		os << ".data" << std::endl;
+		if (cbHeaderLine)
+			os << ".data" << std::endl;
 		for (auto const& tVar : m_tPackage.aVariableTable)
 		{
 			t_size const nVarSize = tVar.nSize * core::SizeOfValueType(tVar.eType);
@@ -955,7 +961,7 @@ void CDebugger::DumpData(std::ostream& os, t_address nBaseAddress, t_size nSizeB
 				tVar.nAddress >= (nBaseAddress + nSizeBytes))
 				continue;
 
-			os  << "# " << tVar.sName << " : " << CValue::TypeToCStr(tVar.eType) << ", 0x"
+			os  << "# " << tVar.sName << ": \t" << CValue::TypeToCStr(tVar.eType) << ", 0x"
 				<< std::setw(8) << std::hex << std::uppercase << std::setfill('0') << tVar.nAddress;
 			
 			if (tVar.nSize > 1)
@@ -977,44 +983,44 @@ void CDebugger::DumpStack(std::ostream& os, t_size const cnFixedDepth, bool bTex
 {
 	VASM_CHECK_PTR(m_pCPU);
 
+	// Find out stack size
 	t_address nStackTop = m_pCPU->State().nSP;
 	t_uoffset nStackBottom = m_pCPU->State().cnStackLBound;
 
-	// Find out stack size
-	if (nStackTop < nStackBottom)
-	{
-		constexpr t_size const cnLinkSize = 2 * sizeof(t_address);
-		t_size nDepth = cnFixedDepth;
-		t_size nSize = nStackBottom - nStackTop;
-		if (nDepth > 0)
-		{	// Cals stack size by unwinding the stack
-			t_address nStackBase = m_pCPU->State().nSF;
-			nSize = nStackBase - nStackTop;
-			while (nStackBase < nStackBottom && --nDepth > 0)
-			{
-				// Next frame 
-				t_address nPrevStackBase = nStackBase;
-				if (nStackBase <= nStackBottom - cnLinkSize)
-					Memory().ReadAt<t_address>(nStackBase, nStackBase);
-				else
-					nStackBase = nStackBottom;
-				if (int64(nStackBase) - int64(nPrevStackBase) < int64(cnLinkSize))
-					throw CError(base::toStr("Stack corruption detected at stack offset %1", nStackBottom - nPrevStackBase));
-				// Update stack size
-				nSize = nStackBase - nStackTop;
-			}
-		}
-
-		if (bText)
+	constexpr t_size const cnLinkSize = 2 * sizeof(t_address);
+	t_size nDepth = cnFixedDepth;
+	t_size nSize = nStackBottom - nStackTop;
+	if (nDepth > 0)
+	{	// Cals stack size by unwinding the stack
+		t_address nStackBase = m_pCPU->State().nSF;
+		nSize = nStackBase - nStackTop;
+		while (nStackBase < nStackBottom && --nDepth > 0)
 		{
-			// Unwind the stack and dump frame info
-			t_address nStackBase = m_pCPU->State().nSF;
-			t_address nCurrentTop = nStackTop;
-			nDepth = 0;
-			os << ".stack" << std::endl;
-			do 
+			// Next frame 
+			t_address nPrevStackBase = nStackBase;
+			if (nStackBase <= nStackBottom - cnLinkSize)
+				Memory().ReadAt<t_address>(nStackBase, nStackBase);
+			else
+				nStackBase = nStackBottom;
+			if (int64(nStackBase) - int64(nPrevStackBase) < int64(cnLinkSize))
+				throw CError(base::toStr("Stack corruption detected at stack offset %1", nStackBottom - nPrevStackBase));
+			// Update stack size
+			nSize = nStackBase - nStackTop;
+		}
+	}
+
+	if (bText)
+	{
+		// Unwind the stack and dump frame info
+		t_address nStackBase = m_pCPU->State().nSF;
+		t_address nCurrentTop = nStackTop;
+		nDepth = 0;
+		os << ".stack" << std::endl;
+		if (nStackTop < nStackBottom)
+		{
+			do
 			{
-				os	<< "# SF(" << nDepth << "): 0x" << std::hex << std::setw(8) << std::setfill('0') << nCurrentTop
+				os << "# SF(" << nDepth << "): 0x" << std::hex << std::setw(8) << std::setfill('0') << nCurrentTop
 					<< " - 0x" << std::setw(8) << std::setfill('0') << nStackBase << std::endl;
 				t_address nPrevStackBase = nStackBase;
 				if (nStackBase <= nStackBottom - cnLinkSize)
@@ -1030,10 +1036,10 @@ void CDebugger::DumpStack(std::ostream& os, t_size const cnFixedDepth, bool bTex
 			os << "# Offset: 15 14 13 12  11 10 09 08   07 06 05 04  03 02 01 00" << std::endl;
 			DumpHelper(os, nStackTop, nSize, &(Memory()[0]), false);
 		}
-		else
-		{
-			os.write(&Memory().operator[]<char>(nStackTop), nSize);
-		}
+	}
+	else if (nStackTop < nStackBottom)
+	{
+		os.write(&Memory().operator[]<char>(nStackTop), nSize);
 	}
 }
 
@@ -1042,7 +1048,7 @@ void CDebugger::DumpStackBacktrace(std::ostream& os) const
 	auto aCodeLines = std::move(GetFunctionCallStack());
 
 	os << std::resetiosflags(0);
-	os << "Function call stack: --------------------------------------------------------------" << std::endl;
+	os << "Function call stack: -------------------------------------------------------------" << std::endl;
 	for (auto const& tInfo : aCodeLines)
 	{
 		os << "0x" << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << tInfo.nAddress << ": ";

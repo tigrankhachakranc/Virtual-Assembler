@@ -197,7 +197,7 @@ inline CValue CMemory::ReadValue(
 		VASM_THROW_ERROR("Zero bytes memory read.");
 	else if (addr == 0) // null is reserved
 		VASM_THROW_ERROR("Nullptr memory read.");
-	else if (addr + nCountBytes > m_aBuffer.size())
+	else if (addr + size_t(nCountBytes) > m_aBuffer.size())
 		VASM_THROW_ERROR("Out of memory bounds read.");
 	else if (addr % nElemSize != 0)
 		VASM_THROW_ERROR("Unaligned memory read.");

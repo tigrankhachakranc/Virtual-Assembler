@@ -39,16 +39,19 @@ const CCommandParser::t_mapCommandDefinitions CCommandParser::ms_cmapCommands{
 	{t_csz("NOP"),	{EOpCode::NOP}},
 	{t_csz("BREAK"),{EOpCode::BREAK}},
 	{t_csz("EXIT"), {EOpCode::EXIT}},
-	{t_csz("END"), {EOpCode::EXIT}},
+	{t_csz("END"),	{EOpCode::EXIT}},
 	//
 	// Execution control
 	//
+	{t_csz("JMP"),	{EOpCode::JUMPA, EOprTypeEx::AR}},
 	{t_csz("JUMP"), {EOpCode::JUMPA, EOprTypeEx::AR}},
+	{t_csz("JMP"),	{EOpCode::JUMPR, EOprTypeEx::GRIMV, EImvType::SNum16}},
 	{t_csz("JUMP"), {EOpCode::JUMPR, EOprTypeEx::GRIMV, EImvType::SNum16}},
 	{t_csz("CALL"), {EOpCode::CALLA, EOprTypeEx::AR}},
 	//{t_csz("CALL"), {EOpCode::CALLR, EOprTypeEx::GRIMV, EImvType::SNum16}},
 	{t_csz("RET"),  {EOpCode::RET}},
 	// Conditional branching
+	{t_csz("JE"),	{EOpCode::JUMPR, ECndtnCode::Equal, EOprTypeEx::GRIMV, EImvType::SNum16}},
 	{t_csz("JEQ"),	{EOpCode::JUMPR, ECndtnCode::Equal, EOprTypeEx::GRIMV, EImvType::SNum16}},
 	{t_csz("JZ"),	{EOpCode::JUMPR, ECndtnCode::Equal, EOprTypeEx::GRIMV, EImvType::SNum16}},
 	//

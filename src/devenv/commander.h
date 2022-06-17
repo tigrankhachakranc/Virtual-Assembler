@@ -135,6 +135,7 @@ protected:
 	void PrintWatchList(std::set<t_string> const&, bool const bHexadecimal) const;
 	void PrintPortsInfo() const;
 	void PrintCode(t_address const nBaseAddress, t_count nIstrCount) const;
+	void PrintData(t_address const nBaseAddress, t_count nSizeInBytes) const;
 	void PrintMemory(t_address const nBaseAddress, t_count nSizeInBytes) const;
 	void PrintVariable(vm::SVariableInfo const& tVarInfo, bool const bHexadecimal) const;
 	void PrintCodeInfo(std::ostream& os, CDebugger::SCodeLineInfo const& tInfo,

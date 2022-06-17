@@ -9,55 +9,47 @@ _text SEGMENT
 
 ;-------------------------------------------------------------------------------
 fnAND8 PROC
-
-mov EAX, 0
-mov AL, BYTE PTR[ECX]
-mov BL, BYTE PTR[EDX]
-and AL, BL
-mov BYTE PTR[R8], AL
-lahf
-SAR AX, 8
-
-ret
+	mov EAX, 0
+	mov AL, BYTE PTR[ECX]
+	mov BL, BYTE PTR[EDX]
+	and AL, BL
+	mov BYTE PTR[R8], AL
+	lahf
+	SAR AX, 8
+	ret
 fnAND8 ENDP
 
 fnAND16 PROC
-
-mov AX, WORD PTR[ECX]
-mov BX, WORD PTR[ECX]
-and AX, BX
-pushf
-mov WORD PTR[EAX], AX
-pop AX 
-
-ret
+	mov AX, WORD PTR[ECX]
+	mov BX, WORD PTR[ECX]
+	and AX, BX
+	pushf
+	mov WORD PTR[EAX], AX
+	pop AX 
+	ret
 fnAND16 ENDP
 
 fnAND32 PROC
-
-mov EAX, DWORD PTR[R11]
-mov EBX, DWORD PTR[R12]
-and EAX, EBX
-pushf
-mov DWORD PTR[R13], EAX
-pop AX 
-
-ret
+	mov EAX, DWORD PTR[R11]
+	mov EBX, DWORD PTR[R12]
+	and EAX, EBX
+	pushf
+	mov DWORD PTR[R13], EAX
+	pop AX 
+	ret
 fnAND32 ENDP
 
 fnAND64 PROC, Arg1:QWORD, Arg2:QWORD, Arg3:QWORD
-
-mov R11, Arg1
-mov R12, Arg2
-mov R13, Arg3
-mov RAX, QWORD PTR[R11]
-mov RBX, QWORD PTR[R12]
-and RAX, RBX
-pushf
-mov QWORD PTR[R13], RAX
-pop AX 
-
-ret
+	mov R11, Arg1
+	mov R12, Arg2
+	mov R13, Arg3
+	mov RAX, QWORD PTR[R11]
+	mov RBX, QWORD PTR[R12]
+	and RAX, RBX
+	pushf
+	mov QWORD PTR[R13], RAX
+	pop AX 
+	ret
 fnAND64 ENDP
 ;-------------------------------------------------------------------------------
 
@@ -66,38 +58,38 @@ fnAND64 ENDP
 
 fnOR8 PROC, Arg1:QWORD, Arg2:QWORD, Arg3:QWORD
 
-mov rax, Arg1
-add rax, Arg2
-add rax, Arg3
+	mov rax, Arg1
+	add rax, Arg2
+	add rax, Arg3
 
-ret
+	ret
 fnOR8 ENDP
 
 fnOR16 PROC, Arg1:QWORD, Arg2:QWORD, Arg3:QWORD
 
-mov rax, Arg1
-add rax, Arg2
-add rax, Arg3
+	mov rax, Arg1
+	add rax, Arg2
+	add rax, Arg3
 
-ret
+	ret
 fnOR16 ENDP
 
 fnOR32 PROC, Arg1:QWORD, Arg2:QWORD, Arg3:QWORD
 
-mov rax, Arg1
-add rax, Arg2
-add rax, Arg3
+	mov rax, Arg1
+	add rax, Arg2
+	add rax, Arg3
 
-ret
+	ret
 fnOR32 ENDP
 
 fnOR64 PROC, Arg1:QWORD, Arg2:QWORD, Arg3:QWORD
 
-mov rax, Arg1
-add rax, Arg2
-add rax, Arg3
+	mov rax, Arg1
+	add rax, Arg2
+	add rax, Arg3
 
-ret
+	ret
 fnOR64 ENDP
 ;-------------------------------------------------------------------------------
 
@@ -1066,12 +1058,13 @@ fnCMP32 PROC ;, Arg1:QWORD, Arg2:QWORD, Arg3:QWORD
 ret
 fnCMP32 ENDP
 
-fnCMP64 PROC ;, Arg1:QWORD, Arg2:QWORD, Arg3:QWORD
-
-	mov rax, 2341
-	mov rcx, 2341
-	mov rax, 2343
-
+fnCMP64 PROC ; Arg1: QWORD PTR pLeft, Arg2: QWORD pRight -> Flags
+	mov RAX, QWORD PTR[RCX]
+	mov RBX, QWORD PTR[RDX]
+	cmp RAX, RBX
+	pushf
+	pop AX
+	ret
 ret
 fnCMP64 ENDP
 ;-------------------------------------------------------------------------------

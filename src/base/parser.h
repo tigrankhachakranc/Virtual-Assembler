@@ -69,10 +69,10 @@ public:
 	inline bool IsFinished(bool bSkipWhiteSpaces);
 	inline bool IsWhiteSpace() const;
 
-	void Skip(int nCharCount);
+	void Skip(t_size nCharCount);
 	void SkipWhiteSpaces();
 
-	inline t_char PeekChar(int nOffset = 0) const;
+	inline t_char PeekChar(t_index nOffset = 0) const;
 	t_char GetChar(bool bSkipEmptySpaces = false);
 
 	using fnIsDelimiter = std::function<bool(t_char)>;
@@ -175,7 +175,7 @@ inline bool CParser::IsWhiteSpace() const
 	return (m_nPos < m_sInput.size() && IsSpace(m_sInput[m_nPos]));
 }
 
-inline t_char CParser::PeekChar(int nOffset) const
+inline t_char CParser::PeekChar(t_index nOffset) const
 {
 	char ch = 0;
 	if (m_nPos + nOffset < m_sInput.size())

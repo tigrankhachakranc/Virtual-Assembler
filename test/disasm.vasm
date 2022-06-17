@@ -1,0 +1,81 @@
+.STACK = 256
+
+.DATA
+
+CHAR  chPass	= '1'
+CHAR  chFail	= '0'
+DWORD dwMean	= 0
+DWORD dwVariance	= 0
+DWORD adwNums[A]	= 0x4E, 0x41, 0x42, 0x52, 0x16, 0x3D, 0x36, 0xE, 0x5C, 0x2A
+DWORD dwCount	= 0xA
+DWORD dwEtalonMean	= 0x3A
+DWORD dwEtalonVariance	= 0x27F
+
+
+.CODE
+
+Func ArithmeticMean;	# Unit: mean
+Func SampleVariance;	# Unit: variance
+Func PrintChar;	# Unit: main
+Func Main;	# Unit: main
+
+Func ArithmeticMean:
+	CMP DW R32, R0
+	JEQ Finished
+	MOVE DW R36, R0
+	MOVE DW R44, R32
+	MOVI DW R48, 0x00000001
+NextNum:
+	LOAD DW R40, A0
+	ADD DW R36, R40
+	INC A0, 4
+	SUB DW R44, R48
+	JNE NextNum
+	DIV DW R36, R32
+	SHR DW R32, 1
+	CMP DW R32, R40
+	ADC DW R36, R0
+	MOVE DW R32, R36
+Finished:
+	RET
+EndF
+
+Func SampleVariance:
+	PUSHSF
+	MOVE DW R40, R0
+	MOVI DW R36, 0x00000001
+	CMP DW R32, R36
+	JBE Finished
+	PUSH DW R32, 0
+	PUSH DW R32, 0
+	PUSH DW R16, 0
+	MOVI A1, ArithmeticMean
+	CALL A1
+	POP DW R16, 0
+	POP DW R48, 0
+	MOVE DW R40, R0
+	MOVI DW R36, 0x00000001
+NextNum:
+	LOAD DW R56, A0
+	SUB DW R56, R32
+	IMUL DW R56, R56
+	ADD QW R40, R56
+	INC A0, 4
+	SUB DW R48, R36
+	JNE NextNum
+	POP DW R32, 0
+	SUB DW R32, R36
+	MOVE DW R36, R0
+	DIV QW R40, R32
+	MOVI DW R36, 0x00000001
+	ADD DW R32, R36
+	SHR DW R32, 1
+	CMP DW R32, R48
+	ADC DW R40, R0
+Finished:
+	MOVE DW R32, R40
+	POPSF
+	RET
+
+# Error:  Unknown instruction code happend!
+Processing aborted!

@@ -138,8 +138,8 @@ public:
 	void Dump(std::ostream&, bool bText) const;
 	void DumpState(std::ostream&, bool const bHexadecimal) const;
 	void DumpMemory(std::ostream&, t_address nAddress, t_size nSizeBytes, bool bText) const;
-	void DumpCode(std::ostream&, t_address nAddress, t_size nSizeBytes, bool bText) const;
-	void DumpData(std::ostream&, t_address nAddress, t_size nSizeBytes, bool bText) const;
+	void DumpCode(std::ostream&, t_address nAddress, t_size nSizeBytes, bool const bText, bool const bHeaderLine = true) const;
+	void DumpData(std::ostream&, t_address nAddress, t_size nSizeBytes, bool const bText, bool const bHeaderLine = true) const;
 	void DumpStack(std::ostream&, t_size const cnDepth, bool bText) const;
 	void DumpStackBacktrace(std::ostream&) const;
 

@@ -1,0 +1,26 @@
+.DATA
+
+WORD wVal1 = -1
+WORD wVal2 = -2
+
+WORD wVal3 = -32767
+WORD wVal4 = -2
+
+.CODE
+
+
+Func Main:
+	MVI A0, wVal1
+	MVI A1, wVal2
+	MVI A2, wVal3
+	MVI A3, wVal4
+	LOAD W R32, A0
+	LOAD W R36, A1
+	LOAD W R40, A2
+	LOAD W R44, A3
+	ADD W R32, R36
+	ADD W R40, R44
+	RET
+EndF
+
+.MAIN = Main

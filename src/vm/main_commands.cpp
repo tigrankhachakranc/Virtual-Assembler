@@ -205,7 +205,7 @@ void CMainCommands::StoreRel(SCommandContext& tCtxt)
 void CMainCommands::PushSF(SCommandContext& tCtxt)
 {
 	if ((tCtxt.tCPUState.nSP - 2 * sizeof(t_address)) < tCtxt.tCPUState.cnStackUBound)
-		VASM_THROW_ERROR(t_csz("CPU: Stack overflow"));
+		throw base::CError(t_csz("CPU: Stack overflow"));
 
 	// Push RIP
 	tCtxt.tCPUState.nSP -= sizeof(t_address);
@@ -230,7 +230,7 @@ void CMainCommands::PushSF(SCommandContext& tCtxt)
 		}
 
 		if (tCtxt.tCPUState.nSP - nOffset < tCtxt.tCPUState.cnStackUBound)
-			VASM_THROW_ERROR(t_csz("CPU: Stack overflow in stack frame creation"));
+			throw base::CError(t_csz("CPU: Stack overflow in stack frame creation"));
 		tCtxt.tCPUState.nSP -= nOffset;
 	}
 }
@@ -238,7 +238,7 @@ void CMainCommands::PushSF(SCommandContext& tCtxt)
 void CMainCommands::PopSF(SCommandContext& tCtxt)
 {
 	if ((tCtxt.tCPUState.nSF + 2 * sizeof(t_address)) > tCtxt.tCPUState.cnStackLBound)
-		VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
+		throw base::CError(t_csz("CPU: Stack underflow"));
 
 	// Change SP to point to SF
 	tCtxt.tCPUState.nSP = tCtxt.tCPUState.nSF;
@@ -263,7 +263,7 @@ void CMainCommands::PopSF(SCommandContext& tCtxt)
 		}
 
 		if (tCtxt.tCPUState.nSP + nOffset > tCtxt.tCPUState.cnStackLBound)
-			VASM_THROW_ERROR(t_csz("CPU: Stack underflow on stack frame cleanup"));
+			throw base::CError(t_csz("CPU: Stack underflow on stack frame cleanup"));
 		tCtxt.tCPUState.nSP += nOffset;
 	}
 }
@@ -275,7 +275,7 @@ void CMainCommands::Push(SCommandContext& tCtxt)
 	if (nCount == 0)
 	{	// Push single register
 		if ((tCtxt.tCPUState.nSP - sizeof(TOperandType)) < tCtxt.tCPUState.cnStackUBound)
-			VASM_THROW_ERROR(t_csz("CPU: Stack overflow"));
+			throw base::CError(t_csz("CPU: Stack overflow"));
 		tCtxt.tCPUState.nSP -= sizeof(TOperandType);
 		tCtxt.oMemory.WriteAt<TOperandType>(tCtxt.tCPUState.nSP, *tCtxt.operand<TOperandType>(EOprIdx::First), false);
 	}
@@ -285,9 +285,9 @@ void CMainCommands::Push(SCommandContext& tCtxt)
 		uint nRegIdx = AlignToOperandSize(tCtxt.tInfo.anRegIdx[EOprIdx::First], tCtxt.tInfo.eOprSize);
 		uint nCountBuytes = nCount * OperandSize(tCtxt.tInfo.eOprSize);
 		if (nRegIdx + nCountBuytes > SCPUStateBase::eRegisterPoolSize)
-			VASM_THROW_ERROR(t_csz("CPU: GP Registers pool size excceded"));
+			throw base::CError(t_csz("CPU: GP Registers pool size excceded"));
 		if ((tCtxt.tCPUState.nSP - nCountBuytes) < tCtxt.tCPUState.cnStackUBound)
-			VASM_THROW_ERROR(t_csz("CPU: Stack overflow"));
+			throw base::CError(t_csz("CPU: Stack overflow"));
 		// Push GP registers
 		tCtxt.tCPUState.nSP -= nCountBuytes;
 		tCtxt.oMemory.Write<TOperandType>(tCtxt.tCPUState.nSP, tCtxt.operand<TOperandType>(EOprIdx::First), nCount, false);
@@ -301,7 +301,7 @@ void CMainCommands::Pop(SCommandContext& tCtxt)
 	if (nCount == 0)
 	{	// Pop single register
 		if ((tCtxt.tCPUState.nSP + sizeof(TOperandType)) > tCtxt.tCPUState.cnStackLBound)
-			VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
+			throw base::CError(t_csz("CPU: Stack underflow"));
 		tCtxt.oMemory.ReadAt<TOperandType>(tCtxt.tCPUState.nSP, *tCtxt.operand<TOperandType>(EOprIdx::First), false);
 		tCtxt.tCPUState.nSP += sizeof(TOperandType);
 	}
@@ -311,9 +311,9 @@ void CMainCommands::Pop(SCommandContext& tCtxt)
 		uint nRegIdx = AlignToOperandSize(tCtxt.tInfo.anRegIdx[EOprIdx::First], tCtxt.tInfo.eOprSize);
 		uint nCountBuytes = nCount * OperandSize(tCtxt.tInfo.eOprSize);
 		if (nRegIdx + nCountBuytes > SCPUStateBase::eRegisterPoolSize)
-			VASM_THROW_ERROR(t_csz("CPU: GP Registers pool size excceded"));
+			throw base::CError(t_csz("CPU: GP Registers pool size excceded"));
 		if ((tCtxt.tCPUState.nSP + nCountBuytes) > tCtxt.tCPUState.cnStackLBound)
-			VASM_THROW_ERROR(t_csz("CPU: Stack underflow"));
+			throw base::CError(t_csz("CPU: Stack underflow"));
 		// Pop GP registers
 		tCtxt.oMemory.Read<TOperandType>(tCtxt.tCPUState.nSP, tCtxt.operand< TOperandType>(EOprIdx::First), nCount, false);
 		tCtxt.tCPUState.nSP += nCountBuytes;

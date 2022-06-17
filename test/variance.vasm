@@ -1,0 +1,45 @@
+.code
+
+Func ArithmeticMean;
+
+# Calculates Sample Variance
+# Arg1: DW R32 (Elements count)
+# Arg2: A0 (Elements array pointer)
+# Ret:  DW R32 (Sample variance)
+Func SampleVariance:
+	PUSHSF
+	MOV 	R40, R0		# Init result with 0
+	MVI 	R36, 1
+	CMP 	R32, R36
+	JBE Finished		# If numer of elements is less than 2 then result is 0
+	PUSH 	R32			# Keep the count once
+	PUSH 	R32			# Keep the count twice
+	PUSH	A0			# Keep elements pointer
+	MVI		A1, ArithmeticMean
+	CALL	A1			# Average -> R32
+	POP		A0			# Restore elements pointer
+	POP		R48			# Restore count in R48
+	MOV 	R40, R0		# Reinit result with 0
+	MVI 	R36, 1
+NextNum:
+	LOD		R56, A0
+	SUB		R56, R32	# N-Avrg
+	IMUL	R56, R56	# (N-Avrg)*(N-Avrg)
+	ADD	QW	R40, R56	# Sum Difference Squares
+	INC		A0, 4
+	SUB		R48, R36	# Decrement Count by 1
+	JNZ	NextNum			# Loop
+	POP		R32			# Restore elements count in R32 again
+	SUB		R32, R36	# Decrement count by 1
+	MOV		R36, R0
+	DIV QW	R40, R32
+	MVI 	R36, 1
+	ADD		R32, R36	# Restore original count
+	SHR		R32, 1		# Half of the count
+	CMP		R32, R48	# Compare reminder with N/2
+	ADC		R40, R0		# Round the result
+Finished:
+	MOV R32, R40		# Return result in R32
+	POPSF
+	RET
+EndF

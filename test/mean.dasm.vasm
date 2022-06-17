@@ -1,0 +1,48 @@
+.STACK = 4096
+
+.DATA
+
+DWORD adwNums[5]	= 0x6A, 0xCA, 0x38, 0x48, 0x5E
+DWORD dwCount	= 0x5
+DWORD dwAnswer	= 0
+
+
+.CODE
+
+Func CalculateMean;	# Unit: mean
+Func Main;	# Unit: mean
+
+Func CalculateMean:
+	CMP DW R32, R0
+	JEQ Finished
+	MOVE DW R44, R32
+	MOVI DW R48, 0x00000001
+NextNum:
+	LOAD DW R40, A0
+	ADD DW R36, R40
+	INC A0, 4
+	SUB DW R44, R48
+	JNE NextNum
+	DIV DW R36, R32
+	SHR DW R32, 1
+	CMP DW R32, R40
+	ADC DW R36, R0
+	MOVE DW R32, R36
+Finished:
+	RET
+EndF
+
+Func Main:
+	PUSHSF
+	MOVI A0, dwCount
+	LOAD DW R32, A0
+	MOVI A0, adwNums
+	MOVI A1, CalculateMean
+	CALL A1
+	MOVI A0, dwAnswer
+	STORE DW R32, A0
+	POPSF
+	RET
+EndF
+
+.MAIN = Main
